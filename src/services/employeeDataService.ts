@@ -7,7 +7,6 @@ import * as XLSX from 'xlsx'
 import { 
   EmployeeRecord, 
   convertFromExcelFormat,
-  generateEmployeeData,
   calculateBandStatistics,
   calculatePercentile,
   LEVEL_INFO
@@ -217,9 +216,9 @@ export async function loadEmployeeDataFromExcel(file?: File): Promise<EmployeeRe
     console.error('엑셀 파일 로드 실패:', error)
   }
   
-  // 파일 로드 실패 시 기본 데이터 생성
-  console.log('기본 데이터 생성 중...')
-  const employees = generateEmployeeData(4925)
+  // 파일 로드 실패 시 빈 배열 반환 (Excel 필수)
+  console.log('Excel 파일이 없습니다. 데이터를 업로드해주세요.')
+  const employees: EmployeeRecord[] = []
   cachedEmployeeData = employees
   return employees
 }

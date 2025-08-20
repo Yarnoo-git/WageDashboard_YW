@@ -10,9 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "generate:excel": "tsx src/scripts/generateDummyExcel.ts",
-    "generate:test-excel": "tsx src/scripts/generateTestExcel.ts",
-    "add:competitor": "tsx src/scripts/addCompetitorRate.ts"
+    "generate:test-excel": "tsx src/scripts/generateTestExcel.ts"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",

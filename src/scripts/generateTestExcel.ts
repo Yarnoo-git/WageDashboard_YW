@@ -14,7 +14,7 @@ import {
 
 // 파일 1: 기본 데이터 (표준 분포)
 console.log('🔄 파일 1: 표준 분포 직원 데이터 생성 중...')
-const standardEmployees = generateEmployeeData(4925)
+const standardEmployees = generateEmployeeData(1000) // 개발/테스트용 1000명
 
 // 파일 2: 테스트 데이터 (다른 분포 - S,A 등급 더 많이)
 console.log('🔄 파일 2: 테스트용 직원 데이터 생성 중...')

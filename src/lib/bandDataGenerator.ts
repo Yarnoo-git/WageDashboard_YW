@@ -1,6 +1,12 @@
 /**
- * 직군별 인원 및 급여 데이터 생성 유틸리티
- * 엑셀 파일 구조와 동일한 형식으로 데이터 생성
+ * [개발/테스트 전용] 직군별 인원 및 급여 데이터 생성 유틸리티
+ * 
+ * ⚠️ 주의: 이 파일은 개발 및 테스트 목적으로만 사용됩니다.
+ * 프로덕션 환경에서는 Excel 파일 데이터를 사용합니다.
+ * 
+ * 사용 시나리오:
+ * - npm run generate:test-excel 실행 시
+ * - 개발 환경에서 샘플 데이터 필요 시
  */
 
 export interface EmployeeRecord {
@@ -129,8 +135,13 @@ function getAdjustedLevelRatio(band: string, level: string): number {
   return baseRatio
 }
 
-// 4925명의 직원 데이터 생성
-export function generateEmployeeData(totalCount: number = 4925): EmployeeRecord[] {
+// 테스트용 직원 데이터 생성 (개발 환경 전용)
+export function generateEmployeeData(totalCount: number = 1000): EmployeeRecord[] {
+  // 개발 환경이 아니면 경고
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('⚠️ generateEmployeeData는 개발 환경 전용입니다. 프로덕션에서는 Excel 데이터를 사용하세요.')
+    return []
+  }
   const employees: EmployeeRecord[] = []
   const departments = Object.keys(DEPARTMENT_BAND_MAPPING)
   const levels = ['Lv.4', 'Lv.3', 'Lv.2', 'Lv.1', '신입']
