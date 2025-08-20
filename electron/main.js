@@ -1,8 +1,11 @@
-const { app, BrowserWindow, Menu, shell } = require('electron')
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron')
 const path = require('path')
-const isDev = process.env.NODE_ENV !== 'production'
+const fs = require('fs')
+const { spawn } = require('child_process')
+const isDev = process.env.NODE_ENV === 'development'
 
 let mainWindow
+let serverProcess = null
 
 function createWindow() {
   // 메인 윈도우 생성
@@ -17,7 +20,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      devTools: isDev // 프로덕션에서 개발자 도구 비활성화
+      devTools: false // 개발자 도구 완전 비활성화
     },
     show: false, // 로딩 완료 후 표시
   })
@@ -60,15 +63,7 @@ function createWindow() {
         { label: '축소', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
         { label: '실제 크기', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
         { type: 'separator' },
-        { label: '전체 화면', accelerator: 'F11', role: 'togglefullscreen' },
-        ...(isDev ? [
-          { type: 'separator' },
-          { 
-            label: '개발자 도구', 
-            accelerator: 'F12',
-            click: () => mainWindow.webContents.toggleDevTools()
-          }
-        ] : [])
+        { label: '전체 화면', accelerator: 'F11', role: 'togglefullscreen' }
       ]
     },
     {
@@ -97,88 +92,38 @@ function createWindow() {
   if (isDev) {
     // 개발 모드: Next.js 개발 서버 사용
     mainWindow.loadURL('http://localhost:3000')
-    mainWindow.webContents.openDevTools()
+    // 개발 모드에서도 개발자 도구는 수동으로 열도록 변경
+    // mainWindow.webContents.openDevTools()
   } else {
-    // 프로덕션 모드: Standalone 서버 실행
-    const { spawn } = require('child_process')
-    const fs = require('fs')
+    // 프로덕션 모드: 정적 HTML 파일 직접 로드
+    // 먼저 app.asar.unpacked에서 찾기
+    let indexPath = path.join(__dirname, '..', '..', 'app.asar.unpacked', 'out', 'index.html')
     
-    // Standalone 서버 경로 설정
-    const standaloneDir = path.join(__dirname, '..', '.next', 'standalone')
-    const serverPath = path.join(standaloneDir, 'server.js')
+    // app.asar.unpacked에 없으면 일반 out 폴더에서 찾기
+    if (!fs.existsSync(indexPath)) {
+      indexPath = path.join(__dirname, '..', 'out', 'index.html')
+    }
     
-    // 서버 파일이 존재하는지 확인
-    if (fs.existsSync(serverPath)) {
-      // 환경 변수 설정
-      const env = {
-        ...process.env,
-        PORT: '3000',
-        NODE_ENV: 'production'
-      }
-      
-      // Node.js로 standalone 서버 실행
-      const serverProcess = spawn('node', [serverPath], {
-        cwd: standaloneDir,
-        env: env,
-        stdio: 'pipe'
-      })
-      
-      let serverReady = false
-      
-      // 서버 출력 모니터링
-      serverProcess.stdout.on('data', (data) => {
-        const output = data.toString()
-        console.log('Server:', output)
-        
-        // 서버가 준비되었는지 확인
-        if (!serverReady && (output.includes('started server') || output.includes('Ready'))) {
-          serverReady = true
-          setTimeout(() => {
-            mainWindow.loadURL('http://localhost:3000')
-          }, 1000)
-        }
-      })
-      
-      serverProcess.stderr.on('data', (data) => {
-        console.error('Server Error:', data.toString())
-      })
-      
-      serverProcess.on('error', (error) => {
-        console.error('Failed to start server:', error)
-        mainWindow.loadURL(`data:text/html;charset=utf-8,
-          <html>
-            <body style="font-family: sans-serif; padding: 20px;">
-              <h1>서버 시작 실패</h1>
-              <p>오류: ${error.message}</p>
-              <p>Standalone 서버를 시작할 수 없습니다.</p>
-            </body>
-          </html>
-        `)
-      })
-      
-      // 타임아웃 설정 (10초 후에도 서버가 준비되지 않으면 강제 로드)
-      setTimeout(() => {
-        if (!serverReady) {
-          console.log('Server timeout, loading anyway...')
-          mainWindow.loadURL('http://localhost:3000')
-        }
-      }, 10000)
-      
-      // 앱 종료 시 서버도 종료
-      app.on('before-quit', () => {
-        if (serverProcess) {
-          serverProcess.kill()
-        }
-      })
+    // 개발 환경에서는 프로젝트 루트의 out 폴더
+    if (!fs.existsSync(indexPath)) {
+      indexPath = path.join(process.cwd(), 'out', 'index.html')
+    }
+    
+    console.log('Looking for index.html at:', indexPath)
+    console.log('File exists:', fs.existsSync(indexPath))
+    
+    if (fs.existsSync(indexPath)) {
+      // 정적 HTML 파일 로드
+      mainWindow.loadFile(indexPath)
     } else {
-      // Standalone 서버가 없는 경우 에러 메시지
-      console.error('Standalone server not found at:', serverPath)
+      // 파일을 찾을 수 없으면 에러 메시지 표시
       mainWindow.loadURL(`data:text/html;charset=utf-8,
         <html>
           <body style="font-family: sans-serif; padding: 20px;">
-            <h1>서버 파일을 찾을 수 없음</h1>
-            <p>Standalone 서버가 빌드되지 않았습니다.</p>
-            <p>npm run build를 실행하여 빌드를 완료하세요.</p>
+            <h1>빌드된 파일을 찾을 수 없습니다</h1>
+            <p>index.html 파일이 없습니다.</p>
+            <p>npm run build:electron을 실행하여 빌드를 완료하세요.</p>
+            <p style="color: #666; font-size: 12px;">경로: ${indexPath}</p>
           </body>
         </html>
       `)
@@ -193,10 +138,9 @@ function createWindow() {
   // 프로덕션에서 개발자 도구 관련 단축키 차단
   if (!isDev) {
     mainWindow.webContents.on('before-input-event', (event, input) => {
-      // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, F5 차단
+      // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C 차단 (F5 새로고침은 허용)
       if (input.key === 'F12' || 
-          (input.control && input.shift && (input.key === 'I' || input.key === 'J' || input.key === 'C')) ||
-          (input.key === 'F5' && !input.control)) {
+          (input.control && input.shift && (input.key === 'I' || input.key === 'J' || input.key === 'C'))) {
         event.preventDefault()
       }
     })
@@ -219,9 +163,82 @@ function createWindow() {
   })
 }
 
+// IPC 핸들러 설정
+function setupIpcHandlers() {
+  // 파일 선택 다이얼로그
+  ipcMain.handle('dialog:openFile', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    })
+    
+    if (!result.canceled) {
+      return result.filePaths[0]
+    }
+    return null
+  })
+  
+  // 파일 저장 다이얼로그
+  ipcMain.handle('dialog:saveFile', async (event, data) => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      filters: [
+        { name: 'Excel Files', extensions: ['xlsx'] },
+        { name: 'PDF Files', extensions: ['pdf'] }
+      ]
+    })
+    
+    if (!result.canceled) {
+      fs.writeFileSync(result.filePath, data)
+      return result.filePath
+    }
+    return null
+  })
+  
+  // Excel 파일 처리
+  ipcMain.handle('process:excel', async (event, arrayBuffer) => {
+    try {
+      // 여기서는 단순히 ArrayBuffer를 반환
+      // 실제 처리는 렌더러 프로세스에서 수행
+      return { success: true, data: arrayBuffer }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+  
+  // 파일 읽기
+  ipcMain.handle('file:readAsBuffer', async (event, filePath) => {
+    try {
+      const buffer = fs.readFileSync(filePath)
+      return buffer
+    } catch (error) {
+      console.error('File read error:', error)
+      return null
+    }
+  })
+  
+  // 앱 정보
+  ipcMain.handle('app:getInfo', () => {
+    return {
+      version: app.getVersion(),
+      name: app.getName(),
+      path: app.getPath('userData')
+    }
+  })
+}
+
+// 프로덕션 서버 시작 함수 (사용하지 않음 - 정적 파일 직접 로드)
+function startProductionServer() {
+  // 이 함수는 더 이상 사용되지 않지만 호환성을 위해 남겨둠
+  return Promise.resolve(null)
+}
+
 // Electron이 준비되면 윈도우 생성
 app.whenReady().then(() => {
   createWindow()
+  setupIpcHandlers()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -233,6 +250,11 @@ app.whenReady().then(() => {
 // 모든 윈도우가 닫히면 앱 종료 (macOS 제외)
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    // 서버 프로세스 종료
+    if (serverProcess) {
+      serverProcess.kill()
+      serverProcess = null
+    }
     app.quit()
   }
 })

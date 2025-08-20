@@ -6,15 +6,18 @@ directories:
 
 files:
   - electron/**/*
-  - .next/standalone/**/*
-  - .next/static/**/*
-  - public/**/*
+  - out/**/*
   - package.json
   - "!**/*.{ts,tsx}"
   - "!**/*.map"
   - "!src/**/*"
-  - "!.next/standalone/node_modules/**/{README.md,CHANGELOG.md,LICENSE,*.map}"
-  - "!.next/standalone/node_modules/**/test/**"
+  - "!out/cache/**/*"
+  - "!out/server/**/*"
+  - "!out/standalone/**/*"
+
+# 정적 파일을 압축하지 않고 직접 접근 가능하도록 설정
+asarUnpack:
+  - out/**/*
 
 # Windows 설정
 win:

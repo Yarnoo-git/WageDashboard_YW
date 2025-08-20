@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { loadExcelData, hasStoredData } from '@/lib/clientStorage'
+import { fetchDashboardData } from '@/services/clientDataService'
 
 interface DashboardData {
   summary: {
@@ -121,9 +122,7 @@ export function useDashboardData() {
         }
         
         // 클라이언트 데이터가 없으면 서버에서 가져오기
-        const response = await fetch('/api/dashboard')
-        if (!response.ok) throw new Error('Failed to fetch dashboard data')
-        const result = await response.json()
+        const result = await fetchDashboardData()
         
         // 디버그: 서버 데이터 확인
         console.log('useDashboardData - 서버 데이터:', {
@@ -201,9 +200,8 @@ export function useDashboardData() {
       }
       
       // 클라이언트 데이터가 없으면 서버에서 가져오기
-      const response = await fetch('/api/dashboard')
-      if (!response.ok) throw new Error('Failed to fetch dashboard data')
-      const result = await response.json()
+      // Electron 환경에서는 직접 서비스 호출, 브라우저에서는 API 호출
+      const result = await fetchDashboardData()
       setData(result)
       setError(null)
     } catch (err) {

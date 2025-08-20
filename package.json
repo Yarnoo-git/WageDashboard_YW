@@ -5,7 +5,8 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/post-build.js",
+    "build": "next build",
+    "build:electron": "node scripts/prepare-electron-build.js && cross-env BUILD_TARGET=electron next build && node scripts/restore-api-routes.js",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
@@ -14,11 +15,11 @@
     "generate:test-excel": "tsx src/scripts/generateTestExcel.ts",
     "electron": "electron .",
     "electron-dev": "set NODE_ENV=development && electron .",
-    "electron-pack": "npm run build && electron-builder",
-    "dist": "npm run build && electron-builder --win",
-    "dist:portable": "npm run build && electron-builder --win portable",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:linux": "npm run build && electron-builder --linux"
+    "electron-pack": "npm run build:electron && electron-builder",
+    "dist": "npm run build:electron && electron-builder --win",
+    "dist:portable": "npm run build:electron && electron-builder --win portable",
+    "dist:mac": "npm run build:electron && electron-builder --mac",
+    "dist:linux": "npm run build:electron && electron-builder --linux"
   },
   "dependencies": {
     "express": "^5.1.0",
@@ -38,6 +39,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.19",
+    "cross-env": "^10.0.0",
     "electron": "^37.3.1",
     "electron-builder": "^26.0.12",
     "jest": "^29.7.0",
