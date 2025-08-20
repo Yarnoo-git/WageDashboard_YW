@@ -1,0 +1,77 @@
+appId: com.wagedashboard.app
+productName: 인건비 대시보드
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - electron/**/*
+  - .next/standalone/**/*
+  - .next/static/**/*
+  - public/**/*
+  - package.json
+  - "!**/*.{ts,tsx}"
+  - "!**/*.map"
+  - "!src/**/*"
+  - "!.next/standalone/node_modules/**/{README.md,CHANGELOG.md,LICENSE,*.map}"
+  - "!.next/standalone/node_modules/**/test/**"
+
+# Windows 설정
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  # icon: electron/icon.ico  # 아이콘 파일 생성 후 주석 해제
+  requestedExecutionLevel: asInvoker
+  forceCodeSigning: false
+
+# NSIS 설치 프로그램 설정
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 인건비 대시보드
+  artifactName: ${productName}-Setup-${version}.${ext}
+  installerLanguages:
+    - ko-KR
+  language: 1042
+
+# 포터블 버전 설정
+portable:
+  artifactName: ${productName}-Portable-${version}.${ext}
+
+# Mac 설정 (선택사항)
+mac:
+  category: public.app-category.business
+  icon: electron/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+# Linux 설정 (선택사항)
+linux:
+  target:
+    - AppImage
+    - deb
+  icon: electron/icon.png
+  category: Office
+  synopsis: 인건비 대시보드 애플리케이션
+  description: 실시간 급여 관리 및 인상률 시뮬레이션 도구
+
+# 압축 설정
+compression: maximum
+npmRebuild: true
+nodeGypRebuild: false
+
+# 배포 설정 (선택사항)
+publish:
+  provider: generic
+  url: https://example.com/updates

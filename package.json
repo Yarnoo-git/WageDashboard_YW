@@ -2,17 +2,26 @@
   "name": "wage-dashboard",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/post-build.js",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "generate:test-excel": "tsx src/scripts/generateTestExcel.ts"
+    "generate:test-excel": "tsx src/scripts/generateTestExcel.ts",
+    "electron": "electron .",
+    "electron-dev": "set NODE_ENV=development && electron .",
+    "electron-pack": "npm run build && electron-builder",
+    "dist": "npm run build && electron-builder --win",
+    "dist:portable": "npm run build && electron-builder --win portable",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
+    "express": "^5.1.0",
     "html2canvas": "^1.4.1",
     "next": "14.2.31",
     "react": "^18.3.1",
@@ -21,20 +30,22 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "autoprefixer": "^10.4.19",
-    "postcss": "^8.4.40",
-    "tailwindcss": "^3.4.7",
-    "tsx": "^4.20.3",
-    "typescript": "^5",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.5.1",
     "@types/jest": "^29.5.11",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.19",
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "ts-jest": "^29.1.1"
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "ts-jest": "^29.1.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5"
   }
 }
