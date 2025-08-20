@@ -467,11 +467,9 @@ export async function getEmployeeData(): Promise<EmployeeRecord[]> {
     }
   }
   
-  // Excel 파일이 없으면 기본 샘플 데이터 반환
-  console.log('기본 샘플 데이터 사용')
-  const sampleEmployees = generateEmployeeData()
-  cachedEmployeeData = sampleEmployees
-  return sampleEmployees
+  // Excel 파일이 없으면 빈 배열 반환 (Excel 업로드 필수)
+  console.log('Excel 파일 업로드 필요')
+  return []
 }
 
 /**

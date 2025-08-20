@@ -100,20 +100,26 @@ AI 추천 인상률 설정값:
 
 ### Frontend
 - **Framework**: Next.js 14.2 (App Router)
+- **UI Library**: React 18.3
 - **Language**: TypeScript 5
-- **Styling**: TailwindCSS 3.4
+- **Styling**: TailwindCSS 3.4 + Pretendard Font
 - **Charts**: Recharts 3.1
 
 ### Data Management
-- **Storage**: IndexedDB (클라이언트 사이드)
-- **State**: React Context API
+- **Storage**: IndexedDB + localStorage (클라이언트 전용, 서버 DB 없음)
+- **State**: React Context API (WageContext)
 - **Excel Processing**: xlsx 라이브러리
+- **PDF Export**: jsPDF
 
 ### Development
 - **Package Manager**: npm
 - **Linter**: ESLint
 - **Formatter**: Prettier
 - **Testing**: Jest + React Testing Library
+
+### Deployment
+- **Platform**: Vercel (서버리스)
+- **Environment**: Node.js 20+
 
 ## 프로젝트 구조
 
@@ -212,6 +218,11 @@ npm run build
 - XSS 방지 처리
 
 ## 최근 업데이트
+
+### v1.2.1 (2025-08-20)
+- generateEmployeeData() 자동 호출 제거 (Excel 업로드 필수화)
+- 빌드 에러 수정 및 TypeScript 타입 개선
+- 불필요한 문서 정리
 
 ### v1.2.0 (2025-08-18)
 - Excel 데이터 읽기 유연성 개선 (띄어쓰기 변형 지원)
