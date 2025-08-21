@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useBandData } from '@/hooks/useBandData'
+import { useWageContext } from '@/context/WageContext'
 
 interface LevelData {
   level: string
@@ -38,16 +39,27 @@ interface Props {
   bands?: BandData[]  // Accept bands as props
 }
 
-export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, initialBaseUp = 3.2, initialMerit = 2.5, bands: propsB = [] }: Props) {
+export function PayBandCompetitivenessHeatmap({ 
+  bandRates = {}, 
+  levelRates, 
+  initialBaseUp = 3.2, 
+  initialMerit = 2.5, 
+  bands: propsBands = [] 
+}: Props) {
   const { bands: hookBands, loading: hookLoading } = useBandData()
+  const { baseUpRate: contextBaseUp, meritRate: contextMerit } = useWageContext()
   const [bands, setBands] = useState<BandData[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<'AS-IS' | 'TO-BE'>('AS-IS')
+  const [viewMode, setViewMode] = useState<'AS-IS' | 'TO-BE'>('TO-BE')
+  
+  // Context 값 우선 사용
+  const baseUp = contextBaseUp || initialBaseUp
+  const merit = contextMerit || initialMerit
   
   useEffect(() => {
     // Use props bands if provided, otherwise use hook bands
-    if (propsB && propsB.length > 0) {
-      setBands(propsB)
+    if (propsBands && propsBands.length > 0) {
+      setBands(propsBands)
       setLoading(false)
     } else if (hookBands && hookBands.length > 0) {
       setBands(hookBands)
@@ -57,7 +69,7 @@ export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, init
       setBands([])
       setLoading(false)
     }
-  }, [propsB, hookBands, hookLoading])
+  }, [propsBands, hookBands, hookLoading])
   
   // TO-BE 경쟁력 계산 함수
   const calculateToBECompetitiveness = (band: BandData, level: LevelData) => {
@@ -75,9 +87,9 @@ export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, init
         totalRate += (rate.baseUpAdjustment || 0) / 100 + (rate.meritAdjustment || 0) / 100
       }
     } 
-    // 3. 차선책: 기본값 사용
+    // 3. 차선책: Context 값 사용
     else {
-      totalRate = (initialBaseUp / 100) + (initialMerit / 100)
+      totalRate = (baseUp / 100) + (merit / 100)
     }
     
     if (!level.meanBasePay) return level.sblIndex
@@ -196,66 +208,70 @@ export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, init
       
       <div className="p-6">
         {/* TO-BE 모드 안내 메시지 */}
-        {viewMode === 'TO-BE' && Object.keys(bandRates).length === 0 && (
+        {viewMode === 'TO-BE' && Object.keys(bandRates).length === 0 && !levelRates && (
           <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
-              💡 TO-BE 모드: 각 직군별 페이지에서 인상률을 조정하면 변경사항이 여기에 반영됩니다.
+              💡 TO-BE 모드는 시뮬레이션 페이지에서 조정한 인상률이 반영된 경쟁력을 보여줍니다.
+              아직 조정하지 않았다면 기본 인상률(Base-up: {baseUp}%, 성과: {merit}%)이 적용됩니다.
             </p>
           </div>
         )}
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 히트맵 */}
-          <div className="lg:col-span-2">
+        {/* 메인 콘텐츠: 히트맵 테이블과 요약 카드를 나란히 배치 */}
+        <div className="flex gap-6">
+          {/* 왼쪽: 히트맵 테이블 (70%) */}
+          <div className="flex-1">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr>
-                    <th className="text-left text-sm font-medium text-slate-600 pb-3 px-3">직군 / 직급</th>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider py-2 px-3">
+                      직군
+                    </th>
                     {levels.map(level => (
-                      <th key={level} className="text-center text-sm font-medium text-slate-600 pb-3 px-2 min-w-[80px]">
+                      <th key={level} className="text-center text-xs font-semibold text-slate-600 uppercase tracking-wider py-2 px-3">
                         {level}
                       </th>
                     ))}
-                    <th className="text-center text-sm font-medium text-slate-600 pb-3 px-2 min-w-[80px]">평균</th>
+                    <th className="text-center text-xs font-semibold text-slate-600 uppercase tracking-wider py-2 px-3">
+                      평균
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {bands.map((band, idx) => {
-                    // 직군별 평균 계산
-                    let totalValue = 0
-                    let totalHeadcount = 0
+                    // 각 밴드의 평균 계산
+                    let bandTotalValue = 0
+                    let bandTotalHeadcount = 0
+                    
                     band.levels.forEach(level => {
-                      const value = viewMode === 'TO-BE'
-                        ? calculateToBECompetitiveness(band, level)
-                        : level.sblIndex  // 우리회사 vs C사 경쟁력
                       if (level.headcount > 0) {
-                        totalValue += value * level.headcount
-                        totalHeadcount += level.headcount
+                        const value = viewMode === 'TO-BE'
+                          ? calculateToBECompetitiveness(band, level)
+                          : level.sblIndex
+                        bandTotalValue += value * level.headcount
+                        bandTotalHeadcount += level.headcount
                       }
                     })
-                    const avgValue = totalHeadcount > 0 ? totalValue / totalHeadcount : 0
+                    
+                    const avgValue = bandTotalHeadcount > 0 ? bandTotalValue / bandTotalHeadcount : 0
                     
                     return (
-                      <tr key={band.id} className={idx % 2 === 0 ? 'bg-gray-50' : ''}>
-                        <td className="text-sm font-medium text-slate-700 py-2 px-3">
-                          {band.name}
-                        </td>
+                      <tr key={band.id} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                        <td className="text-sm font-medium text-slate-900 py-2 px-3">{band.name}</td>
                         {levels.map(levelName => {
                           const levelData = band.levels.find(l => l.level === levelName)
                           const value = levelData 
                             ? (viewMode === 'TO-BE' 
                                 ? calculateToBECompetitiveness(band, levelData)
                                 : levelData.sblIndex)
-                            : 0  // 우리회사 vs C사 경쟁력
+                            : 0
                           const headcount = levelData?.headcount || 0
                           
                           return (
                             <td key={levelName} className="p-1">
-                              <div className={`rounded-lg p-3 text-center transition-all ${getCellColor(value)} ${
-                                viewMode === 'TO-BE' && bandRates[band.name] && levelData ? 'ring-2 ring-blue-400 ring-opacity-50' : ''
-                              }`}>
-                                {headcount > 0 ? (
+                              <div className={`rounded-lg p-3 text-center transition-all hover:scale-105 cursor-pointer ${getCellColor(value)}`}>
+                                {value > 0 ? (
                                   <div>
                                     <div className="text-lg font-bold">
                                       {value}%
@@ -264,13 +280,11 @@ export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, init
                                       {headcount}명
                                     </div>
                                     {/* TO-BE 모드에서 변화율 표시 */}
-                                    {viewMode === 'TO-BE' && bandRates[band.name] && levelData && (
+                                    {viewMode === 'TO-BE' && levelData && levelData.sblIndex !== value && (
                                       <div className="text-xs opacity-90 mt-1">
-                                        {levelData.sblIndex > 0 && value !== levelData.sblIndex && (
-                                          <span className={value > levelData.sblIndex ? 'text-green-200' : 'text-red-200'}>
-                                            ({value > levelData.sblIndex ? '+' : ''}{value - levelData.sblIndex}%)
-                                          </span>
-                                        )}
+                                        <span className={value > levelData.sblIndex ? 'text-green-200' : 'text-red-200'}>
+                                          ({value > levelData.sblIndex ? '+' : ''}{value - levelData.sblIndex}%)
+                                        </span>
                                       </div>
                                     )}
                                   </div>
@@ -304,7 +318,7 @@ export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, init
                         if (levelData && levelData.headcount > 0) {
                           const value = viewMode === 'TO-BE'
                             ? calculateToBECompetitiveness(band, levelData)
-                            : levelData.sblIndex  // 우리회사 vs C사 경쟁력
+                            : levelData.sblIndex
                           totalValue += value * levelData.headcount
                           totalHeadcount += levelData.headcount
                         }
@@ -332,7 +346,9 @@ export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, init
                             bands.forEach(band => {
                               band.levels.forEach(level => {
                                 if (level.headcount > 0) {
-                                  const value = level.sblIndex  // 우리회사 vs C사 경쟁력
+                                  const value = viewMode === 'TO-BE'
+                                    ? calculateToBECompetitiveness(band, level)
+                                    : level.sblIndex
                                   totalValue += value * level.headcount
                                   totalHeadcount += level.headcount
                                 }
@@ -367,15 +383,15 @@ export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, init
             </div>
           </div>
           
-          {/* 요약 정보 */}
-          <div className="space-y-4 flex flex-col h-full">
+          {/* 오른쪽: 요약 정보 (30%) */}
+          <div className="w-80 space-y-4 flex flex-col">
             {/* 경쟁력 부족 */}
             <div className="bg-red-50 rounded-lg p-4 flex-1">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-semibold text-red-900">경쟁력 부족 (&lt;95%)</h4>
                 <span className="text-lg font-bold text-red-600">{summary.totalUnder}명</span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
                 {bands.map(band => {
                   const underLevels = band.levels
                     .filter(level => {
@@ -403,7 +419,7 @@ export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, init
                 <h4 className="text-sm font-semibold text-green-900">적정 (95-105%)</h4>
                 <span className="text-lg font-bold text-green-600">{summary.totalFit}명</span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
                 {bands.map(band => {
                   const fitLevels = band.levels
                     .filter(level => {
@@ -431,7 +447,7 @@ export function PayBandCompetitivenessHeatmap({ bandRates = {}, levelRates, init
                 <h4 className="text-sm font-semibold text-blue-900">경쟁력 우위 (&gt;105%)</h4>
                 <span className="text-lg font-bold text-blue-600">{summary.totalOver}명</span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
                 {bands.map(band => {
                   const overLevels = band.levels
                     .filter(level => {

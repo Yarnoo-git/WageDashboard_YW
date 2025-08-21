@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Wage Dashboard (인건비 대시보드) project for displaying real-time salary metrics, compensation planning, and wage distribution analysis. The dashboard is designed to show Korean wage data with various visualizations and metrics.
 
+## 🚨 Major Restructuring Plan (2025-08-21)
+
+### Core Changes
+- **Pay Zone Integration**: Adding Pay Zone field (1-8) for salary level grouping
+- **4-Page Structure**: Upload → Dashboard → Simulation → Person
+- **Centralized Control**: All adjustments moved to Simulation page
+- **Hierarchical Adjustment**: 3-level system (Simple → Advanced → Expert)
+
 ## Current Architecture
 
 ### Technology Stack (실제 구현)

@@ -1,626 +1,269 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useDashboardData } from '@/hooks/useDashboardData'
 import { useWageContext } from '@/context/WageContext'
-import { ScenarioManager } from '@/components/ScenarioManager'
-import { AIRecommendationCard } from '@/components/dashboard/AIRecommendationCard'
-import { BudgetResourceCard } from '@/components/dashboard/BudgetResourceCard'
-import { BudgetUtilizationDetail } from '@/components/dashboard/BudgetUtilizationDetail'
-import { GradeSalaryAdjustmentTable } from '@/components/dashboard/GradeSalaryAdjustmentTable'
-import { IndustryComparisonSection } from '@/components/dashboard/IndustryComparisonSection'
-import { ExportButton, SimpleExportButton } from '@/components/ExportButton'
-import { prepareExportData } from '@/lib/exportHelpers'
+import { useDashboardData } from '@/hooks/useDashboardData'
+import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
 
-export default function Home() {
+export default function DashboardPage() {
   const router = useRouter()
-  const { data, loading, error, refresh } = useDashboardData()
+  const { data, loading } = useDashboardData()
   
-  // WageContext에서 전역 상태 가져오기
   const {
-    baseUpRate: contextBaseUpRate,
-    meritRate: contextMeritRate,
-    levelRates: contextLevelRates,
-    detailedLevelRates: contextDetailedLevelRates,
-    totalBudget: contextTotalBudget,
-    setBaseUpRate: setContextBaseUpRate,
-    setMeritRate: setContextMeritRate,
-    setLevelRates: setContextLevelRates,
-    setDetailedLevelRates: setContextDetailedLevelRates,
-    setTotalBudget: setContextTotalBudget
-  } = useWageContext()
-  
-  // AI 설정 데이터가 로드되면 상태 동기화 (첫 로드 시에만)
-  const [hasInitialized, setHasInitialized] = useState(false)
-  
-  // AI 추천값 (대시보드 표시용, 읽기 전용)
-  const [aiBaseUpRate, setAiBaseUpRate] = useState(0)
-  const [aiMeritRate, setAiMeritRate] = useState(0)
-  
-  // 사용자 조정값 (슬라이더로 변경 가능)
-  const [baseUpRate, setBaseUpRate] = useState(0)
-  const [meritRate, setMeritRate] = useState(0)
-  const [totalBudget, setTotalBudget] = useState<number | null>(null)
-  const [levelRates, setLevelRates] = useState({
-    'Lv.1': { baseUp: 0, merit: 0 },
-    'Lv.2': { baseUp: 0, merit: 0 },
-    'Lv.3': { baseUp: 0, merit: 0 },
-    'Lv.4': { baseUp: 0, merit: 0 }
-  })
-  
-  // GradeSalaryAdjustmentTable의 세부 인상률 상태 - 모두 0으로 초기화 (여기로 이동)
-  const [detailedLevelRates, setDetailedLevelRates] = useState<Record<string, {
-    baseUp: number
-    merit: number
-    promotion: number
-    advancement: number
-    additional: number
-  }>>({
-    'Lv.4': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 },
-    'Lv.3': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 },
-    'Lv.2': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 },
-    'Lv.1': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 }
-  })
-  
-  // 사용자 조정값이 변경될 때 WageContext 업데이트
-  useEffect(() => {
-    // 초기화가 완료된 후에만 Context 업데이트
-    if (hasInitialized) {
-      setContextLevelRates(levelRates)
-      setContextDetailedLevelRates(detailedLevelRates)
-      if (totalBudget !== null) {
-        setContextTotalBudget(totalBudget)
-      }
-    }
-  }, [levelRates, detailedLevelRates, totalBudget, hasInitialized, setContextLevelRates, setContextDetailedLevelRates, setContextTotalBudget])
-  
-  // 예산활용내역 상세를 위한 상태 - 모두 0원으로 초기화
-  const [promotionBudgets, setPromotionBudgets] = useState({
-    lv1: 0,
-    lv2: 0,
-    lv3: 0,
-    lv4: 0
-  })
-  const [additionalBudget, setAdditionalBudget] = useState(0)
-  const [enableAdditionalIncrease, setEnableAdditionalIncrease] = useState(false) // 비활성화로 시작
-  
-  // 계산된 예산 값들 상태
-  const [budgetDetails, setBudgetDetails] = useState({
-    aiRecommendation: 0,
-    promotion: 0,
-    additional: 0,
-    indirect: 0
-  })
-  
-  // 추가 인상 총액 상태 (GradeSalaryAdjustmentTable에서 계산)
-  const [calculatedAdditionalBudget, setCalculatedAdditionalBudget] = useState(0)
-  
-  // 직급별 총 인상률 및 가중평균 상태 - 0으로 초기화
-  const [levelTotalRates, setLevelTotalRates] = useState<{[key: string]: number}>({
-    'Lv.1': 0,
-    'Lv.2': 0,
-    'Lv.3': 0,
-    'Lv.4': 0
-  })
-  const [weightedAverageRate, setWeightedAverageRate] = useState(0)
-  const [meritWeightedAverage, setMeritWeightedAverage] = useState(0) // 성과인상률 가중평균
-  
-  // 시나리오 관리 - WageContext에서 가져오기
-  const {
-    scenarios,
-    activeScenarioId,
-    saveScenario: saveScenarioContext,
-    loadScenario: loadScenarioContext,
-    deleteScenario,
-    renameScenario
-  } = useWageContext()
-  
-  // 데이터가 없으면 홈으로 리다이렉트
-  useEffect(() => {
-    if (!loading && !data?.summary?.totalEmployees) {
-      router.push('/home')
-    }
-  }, [loading, data, router])
-  
-  useEffect(() => {
-    if (data?.aiRecommendation && !hasInitialized) {
-      const aiData = data.aiRecommendation
-      
-      // AI 추천값은 항상 엑셀 데이터로 설정 (고정값, 변경되지 않음)
-      setAiBaseUpRate(aiData.baseUpPercentage)
-      setAiMeritRate(aiData.meritIncreasePercentage)
-      
-      // Context에 저장된 값이 있으면 그것을 사용, 없으면 AI 데이터로 초기화
-      if (contextDetailedLevelRates && Object.values(contextDetailedLevelRates).some((rate: any) => 
-        rate.baseUp > 0 || rate.merit > 0 || rate.promotion > 0 || rate.advancement > 0 || rate.additional > 0
-      )) {
-        // Context에 저장된 상세 인상률 사용
-        setDetailedLevelRates(contextDetailedLevelRates)
-        
-        // levelRates도 Context에서 가져오기
-        if (contextLevelRates && 
-            'Lv.1' in contextLevelRates && 
-            'Lv.2' in contextLevelRates && 
-            'Lv.3' in contextLevelRates && 
-            'Lv.4' in contextLevelRates) {
-          setLevelRates({
-            'Lv.1': contextLevelRates['Lv.1'],
-            'Lv.2': contextLevelRates['Lv.2'],
-            'Lv.3': contextLevelRates['Lv.3'],
-            'Lv.4': contextLevelRates['Lv.4']
-          })
-        }
-        
-        // baseUpRate와 meritRate는 평균값 계산
-        let totalBaseUp = 0, totalMerit = 0, totalHeadcount = 0
-        if (data?.levelStatistics) {
-          data.levelStatistics.forEach(level => {
-            const detailedRate = contextDetailedLevelRates[level.level]
-            if (detailedRate) {
-              totalBaseUp += detailedRate.baseUp * level.employeeCount
-              totalMerit += detailedRate.merit * level.employeeCount
-              totalHeadcount += level.employeeCount
-            }
-          })
-          if (totalHeadcount > 0) {
-            setBaseUpRate(totalBaseUp / totalHeadcount)
-            setMeritRate(totalMerit / totalHeadcount)
-          }
-        }
-        
-        // Context의 totalBudget 사용하거나 새로 계산
-        if (contextTotalBudget > 0) {
-          setTotalBudget(contextTotalBudget)
-        } else if (data?.summary?.totalPayroll && aiData) {
-          // Context에 총예산이 없으면 계산
-          const totalPayroll = data.summary.totalPayroll
-          const directBudget = totalPayroll * (aiData.totalPercentage / 100)
-          const indirectCost = directBudget * 0.178 // 간접비용 17.8%
-          const calculatedTotalBudget = directBudget + indirectCost
-          setTotalBudget(Math.round(calculatedTotalBudget))
-        }
-      } else {
-        // Context에 저장된 값이 없으면 AI 데이터로 초기화
-        setBaseUpRate(aiData.baseUpPercentage)
-        setMeritRate(aiData.meritIncreasePercentage)
-        
-        // 개별 레벨 인상률도 업데이트
-        setLevelRates({
-          'Lv.1': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage },
-          'Lv.2': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage },
-          'Lv.3': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage },
-          'Lv.4': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage }
-        })
-        
-        // 세부 인상률도 업데이트
-        setDetailedLevelRates({
-          'Lv.4': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage, promotion: 0, advancement: 0, additional: 0 },
-          'Lv.3': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage, promotion: 0, advancement: 0, additional: 0 },
-          'Lv.2': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage, promotion: 0, advancement: 0, additional: 0 },
-          'Lv.1': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage, promotion: 0, advancement: 0, additional: 0 }
-        })
-        
-        // 총예산 설정 - AI 적정인상률 예산 + 간접비용으로 계산
-        if (data?.summary?.totalPayroll && aiData) {
-          const totalPayroll = data.summary.totalPayroll
-          const directBudget = totalPayroll * (aiData.totalPercentage / 100)
-          const indirectCost = directBudget * 0.178 // 간접비용 17.8%
-          const calculatedTotalBudget = directBudget + indirectCost
-          setTotalBudget(Math.round(calculatedTotalBudget))
-          console.log('[대시보드] 총예산 계산:', {
-            totalPayroll,
-            aiTotalPercentage: aiData.totalPercentage,
-            directBudget,
-            indirectCost,
-            totalBudget: calculatedTotalBudget
-          })
-        } else if (data.budget?.totalBudget) {
-          // 백업: API에서 계산된 총예산 사용
-          const budgetValue = typeof data.budget.totalBudget === 'string' 
-            ? parseFloat(data.budget.totalBudget.replace(/[^0-9.-]/g, ''))
-            : data.budget.totalBudget
-          setTotalBudget(budgetValue)
-        } else {
-          // 엑셀 데이터가 없으면 0원
-          setTotalBudget(0)
-        }
-      }
-      
-      console.log('대시보드 초기화 완료 - Context값 우선 사용')
-      setHasInitialized(true)
-    }
-  }, [data?.aiRecommendation, data?.levelStatistics, hasInitialized, contextDetailedLevelRates, contextLevelRates, contextTotalBudget])
-  
-  // Context 값이 변경되면 로컬 상태 업데이트 (시나리오 적용 시)
-  useEffect(() => {
-    if (hasInitialized && contextBaseUpRate !== undefined && contextMeritRate !== undefined) {
-      // 시나리오 로드로 인한 Context 변경 감지
-      if (Math.abs(contextBaseUpRate - baseUpRate) > 0.01 || Math.abs(contextMeritRate - meritRate) > 0.01) {
-        setBaseUpRate(contextBaseUpRate)
-        setMeritRate(contextMeritRate)
-        
-        // 직급별 인상률도 업데이트
-        if (contextLevelRates) {
-          setLevelRates(contextLevelRates as {
-            'Lv.1': { baseUp: number; merit: number }
-            'Lv.2': { baseUp: number; merit: number }
-            'Lv.3': { baseUp: number; merit: number }
-            'Lv.4': { baseUp: number; merit: number }
-          })
-        }
-        
-        // 상세 인상률도 업데이트
-        if (contextDetailedLevelRates) {
-          setDetailedLevelRates(contextDetailedLevelRates)
-        }
-        
-        // 총예산도 업데이트
-        if (contextTotalBudget) {
-          setTotalBudget(contextTotalBudget)
-        }
-      }
-    }
-  }, [contextBaseUpRate, contextMeritRate, contextLevelRates, contextDetailedLevelRates, contextTotalBudget, hasInitialized])
-  
-  // 새로운 인터페이스에 맞춰 수정
-  const updateLevelRate = (level: string, rates: any) => {
-    // 새로운 GradeSalaryAdjustmentTable에서 전체 rates 객체를 전달받음
-    console.log(`Level ${level} rates updated:`, rates)
-    // detailedLevelRates 업데이트
-    if (rates) {
-      setDetailedLevelRates(prev => ({
-        ...prev,
-        [level]: rates
-      }))
-      
-      // levelRates도 업데이트 (baseUp과 merit만)
-      setLevelRates(prev => ({
-        ...prev,
-        [level]: { baseUp: rates.baseUp, merit: rates.merit }
-      }))
-    }
-  }
-  
-  // 승급/승격 예산 업데이트 핸들러 (개별 레벨)
-  const updatePromotionBudget = (level: string, value: number) => {
-    setPromotionBudgets(prev => ({
-      ...prev,
-      [level]: value
-    }))
-  }
-  
-  // 승급/승격 예산 업데이트 핸들러 (전체 레벨)
-  const updateAllPromotionBudgets = (levelBudgets: {[key: string]: number}) => {
-    // 직급별 예산을 억원 단위로 변환
-    const budgets = {
-      lv4: (levelBudgets['Lv.4'] || 0) / 100000000,
-      lv3: (levelBudgets['Lv.3'] || 0) / 100000000,
-      lv2: (levelBudgets['Lv.2'] || 0) / 100000000,
-      lv1: (levelBudgets['Lv.1'] || 0) / 100000000
-    }
-    setPromotionBudgets(budgets)
-  }
-  
-  // 추가 인상 예산 업데이트 핸들러
-  const updateAdditionalBudget = (value: number) => {
-    setAdditionalBudget(value)
-  }
-  
-  // 시나리오 저장 핸들러
-  const handleSaveScenario = async (name: string) => {
-    // 사용 예산 계산
-    const usedBudget = budgetDetails.aiRecommendation + budgetDetails.promotion + budgetDetails.additional + budgetDetails.indirect
+    // 예산 관련 (읽기만)
+    availableBudget,
+    welfareBudget,
+    totalBudget,
+    setAvailableBudget,
+    setWelfareBudget,
     
-    console.log('[Dashboard] 시나리오 저장 - 사용 예산:', {
-      aiRecommendation: budgetDetails.aiRecommendation,
-      promotion: budgetDetails.promotion,
-      additional: budgetDetails.additional,
-      indirect: budgetDetails.indirect,
-      total: usedBudget
-    })
-    
-    // Context로 저장 (모든 페이지 데이터 + 사용 예산 포함)
-    await saveScenarioContext(name, { usedBudget })
-  }
-  
-  // 시나리오 불러오기 핸들러
-  const handleLoadScenario = (id: string) => {
-    // Context에서 불러오기 (모든 페이지 데이터 포함)
-    loadScenarioContext(id)
-  }
-  
-  // GradeSalaryAdjustmentTable용 직원 데이터
-  const employeeDataForTable = useMemo(() => {
-    if (!data?.levelStatistics) return undefined
-    
-    return {
-      totalCount: data.summary.totalEmployees,
-      levels: data.levelStatistics.reduce((acc, level) => ({
-        ...acc,
-        [level.level]: {
-          headcount: level.employeeCount,
-          averageSalary: parseInt(level.averageSalary)
-        }
-      }), {})
-    }
-  }, [data?.levelStatistics, data?.summary?.totalEmployees])
-  
-  // 내보내기용 데이터 준비
-  const exportData = useMemo(() => {
-    const currentState = {
-      baseUpRate,
-      meritRate,
-      totalBudget,
-      levelTotalRates,
-      weightedAverageRate,
-      meritWeightedAverage
-    }
-    
-    // 현재 활성 시나리오 이름 가져오기
-    const activeScenario = scenarios.find(s => s.id === activeScenarioId)
-    const scenarioName = activeScenario?.name || '현재 설정'
-    
-    return prepareExportData(
-      currentState,
-      budgetDetails,
-      data?.levelStatistics,
-      detailedLevelRates,
-      scenarioName
-    )
-  }, [
+    // 인상률 (읽기만)
     baseUpRate,
     meritRate,
-    totalBudget,
-    levelTotalRates,
-    weightedAverageRate,
-    meritWeightedAverage,
-    budgetDetails,
-    detailedLevelRates,
-    data?.levelStatistics,
-    scenarios,
-    activeScenarioId
-  ])
+    levelRates,
+    
+    // 직원 데이터
+    contextEmployeeData
+  } = useWageContext()
   
-  // 현재 시나리오 이름
-  const currentScenarioName = useMemo(() => {
-    const activeScenario = scenarios.find(s => s.id === activeScenarioId)
-    return activeScenario?.name || '현재 설정'
-  }, [scenarios, activeScenarioId])
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-gray-200">
-        <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-300 rounded w-1/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/3 mb-8"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-lg shadow h-96"></div>
-              <div className="bg-white rounded-lg shadow h-96"></div>
+  const [showBudgetDetail, setShowBudgetDetail] = useState(false)
+  
+  // 데이터 없으면 홈으로
+  useEffect(() => {
+    if (!loading && (!contextEmployeeData || contextEmployeeData.length === 0)) {
+      router.push('/home')
+    }
+  }, [contextEmployeeData, loading, router])
+  
+  // 총 인원수
+  const totalEmployees = contextEmployeeData?.length || 0
+  
+  // 총 인상률 계산
+  const totalRate = baseUpRate + meritRate
+  
+  // 예산 사용량 계산
+  const calculateBudgetUsage = () => {
+    if (!contextEmployeeData || contextEmployeeData.length === 0) return null
+    
+    let totalDirect = 0
+    contextEmployeeData.forEach(emp => {
+      const level = emp.level
+      const rate = levelRates[level] || { baseUp: baseUpRate, merit: meritRate }
+      const totalRate = rate.baseUp + rate.merit
+      const increase = emp.currentSalary * (totalRate / 100)
+      totalDirect += increase
+    })
+    
+    const totalIndirect = totalDirect * 0.178
+    const total = totalDirect + totalIndirect
+    const actualBudget = availableBudget - welfareBudget
+    const percentage = actualBudget > 0 ? (total / actualBudget) * 100 : 0
+    
+    return {
+      direct: totalDirect,
+      indirect: totalIndirect,
+      total,
+      percentage
+    }
+  }
+  
+  const budgetUsage = calculateBudgetUsage()
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50">
+      <main className="pt-20 px-6 pb-8">
+        <div className="max-w-7xl mx-auto">
+          {/* 헤더 섹션 */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
+              예산 관리 대시보드
+            </h1>
+            <p className="text-gray-600 mt-2">예산 설정 및 인상률 현황 모니터링</p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 좌상단: 인상률 표시 */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold mb-4">인상률 현황</h2>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">Base-up</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {formatPercentage(baseUpRate)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">성과인상률</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {formatPercentage(meritRate)}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">총 인상률</p>
+                  <p className="text-3xl font-bold text-purple-600">
+                    {formatPercentage(totalRate)}
+                  </p>
+                </div>
+                
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">총 인원</p>
+                  <p className="text-2xl font-bold text-gray-800">
+                    {totalEmployees.toLocaleString()}명
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t">
+                <button
+                  onClick={() => router.push('/simulation')}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  시뮬레이션에서 조정하기 →
+                </button>
+              </div>
+            </div>
+            
+            {/* 우상단: 예산 설정 (주요 기능) */}
+            <div className="bg-gradient-to-br from-white to-indigo-50 rounded-lg shadow-md p-6 border-2 border-indigo-200">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                예산 설정
+                <span className="ml-auto text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">조정 가능</span>
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    사용가능 예산
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={availableBudget / 100000000}
+                      onChange={(e) => setAvailableBudget(parseFloat(e.target.value || '0') * 100000000)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      step="1"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">억원</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    복리후생 예산
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={welfareBudget / 100000000}
+                      onChange={(e) => setWelfareBudget(parseFloat(e.target.value || '0') * 100000000)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      step="0.1"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">억원</span>
+                  </div>
+                </div>
+                
+                <div className="pt-4 border-t">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">사용 예산</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      {budgetUsage ? formatKoreanCurrency(budgetUsage.total, '억원', 100000000) : '계산 중...'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">가용률</span>
+                    <span className={`text-lg font-bold ${
+                      budgetUsage && budgetUsage.percentage > 100 ? 'text-red-600' :
+                      budgetUsage && budgetUsage.percentage > 80 ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`}>
+                      {budgetUsage ? `${budgetUsage.percentage.toFixed(1)}%` : '계산 중...'}
+                    </span>
+                  </div>
+                  
+                  <button
+                    onClick={() => setShowBudgetDetail(!showBudgetDetail)}
+                    className="mt-3 w-full px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  >
+                    {showBudgetDetail ? '상세 내역 숨기기 ▲' : '상세 내역 보기 ▼'}
+                  </button>
+                  
+                  {showBudgetDetail && budgetUsage && (
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Base-up</span>
+                        <span className="font-medium">
+                          {formatKoreanCurrency(budgetUsage.direct * (baseUpRate / (baseUpRate + meritRate)), '억원', 100000000)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">성과인상</span>
+                        <span className="font-medium">
+                          {formatKoreanCurrency(budgetUsage.direct * (meritRate / (baseUpRate + meritRate)), '억원', 100000000)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">추가인상</span>
+                        <span className="font-medium">0억원</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t">
+                        <span className="text-gray-600">간접비용 (17.8%)</span>
+                        <span className="font-medium">
+                          {formatKoreanCurrency(budgetUsage.indirect, '억원', 100000000)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* 직급별 현황 */}
+          <div className="mt-6 bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-4">직급별 인상률 현황</h2>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-4">직급</th>
+                    <th className="text-right py-2 px-4">인원</th>
+                    <th className="text-right py-2 px-4">Base-up</th>
+                    <th className="text-right py-2 px-4">성과인상률</th>
+                    <th className="text-right py-2 px-4">총 인상률</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(levelRates).map(([level, rates]) => {
+                    const levelCount = contextEmployeeData?.filter(emp => emp.level === level).length || 0
+                    return (
+                      <tr key={level} className="border-b hover:bg-gray-50">
+                        <td className="py-2 px-4 font-medium">{level}</td>
+                        <td className="text-right py-2 px-4">{levelCount.toLocaleString()}명</td>
+                        <td className="text-right py-2 px-4">{formatPercentage(rates.baseUp)}</td>
+                        <td className="text-right py-2 px-4">{formatPercentage(rates.merit)}</td>
+                        <td className="text-right py-2 px-4 font-semibold text-blue-600">
+                          {formatPercentage(rates.baseUp + rates.merit)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </main>
-    )
-  }
-
-  if (error) {
-    return (
-      <main className="min-h-screen bg-gray-200">
-        <div className="container mx-auto px-4 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">데이터를 불러오는 중 오류가 발생했습니다: {error}</p>
-            <button 
-              onClick={refresh}
-              className="mt-2 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
-            >
-              다시 시도
-            </button>
-          </div>
-        </div>
-      </main>
-    )
-  }
-
-  return (
-    <main className="min-h-screen bg-gray-200">
-      {/* 네비게이션 바 아래에 버튼 영역 추가 */}
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-end items-center h-12 gap-2">
-            <ScenarioManager
-              scenarios={scenarios}
-              activeScenarioId={activeScenarioId}
-              onSave={handleSaveScenario}
-              onLoad={handleLoadScenario}
-              onDelete={deleteScenario}
-              onRename={renameScenario}
-              isNavigation={true}
-            />
-            <button
-              onClick={() => {
-                // API 데이터 새로고침
-                refresh()
-                // 엑셀 AI 데이터로 리셋
-                if (data?.aiRecommendation) {
-                  const aiData = data.aiRecommendation
-                  // AI 추천값 복원
-                  setAiBaseUpRate(aiData.baseUpPercentage)
-                  setAiMeritRate(aiData.meritIncreasePercentage)
-                  // 사용자 조정값도 AI 값으로 초기화
-                  setBaseUpRate(aiData.baseUpPercentage)
-                  setMeritRate(aiData.meritIncreasePercentage)
-                  // 총예산도 리셋 시 재계산
-                  if (data?.summary?.totalPayroll && aiData) {
-                    const totalPayroll = data.summary.totalPayroll
-                    const directBudget = totalPayroll * (aiData.totalPercentage / 100)
-                    const indirectCost = directBudget * 0.178 // 간접비용 17.8%
-                    const calculatedTotalBudget = directBudget + indirectCost
-                    setTotalBudget(Math.round(calculatedTotalBudget))
-                  } else if (data.budget?.totalBudget) {
-                    const budgetValue = typeof data.budget.totalBudget === 'string' 
-                      ? parseFloat(data.budget.totalBudget.replace(/[^0-9.-]/g, ''))
-                      : data.budget.totalBudget
-                    setTotalBudget(budgetValue)
-                  } else {
-                    setTotalBudget(0)
-                  }
-                  setLevelRates({
-                    'Lv.1': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage },
-                    'Lv.2': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage },
-                    'Lv.3': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage },
-                    'Lv.4': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage }
-                  })
-                  setDetailedLevelRates({
-                    'Lv.4': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage, promotion: 0, advancement: 0, additional: 0 },
-                    'Lv.3': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage, promotion: 0, advancement: 0, additional: 0 },
-                    'Lv.2': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage, promotion: 0, advancement: 0, additional: 0 },
-                    'Lv.1': { baseUp: aiData.baseUpPercentage, merit: aiData.meritIncreasePercentage, promotion: 0, advancement: 0, additional: 0 }
-                  })
-                  
-                  // Default 시나리오도 AI 값으로 리셋 (loadScenario를 통해)
-                  loadScenarioContext('default')
-                }
-                setPromotionBudgets({ lv1: 0, lv2: 0, lv3: 0, lv4: 0 })
-                setAdditionalBudget(0)
-                setEnableAdditionalIncrease(false)
-                setCalculatedAdditionalBudget(0)
-                setLevelTotalRates({
-                  'Lv.1': 0,
-                  'Lv.2': 0,
-                  'Lv.3': 0,
-                  'Lv.4': 0
-                })
-                setWeightedAverageRate(0)
-                setMeritWeightedAverage(0)
-              }}
-              className="h-8 md:h-9 px-2 md:px-4 text-xs md:text-sm font-medium bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              초기화
-            </button>
-            <SimpleExportButton 
-              exportData={exportData}
-              scenarioName={currentScenarioName}
-              isNavigation={true}
-            />
-          </div>
-        </div>
-      </div>
-      
-      <div className="container mx-auto px-3 md:px-4 py-4">
-        
-        {/* 상단 레이아웃: 좌측 2개 카드, 우측 예산 활용 내역 상세 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 md:gap-4 mb-2 md:mb-4">
-          <div className="flex flex-col gap-4 h-full">
-            {/* AI 제안 적정인상률 */}
-            <AIRecommendationCard 
-              data={data?.aiRecommendation || null} 
-              totalEmployees={data?.summary?.totalEmployees || 0}
-              baseUpRate={aiBaseUpRate}
-              meritRate={aiMeritRate}
-              meritWeightedAverage={meritWeightedAverage}
-              onBaseUpChange={(value) => {
-                // AI 추천값은 읽기 전용이므로 실제로는 변경하지 않음
-                // 사용자가 슬라이더 조정 시 별도 로직으로 처리
-                console.log('AI 추천값은 읽기 전용입니다. 직급별 조정 테이블을 사용하세요.')
-              }}
-              onMeritChange={(value) => {
-                // AI 추천값은 읽기 전용이므로 실제로는 변경하지 않음
-                console.log('AI 추천값은 읽기 전용입니다. 직급별 조정 테이블을 사용하세요.')
-              }}
-              onReset={() => {
-                // AI 추천값 리셋 (엑셀 데이터로 복원)
-                if (data?.aiRecommendation) {
-                  const aiData = data.aiRecommendation
-                  setAiBaseUpRate(aiData.baseUpPercentage)
-                  setAiMeritRate(aiData.meritIncreasePercentage)
-                }
-              }}
-            />
-            
-            {/* 인상 재원 예산 현황 */}
-            <BudgetResourceCard
-              totalBudget={totalBudget || 0}
-              baseUpRate={baseUpRate}
-              meritRate={meritRate}
-              totalEmployees={data?.summary?.totalEmployees || 0}
-              averageSalary={data?.summary?.averageSalary || 0}
-              levelRates={levelRates}
-              levelStatistics={data?.levelStatistics || []}
-              customTotalBudget={totalBudget}
-              onTotalBudgetChange={setTotalBudget}
-              budgetDetails={budgetDetails}
-            />
-          </div>
-          
-          {/* 예산 활용 내역 상세 */}
-          <BudgetUtilizationDetail
-            baseUpRate={baseUpRate}
-            meritRate={meritRate}
-            meritWeightedAverage={meritWeightedAverage}
-            totalEmployees={data?.summary?.totalEmployees || 0}
-            totalSalaryBase={data?.summary?.totalPayroll || 0}
-            totalBudget={totalBudget || 0} // 원 단위 그대로 사용
-            levelStatistics={data?.levelStatistics || []}
-            promotionBudgets={promotionBudgets}
-            onPromotionBudgetChange={updatePromotionBudget}
-            additionalBudget={calculatedAdditionalBudget} // 자동 계산된 값 사용
-            onAdditionalBudgetChange={updateAdditionalBudget}
-            enableAdditionalIncrease={enableAdditionalIncrease}
-            onBudgetCalculated={setBudgetDetails}
-          />
-        </div>
-        
-        {/* 중앙: 직급별 고정급 인상률 조정 테이블 */}
-        <div className="mb-4">
-          <GradeSalaryAdjustmentTable
-            baseUpRate={baseUpRate}
-            meritRate={meritRate}
-            initialRates={detailedLevelRates}
-            employeeData={employeeDataForTable}
-            enableAdditionalIncrease={enableAdditionalIncrease}
-            onEnableAdditionalIncreaseChange={setEnableAdditionalIncrease}
-            onRateChange={updateLevelRate}
-            onTotalBudgetChange={(totalBudget) => {
-              console.log('Total budget changed:', totalBudget)
-              // 필요시 다른 컴포넌트에 예산 정보 전달
-            }}
-            onAdditionalBudgetChange={setCalculatedAdditionalBudget}
-            onPromotionBudgetChange={updateAllPromotionBudgets}  // 승급/승격 예산 콜백 추가
-            onLevelTotalRatesChange={(rates, avgRate) => {
-              setLevelTotalRates(rates)
-              setWeightedAverageRate(avgRate)
-            }}
-            onMeritWeightedAverageChange={setMeritWeightedAverage}
-            onTotalSummaryChange={(summary) => {
-              // GradeSalaryAdjustmentTable의 전체 평균값을 WageContext에만 반영
-              // 대시보드 AI 추천값은 유지하고, 조정값만 Context로 전달
-              setContextBaseUpRate(summary.avgBaseUp)
-              setContextMeritRate(summary.avgMerit)
-            }}
-          />
-        </div>
-        
-        {/* 하단: C사 대비 비교 */}
-        <div className="mb-4">
-          <IndustryComparisonSection
-            baseUpRate={baseUpRate}
-            meritRate={meritRate}
-            levelTotalRates={levelTotalRates}
-            weightedAverageRate={weightedAverageRate}
-            levelStatistics={data?.levelStatistics || []}
-            competitorData={data?.competitorData}  // 엑셀에서 C사 데이터 가져오기
-            competitorIncreaseRate={data?.industryComparison?.competitor || 0}  // C사 인상률
-          />
-        </div>
-
-
-
-        <div className="mt-3 text-center text-xs text-gray-500">
-          <p>마지막 업데이트: {data ? new Date(data.summary.lastUpdated).toLocaleString('ko-KR') : '-'}</p>
-        </div>
-      </div>
-    </main>
+    </div>
   )
 }

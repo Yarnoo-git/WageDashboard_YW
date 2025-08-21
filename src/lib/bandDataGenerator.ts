@@ -20,6 +20,7 @@ export interface EmployeeRecord {
   currentSalary: number       // 현재 연봉
   performanceRating?: 'ST' | 'AT' | 'OT' | 'BT'  // 평가등급
   company?: string            // 회사 (SBL, C사 등)
+  payZone?: number | string   // Pay Zone (0-5 또는 동적 범위)
 }
 
 // 직군 정의
@@ -313,15 +314,16 @@ export function convertFromExcelFormat(excelData: any[]): EmployeeRecord[] {
   return excelData.map((row, index) => {
     // 평가등급 데이터 체크 - 여러 가능한 컬럼명 확인
     const rating = row['평가등급'] || row['평가'] || row['성과등급'] || row['성과'] || row['Performance'] || row['Rating']
+    
+    // Pay Zone 데이터 체크 - 여러 가능한 컬럼명 확인
+    const payZone = row['Pay Zone'] || row['PayZone'] || row['pay zone'] || row['payzone'] || row['페이존'] || row['페이 존']
+    
     if (index < 5) {
-      console.log(`직원 ${index + 1} 평가등급 매핑:`, {
-        '평가등급': row['평가등급'],
-        '평가': row['평가'],
-        '성과등급': row['성과등급'],
-        '성과': row['성과'],
-        'Performance': row['Performance'],
-        'Rating': row['Rating'],
-        '최종값': rating
+      console.log(`직원 ${index + 1} 데이터 매핑:`, {
+        '평가등급': rating,
+        'Pay Zone': payZone,
+        '직군': row['직군'],
+        '직급': row['직급']
       })
     }
     
@@ -334,7 +336,8 @@ export function convertFromExcelFormat(excelData: any[]): EmployeeRecord[] {
       performanceRating: rating as 'ST' | 'AT' | 'OT' | 'BT' | undefined,
       position: row['직책'] || undefined,
       hireDate: row['입사일'] || '',
-      currentSalary: Number(row['현재연봉']) || 0
+      currentSalary: Number(row['현재연봉']) || 0,
+      payZone: payZone !== undefined ? Number(payZone) : undefined
     }
   })
 }

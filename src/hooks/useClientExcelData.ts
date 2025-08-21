@@ -163,11 +163,16 @@ export function useClientExcelData() {
                       emp['performanceRating'] || emp['Performance'] || emp['Rating'] || 
                       emp['평가 등급'] || emp['성과 등급'] || ''
         
-        // 디버깅: 처음 몇 개 직원의 평가등급 확인
+        // Pay Zone 필드 찾기 - 여러 가능한 컬럼명 확인
+        const payZone = emp['Pay Zone'] || emp['PayZone'] || emp['pay zone'] || emp['payzone'] || 
+                       emp['페이존'] || emp['페이 존'] || emp['Pay_Zone'] || emp['pay_zone'] || undefined
+        
+        // 디버깅: 처음 몇 개 직원의 평가등급 및 Pay Zone 확인
         if (index < 3) {
-          console.log(`직원 ${index + 1} (${emp['이름'] || emp['name']}) 평가등급 매핑:`, {
+          console.log(`직원 ${index + 1} (${emp['이름'] || emp['name']}) 데이터 매핑:`, {
             원본데이터키: Object.keys(emp),
             최종평가등급: rating,
+            PayZone: payZone,
             평가등급필드: emp['평가등급'],
             평가필드: emp['평가']
           })
@@ -181,6 +186,7 @@ export function useClientExcelData() {
           department: emp['부서'] || emp['department'] || '',
           currentSalary: emp['현재연봉'] || emp['currentSalary'] || 0,
           performanceRating: rating || null,
+          payZone: payZone !== undefined ? Number(payZone) : undefined,
           hireDate: emp['입사일'] || emp['hireDate'] || '',
           position: emp['직책'] || emp['position'] || ''
         }

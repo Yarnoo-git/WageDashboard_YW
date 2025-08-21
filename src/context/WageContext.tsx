@@ -17,6 +17,14 @@ interface WageContextType {
   baseUpRate: number
   meritRate: number
   
+  // 예산 관리 (분리)
+  availableBudget: number  // 사용가능 예산
+  welfareBudget: number    // 복리후생 예산
+  totalBudget: number      // 총 예산 (기존 호환용)
+  
+  // 조정 모드
+  adjustmentMode: 'simple' | 'advanced' | 'expert'
+  
   // 평가등급별 Merit 가중치
   performanceWeights: PerformanceWeights
   
@@ -57,6 +65,19 @@ interface WageContextType {
     }
   }
   
+  // Pay Zone별 인상률 (Expert 모드)
+  payZoneRates: {
+    [payZone: string]: {
+      [bandName: string]: {
+        [level: string]: {
+          baseUp: number
+          merit: number
+          additional: number
+        }
+      }
+    }
+  }
+  
   // 직원별 성과 가중치 (직원관리 페이지)
   employeeWeights: {
     [employeeId: string]: {
@@ -65,12 +86,16 @@ interface WageContextType {
     }
   }
   
-  // 총 예산
-  totalBudget: number
+  // 직원 데이터 (Pay Zone 포함)
+  contextEmployeeData: any[]
   
   // 설정 업데이트 함수들
   setBaseUpRate: (rate: number) => void
   setMeritRate: (rate: number) => void
+  setAvailableBudget: (budget: number) => void
+  setWelfareBudget: (budget: number) => void
+  setTotalBudget: (budget: number) => void
+  setAdjustmentMode: (mode: 'simple' | 'advanced' | 'expert') => void
   setPerformanceWeights: (weights: PerformanceWeights) => void
   setLevelRates: (rates: any) => void
   setDetailedLevelRates: (rates: any) => void
@@ -88,13 +113,24 @@ interface WageContextType {
       }
     }
   }>>
+  setPayZoneRates: React.Dispatch<React.SetStateAction<{
+    [payZone: string]: {
+      [bandName: string]: {
+        [level: string]: {
+          baseUp: number
+          merit: number
+          additional: number
+        }
+      }
+    }
+  }>>
   setEmployeeWeights: React.Dispatch<React.SetStateAction<{
     [employeeId: string]: {
       performanceRating: string
       meritMultiplier: number
     }
   }>>
-  setTotalBudget: (budget: number) => void
+  setContextEmployeeData: React.Dispatch<React.SetStateAction<any[]>>
   
   // 시나리오 관리
   scenarios: Scenario[]
@@ -119,6 +155,15 @@ export function WageProvider({ children }: { children: ReactNode }) {
   // 기본값 설정 - 모두 0으로 초기화
   const [baseUpRate, setBaseUpRate] = useState(0)
   const [meritRate, setMeritRate] = useState(0)
+  const [availableBudget, setAvailableBudget] = useState(30000000000) // 300억 기본값
+  const [welfareBudget, setWelfareBudget] = useState(5000000000) // 50억 기본값
+  const [totalBudget, setTotalBudget] = useState(25000000000) // 250억 (available - welfare)
+  const [adjustmentMode, setAdjustmentMode] = useState<'simple' | 'advanced' | 'expert'>('simple')
+  
+  // 예산 자동 계산
+  useEffect(() => {
+    setTotalBudget(availableBudget - welfareBudget)
+  }, [availableBudget, welfareBudget])
   const [aiSettings, setAiSettings] = useState<{ baseUpPercentage?: number, meritIncreasePercentage?: number } | null>(null)
   const [performanceWeights, setPerformanceWeights] = useState<PerformanceWeights>({
     ST: 1.5,
@@ -158,7 +203,18 @@ export function WageProvider({ children }: { children: ReactNode }) {
       meritMultiplier: number
     }
   }>({})
-  const [totalBudget, setTotalBudget] = useState(0)
+  const [payZoneRates, setPayZoneRates] = useState<{
+    [payZone: string]: {
+      [bandName: string]: {
+        [level: string]: {
+          baseUp: number
+          merit: number
+          additional: number
+        }
+      }
+    }
+  }>({})
+  const [contextEmployeeData, setContextEmployeeData] = useState<any[]>([])
   const [hasLoadedActiveScenario, setHasLoadedActiveScenario] = useState(false)
   const [currentFileId, setCurrentFileId] = useState<string | undefined>(undefined)
   
@@ -187,6 +243,12 @@ export function WageProvider({ children }: { children: ReactNode }) {
       try {
         // IndexedDB에서 클라이언트 데이터 직접 읽기
         const clientData = await loadExcelData()
+        
+        // 직원 데이터 로드 (Pay Zone 포함)
+        if (clientData?.employees) {
+          setContextEmployeeData(clientData.employees)
+          console.log('[WageContext] 직원 데이터 로드:', clientData.employees.length, '명')
+        }
         
         if (clientData?.aiSettings) {
           const newAiSettings = {
@@ -508,22 +570,32 @@ export function WageProvider({ children }: { children: ReactNode }) {
   const value: WageContextType = {
     baseUpRate,
     meritRate,
+    availableBudget,
+    welfareBudget,
+    totalBudget,
+    adjustmentMode,
     performanceWeights,
     levelRates,
     detailedLevelRates,
     bandAdjustments,
     bandFinalRates,
+    payZoneRates,
     employeeWeights,
-    totalBudget,
+    contextEmployeeData,
     setBaseUpRate,
     setMeritRate,
+    setAvailableBudget,
+    setWelfareBudget,
+    setTotalBudget,
+    setAdjustmentMode,
     setPerformanceWeights,
     setLevelRates,
     setDetailedLevelRates,
     setBandAdjustments,
     setBandFinalRates,
+    setPayZoneRates,
     setEmployeeWeights,
-    setTotalBudget,
+    setContextEmployeeData,
     scenarios,
     activeScenarioId,
     saveScenario,

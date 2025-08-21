@@ -9,6 +9,7 @@ export interface Employee {
   department: string
   level: string
   band?: string
+  payZone?: number | string
   currentSalary: number
   performanceRating?: string | null
   position?: string
@@ -89,11 +90,17 @@ export function useEmployeesData(filters: {
             const performanceRating = emp.performanceRating === '' ? null : emp.performanceRating
             
             if (index < 3) {
-              console.log(`직원 ${emp.name} 평가등급:`, performanceRating)
+              console.log(`직원 ${emp.name}:`, {
+                평가등급: performanceRating,
+                PayZone: emp.payZone,
+                직급: emp.level,
+                직군: emp.band
+              })
             }
             return {
               ...emp,
               performanceRating: performanceRating,
+              payZone: emp.payZone, // Pay Zone 필드 명시적으로 포함
               id: emp.id || emp.employeeId || `emp-${index}`
             }
           })
