@@ -166,15 +166,15 @@ export default function SimulationPage() {
                 onClick={() => setViewMode('all')}
                 className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${
                   viewMode === 'all'
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-md'
                     : 'hover:bg-gray-100 text-gray-700'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <span className="font-medium">전체 직군 현황</span>
+                  <span className="font-medium">종합 현황</span>
                 </div>
               </button>
               
@@ -225,7 +225,7 @@ export default function SimulationPage() {
               </h1>
               <p className="text-gray-600 mt-2">
                 {viewMode === 'adjustment' ? '인상률 조정 및 예산 시뮬레이션' :
-                 viewMode === 'all' ? '전체 직군 종합 현황' :
+                 viewMode === 'all' ? '전체 직군 통합 집계 현황' :
                  viewMode === 'band' ? `${selectedViewBand} 직군 상세 분석` :
                  '직군별 경쟁력 분석'}
                 <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
@@ -736,29 +736,60 @@ export default function SimulationPage() {
               </>
             )}
             
-            {/* 전체 직군 현황 뷰 */}
-            {viewMode === 'all' && bandsData && bandsData.length > 0 && (
-              <div className="grid grid-cols-1 gap-6">
-                {bandsData.map(band => (
-                  <PayBandCard
-                    key={band.id}
-                    bandId={band.id}
-                    bandName={band.name}
-                    levels={band.levels}
-                    initialBaseUp={contextBaseUpRate || 0}
-                    initialMerit={contextMeritRate || 0}
-                    levelRates={levelRates}
-                    currentRates={{
-                      baseUpRate: calculateBandAverage(band.name, 'baseUp'),
-                      additionalRate: 0,
-                      meritMultipliers: { ...performanceWeights }
-                    }}
-                    isReadOnly={true}
-                    bands={bandsData}
-                  />
-                ))}
-              </div>
-            )}
+            {/* 전체 직군 현황 뷰 - 종합 현황 (단일 집계 카드) */}
+            {viewMode === 'all' && bandsData && bandsData.length > 0 && (() => {
+              // 전체 직급별 데이터 집계
+              const totalBandData = {
+                id: 'total',
+                name: '전체',
+                levels: ['Lv.1', 'Lv.2', 'Lv.3', 'Lv.4'].map(level => {
+                  const levelData = bandsData.flatMap(band => 
+                    band.levels ? band.levels.filter(l => l && l.level === level) : []
+                  ).filter(l => l !== undefined && l !== null)
+                  
+                  const totalHeadcount = levelData.reduce((sum, l) => sum + (l?.headcount || 0), 0)
+                  const totalBasePay = levelData.reduce((sum, l) => sum + ((l?.meanBasePay || 0) * (l?.headcount || 0)), 0)
+                  
+                  return {
+                    level,
+                    headcount: totalHeadcount,
+                    meanBasePay: totalHeadcount > 0 ? totalBasePay / totalHeadcount : 0,
+                    baseUpKRW: levelData.reduce((sum, l) => sum + (l?.baseUpKRW || 0) * (l?.headcount || 0), 0) / (totalHeadcount || 1),
+                    baseUpRate: levelData.reduce((sum, l) => sum + (l?.baseUpRate || 0) * (l?.headcount || 0), 0) / (totalHeadcount || 1),
+                    sblIndex: levelData.reduce((sum, l) => sum + (l?.sblIndex || 0) * (l?.headcount || 0), 0) / (totalHeadcount || 1),
+                    caIndex: levelData.reduce((sum, l) => sum + (l?.caIndex || 0) * (l?.headcount || 0), 0) / (totalHeadcount || 1),
+                    competitiveness: levelData.reduce((sum, l) => sum + (l?.competitiveness || 0) * (l?.headcount || 0), 0) / (totalHeadcount || 1),
+                    company: {
+                      median: levelData.reduce((sum, l) => sum + (l?.company?.median || 0) * (l?.headcount || 0), 0) / (totalHeadcount || 1),
+                      mean: levelData.reduce((sum, l) => sum + (l?.company?.mean || 0) * (l?.headcount || 0), 0) / (totalHeadcount || 1),
+                      values: []
+                    },
+                    competitor: {
+                      median: levelData.reduce((sum, l) => sum + (l?.competitor?.median || 0) * (l?.headcount || 0), 0) / (totalHeadcount || 1)
+                    }
+                  }
+                })
+              }
+              
+              return (
+                <PayBandCard
+                  key="total"
+                  bandId="total"
+                  bandName={totalBandData.name}
+                  levels={totalBandData.levels}
+                  initialBaseUp={contextBaseUpRate || 0}
+                  initialMerit={contextMeritRate || 0}
+                  levelRates={levelRates}
+                  currentRates={{
+                    baseUpRate: 0,
+                    additionalRate: 0,
+                    meritMultipliers: { ...performanceWeights }
+                  }}
+                  isReadOnly={true}
+                  bands={bandsData}
+                />
+              )
+            })()}
             
             {/* 직군별 분석 뷰 (읽기 전용 - 정보 표시용) */}
             {viewMode === 'band' && selectedViewBand && bandsData && (
