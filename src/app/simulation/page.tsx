@@ -10,6 +10,7 @@ import { PayBandCard } from '@/components/simulation/PayBandCard'
 import { RaiseSliderPanel } from '@/components/simulation/RaiseSliderPanel'
 import { PayBandCompetitivenessHeatmap } from '@/components/analytics/PayBandCompetitivenessHeatmap'
 import { useBandData } from '@/hooks/useBandData'
+import { PerformanceWeightModal } from '@/components/employees/PerformanceWeightModal'
 
 interface AdjustmentRates {
   baseUp: number
@@ -68,7 +69,7 @@ export default function SimulationPage() {
   })
   
   // View mode state (좌측 메뉴)
-  const [viewMode, setViewMode] = useState<'adjustment' | 'all' | 'band' | 'competitiveness'>('adjustment')
+  const [viewMode, setViewMode] = useState<'adjustment' | 'all' | 'band' | 'payzone' | 'competitiveness'>('adjustment')
   const [selectedViewBand, setSelectedViewBand] = useState<string>('')
   
   // Advanced mode state
@@ -77,6 +78,23 @@ export default function SimulationPage() {
   // Expert mode state
   const [selectedPayZone, setSelectedPayZone] = useState<number | null>(null)
   const [selectedBandExpert, setSelectedBandExpert] = useState<string>('')
+  
+  // 평가가중치 모달 상태
+  const [isWeightModalOpen, setIsWeightModalOpen] = useState(false)
+  
+  // 실제 존재하는 Pay Zone × Band × Level 조합 카운트
+  const getActualCombinationCount = () => {
+    if (!contextEmployeeData || contextEmployeeData.length === 0) return 0
+    
+    const combinations = new Set<string>()
+    contextEmployeeData.forEach(emp => {
+      if (emp.payZone !== undefined && emp.band && emp.level) {
+        combinations.add(`${emp.payZone}-${emp.band}-${emp.level}`)
+      }
+    })
+    
+    return combinations.size
+  }
   
   // Band data (from bands page)
   const { bands: bandsData, loading: bandsLoading } = useBandData()
@@ -252,6 +270,106 @@ export default function SimulationPage() {
         }
       }))
     }
+  }
+  
+  // Expert Mode: PayZone×Band×Level 조정
+  const handlePayZoneBandLevelChange = (zone: number, band: string, level: string, field: 'baseUp' | 'merit' | 'additional', value: number) => {
+    const newPayZoneRates = {
+      ...payZoneRates,
+      [zone]: {
+        ...payZoneRates[zone],
+        [band]: {
+          ...payZoneRates[zone]?.[band],
+          [level]: {
+            ...payZoneRates[zone]?.[band]?.[level],
+            [field]: value
+          }
+        }
+      }
+    }
+    setPayZoneRates(newPayZoneRates)
+    
+    // Bottom-up: PayZone → Band → Level 가중평균 업데이트
+    if (adjustmentMode === 'expert') {
+      updateAdvancedFromExpert(newPayZoneRates)
+      updateSimpleFromExpert(newPayZoneRates)
+    }
+  }
+  
+  // Expert → Advanced 동기화 (Pay Zone별 가중평균)
+  const updateAdvancedFromExpert = (expertRates: typeof payZoneRates) => {
+    if (!contextEmployeeData) return
+    
+    const newBandRates: typeof bandFinalRates = {}
+    
+    dynamicStructure.bands.forEach(band => {
+      newBandRates[band] = {}
+      dynamicStructure.levels.forEach(level => {
+        let totalBaseUp = 0
+        let totalMerit = 0
+        let totalCount = 0
+        
+        dynamicStructure.payZones.forEach(zone => {
+          const empCount = contextEmployeeData.filter(emp => 
+            emp.payZone === zone && emp.band === band && emp.level === level
+          ).length
+          
+          if (empCount > 0) {
+            const rates = expertRates[zone]?.[band]?.[level] || { baseUp: 0, merit: 0 }
+            totalBaseUp += rates.baseUp * empCount
+            totalMerit += rates.merit * empCount
+            totalCount += empCount
+          }
+        })
+        
+        if (totalCount > 0) {
+          newBandRates[band][level] = {
+            baseUp: totalBaseUp / totalCount,
+            merit: totalMerit / totalCount
+          }
+        }
+      })
+    })
+    
+    setBandFinalRates(newBandRates)
+  }
+  
+  // Expert → Simple 동기화 (전체 가중평균)
+  const updateSimpleFromExpert = (expertRates: typeof payZoneRates) => {
+    if (!contextEmployeeData) return
+    
+    const newLevelRates: typeof levelRates = {}
+    
+    dynamicStructure.levels.forEach(level => {
+      let totalBaseUp = 0
+      let totalMerit = 0
+      let totalCount = 0
+      
+      dynamicStructure.payZones.forEach(zone => {
+        dynamicStructure.bands.forEach(band => {
+          const empCount = contextEmployeeData.filter(emp => 
+            emp.payZone === zone && emp.band === band && emp.level === level
+          ).length
+          
+          if (empCount > 0) {
+            const rates = expertRates[zone]?.[band]?.[level] || { baseUp: 0, merit: 0 }
+            totalBaseUp += rates.baseUp * empCount
+            totalMerit += rates.merit * empCount
+            totalCount += empCount
+          }
+        })
+      })
+      
+      if (totalCount > 0) {
+        newLevelRates[level] = {
+          baseUp: totalBaseUp / totalCount,
+          merit: totalMerit / totalCount
+        }
+      }
+    })
+    
+    setLevelRates(newLevelRates)
+    updateGlobalRates(newLevelRates)
   }
   
   // 직군 평균 계산
@@ -632,6 +750,22 @@ export default function SimulationPage() {
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
               <h2 className="text-lg font-semibold mb-4">직급별 인상률 조정</h2>
               
+              {/* 평가가중치 설정 */}
+              <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700">평가가중치 설정</h3>
+                    <p className="text-xs text-gray-500 mt-1">성과평가 등급별 인상률 가중치를 조정합니다</p>
+                  </div>
+                  <button
+                    onClick={() => setIsWeightModalOpen(true)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                  >
+                    가중치 설정
+                  </button>
+                </div>
+              </div>
+              
               {/* 일괄 조정 */}
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                 <h3 className="text-sm font-medium text-gray-700 mb-3">전체 일괄 조정</h3>
@@ -842,7 +976,7 @@ export default function SimulationPage() {
             <div className="space-y-6 mb-6">
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h2 className="text-lg font-semibold mb-4">
-                  Pay Zone×직군×직급별 인상률 조정 ({dynamicStructure.payZones.length} × {dynamicStructure.bands.length} × {dynamicStructure.levels.length} = {dynamicStructure.payZones.length * dynamicStructure.bands.length * dynamicStructure.levels.length}개)
+                  Pay Zone×직군×직급별 인상률 조정 (실제 {getActualCombinationCount()}개 조합)
                 </h2>
                 
                 {/* Pay Zone 선택 */}
@@ -904,6 +1038,9 @@ export default function SimulationPage() {
                           emp => emp.payZone === selectedPayZone && emp.band === selectedBandExpert && emp.level === level
                         ).length || 0
                         
+                        // 직원이 없는 조합은 표시하지 않음
+                        if (empCount === 0) return null
+                        
                         return (
                           <div key={level} className="border border-gray-200 rounded-lg p-3">
                             <div className="flex justify-between items-center mb-2">
@@ -917,7 +1054,7 @@ export default function SimulationPage() {
                                 <input
                                   type="number"
                                   value={rates.baseUp}
-                                  onChange={(e) => handleExpertChange(selectedPayZone, selectedBandExpert, level, 'baseUp', parseFloat(e.target.value) || 0)}
+                                  onChange={(e) => handlePayZoneBandLevelChange(selectedPayZone, selectedBandExpert, level, 'baseUp', parseFloat(e.target.value) || 0)}
                                   step="0.1"
                                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                                 />
@@ -927,7 +1064,7 @@ export default function SimulationPage() {
                                 <input
                                   type="number"
                                   value={rates.merit}
-                                  onChange={(e) => handleExpertChange(selectedPayZone, selectedBandExpert, level, 'merit', parseFloat(e.target.value) || 0)}
+                                  onChange={(e) => handlePayZoneBandLevelChange(selectedPayZone, selectedBandExpert, level, 'merit', parseFloat(e.target.value) || 0)}
                                   step="0.1"
                                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                                 />
@@ -937,7 +1074,7 @@ export default function SimulationPage() {
                                 <input
                                   type="number"
                                   value={rates.additional || 0}
-                                  onChange={(e) => handleExpertChange(selectedPayZone, selectedBandExpert, level, 'additional', parseFloat(e.target.value) || 0)}
+                                  onChange={(e) => handlePayZoneBandLevelChange(selectedPayZone, selectedBandExpert, level, 'additional', parseFloat(e.target.value) || 0)}
                                   step="0.1"
                                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                                 />
@@ -1061,7 +1198,7 @@ export default function SimulationPage() {
                 {budgetUsage.percentage > 100 && (
                   <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-sm font-semibold text-red-800">
-                      ⚠️ 예산 {formatKoreanCurrency(Math.abs(budgetUsage.remaining), '억원', 100000000)} 초과!
+                      예산 {formatKoreanCurrency(Math.abs(budgetUsage.remaining), '억원', 100000000)} 초과!
                     </p>
                   </div>
                 )}
@@ -1152,11 +1289,28 @@ export default function SimulationPage() {
             </div>
           ) : viewMode === 'band' ? (
             /* 개별 직군 뷰 - 조정된 인상률 적용 */
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              {bandsData && (() => {
-                const selectedBandData = bandsData.find(band => band.name === selectedViewBand)
-                return selectedBandData ? (
-                  <PayBandCard
+            <div className="space-y-6">
+              {/* 조정 유도 버튼 */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{selectedViewBand} 직군 분석</h3>
+                    <p className="text-sm text-gray-600 mt-1">인상률을 조정하려면 조정 모드로 이동하세요</p>
+                  </div>
+                  <button
+                    onClick={() => setViewMode('adjustment')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    인상률 조정하기 →
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                {bandsData && (() => {
+                  const selectedBandData = bandsData.find(band => band.name === selectedViewBand)
+                  return selectedBandData ? (
+                    <PayBandCard
                     key={selectedBandData.id}
                     bandId={selectedBandData.id}
                     bandName={selectedBandData.name}
@@ -1173,13 +1327,8 @@ export default function SimulationPage() {
                     initialMerit={2.5}
                     levelRates={levelRates}
                     currentRates={bandFinalRates[selectedViewBand]}
-                    onRateChange={(bandId, data) => {
-                      // 직군 뷰에서의 조정을 전체 시스템에 반영
-                      if (data.baseUpAdjustment !== undefined || data.meritAdjustment !== undefined) {
-                        handleBandLevelChange(selectedViewBand, data.level, 'baseUp', data.baseUpAdjustment || 0)
-                        handleBandLevelChange(selectedViewBand, data.level, 'merit', data.meritAdjustment || 0)
-                      }
-                    }}
+                    // 읽기 전용 모드 - 조정 비활성화
+                    readOnly={true}
                   />
                 ) : (
                   <p className="text-gray-500">직군 데이터를 불러오는 중...</p>
@@ -1207,6 +1356,12 @@ export default function SimulationPage() {
           </div>
         </div>
       </main>
+      
+      {/* 평가가중치 설정 모달 */}
+      <PerformanceWeightModal 
+        isOpen={isWeightModalOpen}
+        onClose={() => setIsWeightModalOpen(false)}
+      />
     </div>
   )
 }

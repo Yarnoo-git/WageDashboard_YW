@@ -7,7 +7,6 @@ import { useWageContext } from '@/context/WageContext'
 import { PersonTable } from '@/components/person/PersonTable'
 import { SimpleExportButton } from '@/components/ExportButton'
 import { ScenarioManager } from '@/components/ScenarioManager'
-import { PerformanceWeightModal } from '@/components/employees/PerformanceWeightModal'
 import { RateInfoCard } from '@/components/common/RateInfoCard'
 import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
 
@@ -34,7 +33,6 @@ export default function PersonPage() {
   const [selectedLevel, setSelectedLevel] = useState<string>('')
   const [selectedDepartment, setSelectedDepartment] = useState<string>('')
   const [selectedRating, setSelectedRating] = useState<string>('')
-  const [isWeightModalOpen, setIsWeightModalOpen] = useState(false)
   
   // 예산 사용률 계산
   const getBudgetUsagePercentage = () => {
@@ -109,17 +107,6 @@ export default function PersonPage() {
             </div>
             
             {/* 가중치 설정 버튼 */}
-            <div>
-              <button 
-                onClick={() => setIsWeightModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                <span className="font-medium">평가 가중치 설정</span>
-              </button>
-            </div>
           </div>
           
           {/* 시뮬레이션 정보 카드 */}
@@ -252,10 +239,6 @@ export default function PersonPage() {
         </div>
       </main>
       
-      <PerformanceWeightModal 
-        isOpen={isWeightModalOpen}
-        onClose={() => setIsWeightModalOpen(false)}
-      />
     </div>
   )
 }

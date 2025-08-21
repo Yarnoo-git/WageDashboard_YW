@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Navigation } from '@/components/navigation'
+import { Footer } from '@/components/Footer'
 import { WageProvider } from '@/context/WageContext'
 import './globals.css'
 
@@ -21,10 +22,13 @@ export default function RootLayout({
     <html lang="ko">
       <body className="font-sans antialiased">
         <WageProvider>
-          <Navigation />
-          <main className="min-h-screen">
-            {children}
-          </main>
+          <div className="flex flex-col min-h-screen">
+            <Navigation />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+          </div>
         </WageProvider>
       </body>
     </html>

@@ -61,7 +61,7 @@ export default function HomePage() {
           
           <div className="bg-blue-50 rounded-lg p-6 mb-8">
             <h2 className="text-lg font-semibold text-blue-900 mb-3">
-              💡 사용 방법
+              사용 방법
             </h2>
             <ol className="text-left text-sm text-gray-700 space-y-2">
               <li>1. 엑셀 파일(.xlsx)을 준비합니다</li>
@@ -73,7 +73,7 @@ export default function HomePage() {
             <div className="mb-8">
               <div className="bg-green-50 rounded-lg p-4 mb-4">
                 <p className="text-sm text-green-800 font-medium mb-1">
-                  ✅ 저장된 데이터가 있습니다
+                  저장된 데이터가 있습니다
                 </p>
                 <p className="text-xs text-green-600">
                   파일명: {fileInfo.fileName}
@@ -114,7 +114,7 @@ export default function HomePage() {
                 엑셀 파일을 업로드하여 시작하세요
               </p>
               <label className="inline-block px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors cursor-pointer">
-                {uploading ? '업로드 중...' : '📊 엑셀 파일 선택'}
+                {uploading ? '업로드 중...' : '엑셀 파일 선택'}
                 <input
                   type="file"
                   accept=".xlsx,.xls"

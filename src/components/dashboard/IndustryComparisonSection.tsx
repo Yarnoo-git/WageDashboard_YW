@@ -330,7 +330,7 @@ function IndustryComparisonSectionComponent({
             {/* 경쟁력 색상 기준 범례 - 하단 고정 */}
             <div className="mt-3 pt-2 border-t border-gray-200 flex-shrink-0">
               <div className="flex items-center justify-between gap-2 text-[10px] px-1">
-                <span className="text-gray-600 font-semibold">💡 경쟁력 기준:</span>
+                <span className="text-gray-600 font-semibold">경쟁력 기준:</span>
                 
                 <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded border border-red-100 flex-1 justify-center">
                   <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-red-400 to-red-600"></div>
