@@ -222,9 +222,9 @@ export function WageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkFileId = () => {
       const fileId = getCurrentFileId()
-      if (fileId && fileId !== currentFileId) {
-        console.log('[WageContext] 파일 ID 변경 감지:', fileId)
-        setCurrentFileId(fileId)
+      if (fileId !== currentFileId) {
+        console.log('[WageContext] 파일 ID 설정/변경:', fileId || 'no file')
+        setCurrentFileId(fileId || 'default')
       }
     }
     
@@ -237,17 +237,71 @@ export function WageProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval)
   }, [currentFileId])
   
-  // AI 설정 값 가져오기 - IndexedDB에서 직접 읽기 (파일 ID 변경 시 재로드)
+  // 초기 데이터 로드 - 컴포넌트 마운트 시 즉시 실행
   useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        console.log('[WageContext] 초기 데이터 로드 시작...')
+        const { hasStoredData } = await import('@/lib/clientStorage')
+        const hasData = await hasStoredData()
+        
+        if (hasData) {
+          const clientData = await loadExcelData()
+          console.log('[WageContext] 로드된 데이터:', clientData)
+          
+          // 직원 데이터 로드 (Pay Zone 포함)
+          if (clientData?.employees && Array.isArray(clientData.employees)) {
+            setContextEmployeeData(clientData.employees)
+            console.log('[WageContext] 직원 데이터 로드 성공:', clientData.employees.length, '명')
+          } else {
+            console.log('[WageContext] 직원 데이터 없음 또는 잘못된 형식')
+          }
+          
+          // AI 설정도 함께 로드
+          if (clientData?.aiSettings) {
+            const newAiSettings = {
+              baseUpPercentage: clientData.aiSettings.baseUpPercentage || 0,
+              meritIncreasePercentage: clientData.aiSettings.meritIncreasePercentage || 0
+            }
+            setAiSettings(newAiSettings)
+            setBaseUpRate(newAiSettings.baseUpPercentage)
+            setMeritRate(newAiSettings.meritIncreasePercentage)
+            
+            // 직급별 인상률도 AI 값으로 초기화
+            const aiLevelRates = {
+              'Lv.1': { baseUp: newAiSettings.baseUpPercentage, merit: newAiSettings.meritIncreasePercentage },
+              'Lv.2': { baseUp: newAiSettings.baseUpPercentage, merit: newAiSettings.meritIncreasePercentage },
+              'Lv.3': { baseUp: newAiSettings.baseUpPercentage, merit: newAiSettings.meritIncreasePercentage },
+              'Lv.4': { baseUp: newAiSettings.baseUpPercentage, merit: newAiSettings.meritIncreasePercentage }
+            }
+            setLevelRates(aiLevelRates)
+          }
+        } else {
+          console.log('[WageContext] 저장된 데이터 없음')
+        }
+      } catch (error) {
+        console.error('[WageContext] 초기 데이터 로드 실패:', error)
+      }
+    }
+    
+    // 즉시 실행
+    fetchInitialData()
+  }, []) // 의존성 배열 비워서 마운트 시 한번만 실행
+  
+  // AI 설정 값 가져오기 - 파일 ID 변경 시 재로드
+  useEffect(() => {
+    if (!currentFileId) return
+    
     const fetchAISettings = async () => {
       try {
+        console.log('[WageContext] 파일 ID 변경으로 데이터 재로드:', currentFileId)
         // IndexedDB에서 클라이언트 데이터 직접 읽기
         const clientData = await loadExcelData()
         
         // 직원 데이터 로드 (Pay Zone 포함)
-        if (clientData?.employees) {
+        if (clientData?.employees && Array.isArray(clientData.employees)) {
           setContextEmployeeData(clientData.employees)
-          console.log('[WageContext] 직원 데이터 로드:', clientData.employees.length, '명')
+          console.log('[WageContext] 직원 데이터 재로드:', clientData.employees.length, '명')
         }
         
         if (clientData?.aiSettings) {
@@ -303,10 +357,8 @@ export function WageProvider({ children }: { children: ReactNode }) {
       }
     }
     
-    // currentFileId가 변경될 때마다 AI 설정 다시 로드
-    if (currentFileId) {
-      fetchAISettings()
-    }
+    // 항상 데이터를 로드 시도 (파일 ID가 없어도)
+    fetchAISettings()
   }, [currentFileId])
 
   // 시나리오 관리 - AI 데이터와 파일 ID 전달
