@@ -42,6 +42,8 @@ export default function SimulationPage() {
     setViewMode,
     selectedViewBand,
     setSelectedViewBand,
+    selectedLevel,
+    setSelectedLevel,
     selectedBand,
     setSelectedBand,
     selectedPayZone,
@@ -236,8 +238,11 @@ export default function SimulationPage() {
             {viewMode === 'adjustment' && (
               <div className="mb-6">
                 <IndustryComparisonSection 
-                  competitorIncrease={dashboardData?.competitorIncrease}
-                  competitorData={dashboardData?.competitorComparison}
+                  baseUpRate={contextBaseUpRate}
+                  meritRate={contextMeritRate}
+                  competitorIncreaseRate={dashboardData?.competitorIncreaseRate}
+                  competitorData={dashboardData?.competitorData}
+                  levelStatistics={dashboardData?.levelStatistics}
                 />
               </div>
             )}
@@ -245,40 +250,85 @@ export default function SimulationPage() {
             {/* 인상률 조정 뷰 */}
             {viewMode === 'adjustment' && (
               <>
-                {/* 예산 현황 표시 */}
+                {/* 통합 예산 현황 및 사용량 표시 */}
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-blue-100">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      예산 현황
+                      예산 현황 및 사용량
                     </h2>
                     <button 
                       onClick={() => router.push('/dashboard')}
                       className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                     >
-                      대시보드에서 조정 →
+                      대시보드에서 예산 설정 →
                     </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  
+                  {/* 예산 개요 */}
+                  <div className="grid grid-cols-4 gap-3 mb-4">
                     <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3">
-                      <p className="text-xs text-gray-600 mb-1">사용가능 예산</p>
-                      <p className="text-xl font-bold text-gray-900">
+                      <p className="text-xs text-gray-600 mb-1">총 가용예산</p>
+                      <p className="text-lg font-bold text-gray-900">
                         {formatKoreanCurrency(availableBudget, '억원', 100000000)}
                       </p>
                     </div>
                     <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-3">
                       <p className="text-xs text-gray-600 mb-1">복리후생</p>
-                      <p className="text-xl font-bold text-yellow-700">
+                      <p className="text-lg font-bold text-yellow-700">
                         {formatKoreanCurrency(welfareBudget, '억원', 100000000)}
                       </p>
                     </div>
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
-                      <p className="text-xs text-gray-600 mb-1">실제 인건비</p>
-                      <p className="text-xl font-bold text-blue-700">
+                      <p className="text-xs text-gray-600 mb-1">인건비 예산</p>
+                      <p className="text-lg font-bold text-blue-700">
                         {formatKoreanCurrency((availableBudget - welfareBudget), '억원', 100000000)}
                       </p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3">
+                      <p className="text-xs text-gray-600 mb-1">잔여 예산</p>
+                      <p className="text-lg font-bold text-green-700">
+                        {formatKoreanCurrency((availableBudget - welfareBudget - budgetUsage.total), '억원', 100000000)}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* 예산 사용 상세 */}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">예산 사용 현황</span>
+                      <span className={`text-sm font-bold ${
+                        budgetUsage.percentage <= 80 ? 'text-green-600' :
+                        budgetUsage.percentage <= 100 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {formatPercentage(budgetUsage.percentage)} 사용
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                      <div 
+                        className={`h-3 rounded-full transition-all duration-300 ${
+                          budgetUsage.percentage <= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
+                          budgetUsage.percentage <= 100 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' : 
+                          'bg-gradient-to-r from-red-500 to-red-600'
+                        }`}
+                        style={{width: `${Math.min(budgetUsage.percentage, 100)}%`}}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">직접비용:</span>
+                        <span className="font-medium">{formatKoreanCurrency(budgetUsage.direct, '억원', 100000000)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">간접비용:</span>
+                        <span className="font-medium">{formatKoreanCurrency(budgetUsage.indirect, '억원', 100000000)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">총 사용:</span>
+                        <span className="font-bold">{formatKoreanCurrency(budgetUsage.total, '억원', 100000000)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -317,45 +367,6 @@ export default function SimulationPage() {
                     >
                       Expert (+{dynamicStructure.payZones.length}개 Pay Zone)
                     </button>
-                  </div>
-                </div>
-                
-                {/* 예산 사용량 표시 */}
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                  <h3 className="text-lg font-semibold mb-4">예산 사용량</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>직접비용</span>
-                        <span>{formatKoreanCurrency(budgetUsage.direct, '억원', 100000000)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>간접비용 (17.8%)</span>
-                        <span>{formatKoreanCurrency(budgetUsage.indirect, '억원', 100000000)}</span>
-                      </div>
-                      <div className="flex justify-between font-semibold">
-                        <span>총 사용</span>
-                        <span>{formatKoreanCurrency(budgetUsage.total, '억원', 100000000)}</span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className={`h-2.5 rounded-full ${
-                          budgetUsage.percentage <= 80 ? 'bg-green-600' :
-                          budgetUsage.percentage <= 100 ? 'bg-yellow-600' : 'bg-red-600'
-                        }`}
-                        style={{width: `${Math.min(budgetUsage.percentage, 100)}%`}}
-                      />
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>예산 사용률</span>
-                      <span className={`font-semibold ${
-                        budgetUsage.percentage <= 80 ? 'text-green-600' :
-                        budgetUsage.percentage <= 100 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {formatPercentage(budgetUsage.percentage)}
-                      </span>
-                    </div>
                   </div>
                 </div>
                 
@@ -555,11 +566,11 @@ export default function SimulationPage() {
                   </div>
                 )}
                 
-                {/* Expert Mode: PayZone×Band×Level 조정 */}
+                {/* Expert Mode: Level×Band×PayZone 조정 */}
                 {adjustmentMode === 'expert' && (
                   <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                     <h2 className="text-lg font-semibold mb-4">
-                      Pay Zone×직군×직급별 인상률 조정
+                      직급×직군×Pay Zone별 인상률 조정
                       <span className="ml-2 text-sm text-gray-500">
                         ({getActualCombinationCount()}개 조합)
                       </span>
@@ -581,22 +592,22 @@ export default function SimulationPage() {
                       </div>
                     </div>
                     
-                    {/* Pay Zone & Band 선택 */}
+                    {/* Level & Band 선택 (Pay Zone은 아래에서 선택) */}
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Pay Zone 선택</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">직급 선택</label>
                         <div className="flex flex-wrap gap-2">
-                          {dynamicStructure.payZones.map(zone => (
+                          {dynamicStructure.levels.map(level => (
                             <button
-                              key={zone}
-                              onClick={() => setSelectedPayZone(zone)}
+                              key={level}
+                              onClick={() => setSelectedLevel(level)}
                               className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                                selectedPayZone === zone
+                                selectedLevel === level
                                   ? 'bg-purple-600 text-white'
                                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                               }`}
                             >
-                              Zone {zone}
+                              {level}
                             </button>
                           ))}
                         </div>
@@ -621,96 +632,95 @@ export default function SimulationPage() {
                       </div>
                     </div>
                     
-                    {/* 선택된 PayZone×Band의 Level별 조정 */}
-                    {selectedPayZone !== null && selectedBandExpert && (
+                    {/* 선택된 Level×Band의 Pay Zone별 조정 */}
+                    {selectedLevel && selectedBandExpert && (
                       <div className="space-y-3">
                         <div className="p-3 bg-purple-50 rounded-lg mb-3">
-                          <div className="grid grid-cols-3 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-600">평균 급여:</span>
-                              <span className="ml-2 font-medium">
-                                {formatKoreanCurrency(calculateAverageSalary(selectedPayZone, selectedBandExpert), '만원', 10000)}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">인원수:</span>
-                              <span className="ml-2 font-medium">
-                                {contextEmployeeData.filter(
-                                  emp => emp.payZone === selectedPayZone && emp.band === selectedBandExpert
-                                ).length}명
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">예산 영향:</span>
-                              <span className="ml-2 font-medium">
-                                {formatKoreanCurrency(
-                                  calculateZoneBandBudget(selectedPayZone, selectedBandExpert),
-                                  '억원',
-                                  100000000
-                                )}
-                              </span>
-                            </div>
+                          <div className="text-sm">
+                            <span className="font-medium text-gray-700">
+                              {selectedLevel} / {selectedBandExpert}
+                            </span>
+                            <span className="ml-4 text-gray-600">
+                              총 {contextEmployeeData.filter(
+                                emp => emp.level === selectedLevel && emp.band === selectedBandExpert
+                              ).length}명
+                            </span>
                           </div>
                         </div>
                         
-                        {dynamicStructure.levels.map(level => {
-                          const empCount = contextEmployeeData.filter(
-                            emp => emp.payZone === selectedPayZone && 
-                                   emp.band === selectedBandExpert && 
-                                   emp.level === level
-                          ).length;
-                          
-                          if (empCount === 0) return null;
-                          
-                          return (
-                            <div key={level} className="p-4 bg-white border border-gray-200 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="font-medium text-gray-900">{level}</h4>
-                                <span className="text-sm text-gray-500">{empCount}명</span>
-                              </div>
-                              <div className="grid grid-cols-4 gap-3">
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">Base-up (%)</label>
-                                  <input
-                                    type="number"
-                                    value={payZoneRates[selectedPayZone]?.[selectedBandExpert]?.[level]?.baseUp || 0}
-                                    onChange={(e) => handleExpertChange(selectedPayZone, selectedBandExpert, level, 'baseUp', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                                    step="0.1"
-                                  />
+                        {/* Pay Zone별 그리드 */}
+                        <div className="grid grid-cols-1 gap-3">
+                          {dynamicStructure.payZones.map(zone => {
+                            const empCount = contextEmployeeData.filter(
+                              emp => emp.payZone === zone && 
+                                     emp.band === selectedBandExpert && 
+                                     emp.level === selectedLevel
+                            ).length;
+                            
+                            if (empCount === 0) return null;
+                            
+                            const avgSalary = contextEmployeeData
+                              .filter(emp => emp.payZone === zone && emp.band === selectedBandExpert && emp.level === selectedLevel)
+                              .reduce((sum, emp) => sum + (emp.currentSalary || 0), 0) / (empCount || 1);
+                            
+                            return (
+                              <div key={zone} className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm font-medium">
+                                      Pay Zone {zone}
+                                    </span>
+                                    <span className="text-sm text-gray-600">{empCount}명</span>
+                                    <span className="text-sm text-gray-600">
+                                      평균: {formatKoreanCurrency(avgSalary, '만원', 10000)}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">성과인상률 (%)</label>
-                                  <input
-                                    type="number"
-                                    value={payZoneRates[selectedPayZone]?.[selectedBandExpert]?.[level]?.merit || 0}
-                                    onChange={(e) => handleExpertChange(selectedPayZone, selectedBandExpert, level, 'merit', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                                    step="0.1"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">추가인상률 (%)</label>
-                                  <input
-                                    type="number"
-                                    value={payZoneRates[selectedPayZone]?.[selectedBandExpert]?.[level]?.additional || 0}
-                                    onChange={(e) => handleExpertChange(selectedPayZone, selectedBandExpert, level, 'additional', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                                    step="0.1"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">총 인상률</label>
-                                  <div className="px-2 py-1 text-sm bg-gray-100 rounded text-center font-medium">
-                                    {((payZoneRates[selectedPayZone]?.[selectedBandExpert]?.[level]?.baseUp || 0) + 
-                                      (payZoneRates[selectedPayZone]?.[selectedBandExpert]?.[level]?.merit || 0) +
-                                      (payZoneRates[selectedPayZone]?.[selectedBandExpert]?.[level]?.additional || 0)).toFixed(1)}%
+                                
+                                <div className="grid grid-cols-4 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Base-up (%)</label>
+                                    <input
+                                      type="number"
+                                      value={payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.baseUp || 0}
+                                      onChange={(e) => handleExpertChange(zone, selectedBandExpert, selectedLevel, 'baseUp', parseFloat(e.target.value) || 0)}
+                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                      step="0.1"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">성과인상률 (%)</label>
+                                    <input
+                                      type="number"
+                                      value={payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.merit || 0}
+                                      onChange={(e) => handleExpertChange(zone, selectedBandExpert, selectedLevel, 'merit', parseFloat(e.target.value) || 0)}
+                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                      step="0.1"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">추가인상률 (%)</label>
+                                    <input
+                                      type="number"
+                                      value={payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.additional || 0}
+                                      onChange={(e) => handleExpertChange(zone, selectedBandExpert, selectedLevel, 'additional', parseFloat(e.target.value) || 0)}
+                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                      step="0.1"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">총 인상률</label>
+                                    <div className="px-2 py-1 text-sm bg-gradient-to-r from-purple-50 to-blue-50 rounded text-center font-bold text-purple-700">
+                                      {((payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.baseUp || 0) + 
+                                        (payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.merit || 0) +
+                                        (payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.additional || 0)).toFixed(1)}%
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
