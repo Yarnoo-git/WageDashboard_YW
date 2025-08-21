@@ -46,6 +46,7 @@ interface DashboardData {
     level: string
     averageSalary: number
   }> | null
+  competitorIncreaseRate?: number
   industryComparison?: {
     ourCompany: number
     competitor: number

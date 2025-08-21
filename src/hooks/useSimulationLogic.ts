@@ -89,9 +89,9 @@ export function useSimulationLogic() {
   // Excel 데이터에서 동적 구조 추출
   useEffect(() => {
     if (contextEmployeeData && contextEmployeeData.length > 0) {
-      const levels = [...new Set(contextEmployeeData.map(emp => emp.level))].sort()
-      const bands = [...new Set(contextEmployeeData.map(emp => emp.band))].filter(Boolean).sort()
-      const payZones = [...new Set(contextEmployeeData.map(emp => emp.payZone))].filter(zone => zone !== undefined).sort((a, b) => Number(a) - Number(b))
+      const levels = Array.from(new Set(contextEmployeeData.map(emp => emp.level))).sort()
+      const bands = Array.from(new Set(contextEmployeeData.map(emp => emp.band))).filter(Boolean).sort()
+      const payZones = Array.from(new Set(contextEmployeeData.map(emp => emp.payZone))).filter(zone => zone !== undefined).sort((a, b) => Number(a) - Number(b))
       
       setDynamicStructure({
         levels,
@@ -119,7 +119,7 @@ export function useSimulationLogic() {
   
   // Simple Mode: Level별 조정
   const handleLevelRateChange = (level: string, field: keyof AdjustmentRates, value: number) => {
-    setLevelRates(prev => ({
+    setLevelRates((prev: any) => ({
       ...prev,
       [level]: {
         ...prev[level],
@@ -214,7 +214,7 @@ export function useSimulationLogic() {
     )
     
     if (avgRate !== null) {
-      setLevelRates(prev => ({
+      setLevelRates((prev: any) => ({
         ...prev,
         [level]: {
           ...prev[level],

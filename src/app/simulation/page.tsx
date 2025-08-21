@@ -333,152 +333,165 @@ export default function SimulationPage() {
                   </div>
                 </div>
                 
-                {/* 조정 모드 선택 */}
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                  <h2 className="text-lg font-semibold mb-4">조정 세밀도</h2>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setAdjustmentMode('simple')}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        adjustmentMode === 'simple'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Simple ({dynamicStructure.levels.length}개 Level)
-                    </button>
-                    <button
-                      onClick={() => setAdjustmentMode('advanced')}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        adjustmentMode === 'advanced'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Advanced (+{dynamicStructure.bands.length}개 Band)
-                    </button>
-                    <button
-                      onClick={() => setAdjustmentMode('expert')}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        adjustmentMode === 'expert'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Expert (+{dynamicStructure.payZones.length}개 Pay Zone)
-                    </button>
+                {/* 통합된 인상률 조정 섹션 */}
+                <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+                  {/* 탭 헤더 */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b">
+                    <h2 className="text-lg font-semibold mb-3">인상률 조정</h2>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setAdjustmentMode('simple')}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                          adjustmentMode === 'simple'
+                            ? 'bg-white shadow-md text-blue-700 ring-2 ring-blue-500 ring-opacity-50'
+                            : 'bg-white/70 text-gray-600 hover:bg-white hover:shadow-sm'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>직급별</span>
+                        <span className="text-xs text-gray-500">({dynamicStructure.levels.length}개)</span>
+                      </button>
+                      <button
+                        onClick={() => setAdjustmentMode('advanced')}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                          adjustmentMode === 'advanced'
+                            ? 'bg-white shadow-md text-blue-700 ring-2 ring-blue-500 ring-opacity-50'
+                            : 'bg-white/70 text-gray-600 hover:bg-white hover:shadow-sm'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                        </svg>
+                        <span>직군×직급별</span>
+                        <span className="text-xs text-gray-500">(+{dynamicStructure.bands.length}개 직군)</span>
+                      </button>
+                      <button
+                        onClick={() => setAdjustmentMode('expert')}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                          adjustmentMode === 'expert'
+                            ? 'bg-white shadow-md text-blue-700 ring-2 ring-blue-500 ring-opacity-50'
+                            : 'bg-white/70 text-gray-600 hover:bg-white hover:shadow-sm'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                        </svg>
+                        <span>Pay Zone별</span>
+                        <span className="text-xs text-gray-500">(+{dynamicStructure.payZones.length}개 Zone)</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-                
-                {/* Simple Mode: Level별 조정 */}
-                {adjustmentMode === 'simple' && (
-                  <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                    <h2 className="text-lg font-semibold mb-4">직급별 인상률 조정</h2>
-                    
-                    {/* 평가가중치 설정 */}
-                    <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-700">평가가중치 설정</h3>
-                          <p className="text-xs text-gray-500 mt-1">성과평가 등급별 인상률 가중치를 조정합니다</p>
-                        </div>
-                        <button
-                          onClick={() => setIsWeightModalOpen(true)}
-                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
-                        >
-                          가중치 설정
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* 일괄 조정 */}
-                    <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                      <h3 className="text-sm font-medium text-gray-700 mb-3">전체 일괄 조정</h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">Base-up</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            placeholder="일괄 적용"
-                            onChange={(e) => handleGlobalAdjustment('baseUp', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">성과인상률</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            placeholder="일괄 적용"
-                            onChange={(e) => handleGlobalAdjustment('merit', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">추가인상률</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            placeholder="일괄 적용"
-                            onChange={(e) => handleGlobalAdjustment('additional', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Level별 개별 조정 */}
-                    <div className="space-y-3">
-                      {dynamicStructure.levels.map(level => (
-                        <div key={level} className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-gray-900">{level}</h4>
-                            <span className="text-sm text-gray-500">
-                              {contextEmployeeData.filter(emp => emp.level === level).length}명
-                            </span>
+                  
+                  {/* 탭 컨텐츠 */}
+                  <div className="p-6">
+                    {/* Simple Mode: Level별 조정 */}
+                    {adjustmentMode === 'simple' && (
+                      <div>
+                        {/* 평가가중치 설정 */}
+                        <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-sm font-medium text-gray-700">평가가중치 설정</h3>
+                              <p className="text-xs text-gray-500 mt-1">성과평가 등급별 인상률 가중치를 조정합니다</p>
+                            </div>
+                            <button
+                              onClick={() => setIsWeightModalOpen(true)}
+                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                            >
+                              가중치 설정
+                            </button>
                           </div>
-                          <div className="grid grid-cols-3 gap-3">
+                        </div>
+                        
+                        {/* 일괄 조정 */}
+                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                          <h3 className="text-sm font-medium text-gray-700 mb-3">전체 일괄 조정</h3>
+                          <div className="grid grid-cols-3 gap-4">
                             <div>
-                              <label className="block text-xs text-gray-600 mb-1">Base-up (%)</label>
+                              <label className="block text-xs text-gray-600 mb-1">Base-up</label>
                               <input
                                 type="number"
-                                value={levelRates[level]?.baseUp || 0}
-                                onChange={(e) => handleLevelRateChange(level, 'baseUp', parseFloat(e.target.value) || 0)}
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                                 step="0.1"
+                                placeholder="일괄 적용"
+                                onChange={(e) => handleGlobalAdjustment('baseUp', parseFloat(e.target.value) || 0)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs text-gray-600 mb-1">성과인상률 (%)</label>
+                              <label className="block text-xs text-gray-600 mb-1">성과인상률</label>
                               <input
                                 type="number"
-                                value={levelRates[level]?.merit || 0}
-                                onChange={(e) => handleLevelRateChange(level, 'merit', parseFloat(e.target.value) || 0)}
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                                 step="0.1"
+                                placeholder="일괄 적용"
+                                onChange={(e) => handleGlobalAdjustment('merit', parseFloat(e.target.value) || 0)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs text-gray-600 mb-1">총 인상률</label>
-                              <div className="px-2 py-1 text-sm bg-gray-100 rounded text-center font-medium">
-                                {((levelRates[level]?.baseUp || 0) + (levelRates[level]?.merit || 0)).toFixed(1)}%
+                              <label className="block text-xs text-gray-600 mb-1">추가인상률</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                placeholder="일괄 적용"
+                                onChange={(e) => handleGlobalAdjustment('additional', parseFloat(e.target.value) || 0)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Level별 개별 조정 */}
+                        <div className="space-y-3">
+                          {dynamicStructure.levels.map(level => (
+                            <div key={level} className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium text-gray-900">{level}</h4>
+                                <span className="text-sm text-gray-500">
+                                  {contextEmployeeData.filter(emp => emp.level === level).length}명
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">Base-up (%)</label>
+                                  <input
+                                    type="number"
+                                    value={levelRates[level]?.baseUp || 0}
+                                    onChange={(e) => handleLevelRateChange(level, 'baseUp', parseFloat(e.target.value) || 0)}
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                                    step="0.1"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">성과인상률 (%)</label>
+                                  <input
+                                    type="number"
+                                    value={levelRates[level]?.merit || 0}
+                                    onChange={(e) => handleLevelRateChange(level, 'merit', parseFloat(e.target.value) || 0)}
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                                    step="0.1"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">총 인상률</label>
+                                  <div className="px-2 py-1 text-sm bg-gray-100 rounded text-center font-medium">
+                                    {((levelRates[level]?.baseUp || 0) + (levelRates[level]?.merit || 0)).toFixed(1)}%
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Advanced Mode: Band×Level 조정 */}
-                {adjustmentMode === 'advanced' && (
-                  <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                    <h2 className="text-lg font-semibold mb-4">직군×직급별 인상률 조정</h2>
+                      </div>
+                    )}
                     
-                    {/* 평가가중치 설정 */}
-                    <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
+                    {/* Advanced Mode: Band×Level 조정 */}
+                    {adjustmentMode === 'advanced' && (
+                      <div>
+                        {/* 평가가중치 설정 */}
+                        <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-sm font-medium text-gray-700">평가가중치 설정</h3>
@@ -568,14 +581,7 @@ export default function SimulationPage() {
                 
                 {/* Expert Mode: Level×Band×PayZone 조정 */}
                 {adjustmentMode === 'expert' && (
-                  <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                    <h2 className="text-lg font-semibold mb-4">
-                      직급×직군×Pay Zone별 인상률 조정
-                      <span className="ml-2 text-sm text-gray-500">
-                        ({getActualCombinationCount()}개 조합)
-                      </span>
-                    </h2>
-                    
+                  <div>
                     {/* 평가가중치 설정 */}
                     <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
                       <div className="flex items-center justify-between">
@@ -723,8 +729,10 @@ export default function SimulationPage() {
                         </div>
                       </div>
                     )}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </>
             )}
             
@@ -743,7 +751,7 @@ export default function SimulationPage() {
                     currentRates={{
                       baseUpRate: calculateBandAverage(band.name, 'baseUp'),
                       additionalRate: 0,
-                      meritMultipliers: performanceWeights
+                      meritMultipliers: { ...performanceWeights }
                     }}
                     isReadOnly={true}
                     bands={bandsData}
@@ -769,7 +777,7 @@ export default function SimulationPage() {
                       currentRates={{
                         baseUpRate: calculateBandAverage(band.name, 'baseUp'),
                         additionalRate: 0,
-                        meritMultipliers: performanceWeights
+                        meritMultipliers: { ...performanceWeights }
                       }}
                       isReadOnly={true}
                       bands={bandsData}

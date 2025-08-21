@@ -10,6 +10,8 @@ export interface Employee {
   name: string
   level: EmployeeLevel
   department: string
+  band?: string
+  payZone?: number
   performanceRating: PerformanceRating
   currentSalary: number
   baseUpAmount: number

@@ -1,6 +1,6 @@
 // 시뮬레이션 계산 및 동기화 유틸리티 함수
 
-import { Employee } from '@/types/employee'
+import { Employee } from '@/types'
 import { 
   AdjustmentRates, 
   BandFinalRates, 
@@ -295,7 +295,7 @@ export const calculateBudgetUsage = (
     let rates: AdjustmentRates = { baseUp: 0, merit: 0, additional: 0 }
     
     // 모드에 따른 인상률 적용
-    if (adjustmentMode === 'expert' && payZone !== undefined && payZoneRates[payZone]?.[band]?.[level]) {
+    if (adjustmentMode === 'expert' && payZone !== undefined && band && payZoneRates[payZone]?.[band]?.[level]) {
       rates = payZoneRates[payZone][band][level]
     } else if (adjustmentMode === 'advanced' && band && bandFinalRates[band]?.[level]) {
       rates = {
