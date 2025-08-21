@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSimulationLogic } from '@/hooks/useSimulationLogic'
 import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
@@ -10,6 +10,9 @@ import { RaiseSliderPanel } from '@/components/simulation/RaiseSliderPanel'
 import { PayBandCompetitivenessHeatmap } from '@/components/analytics/PayBandCompetitivenessHeatmap'
 import { useBandData } from '@/hooks/useBandData'
 import { PerformanceWeightModal } from '@/components/employees/PerformanceWeightModal'
+import { RateSummaryCard } from '@/components/simulation/RateSummaryCard'
+import { RateInputWithIndicator } from '@/components/simulation/RateChangeIndicator'
+import { RateHeatmap } from '@/components/simulation/RateHeatmap'
 
 export default function SimulationPage() {
   const router = useRouter()
@@ -136,6 +139,69 @@ export default function SimulationPage() {
     return null
   }
   
+  // 전체 인상률 계산 (가중평균)
+  const weightedAverageRates = useMemo<{ baseUp: number; merit: number; total: number }>(() => {
+    if (!contextEmployeeData || contextEmployeeData.length === 0) {
+      return { baseUp: 0, merit: 0, total: 0 }
+    }
+    
+    let totalBaseUp = 0
+    let totalMerit = 0
+    let totalCount = 0
+    
+    // 조정 모드에 따라 다른 인상률 적용
+    contextEmployeeData.forEach(emp => {
+      const level = emp.level
+      const band = emp.bandName
+      const payZone = emp.payZone
+      
+      let baseUp = 0
+      let merit = 0
+      
+      if (adjustmentMode === 'expert' && payZone && payZoneRates[payZone]?.[band]?.[level]) {
+        // Expert 모드: Pay Zone별 인상률
+        baseUp = payZoneRates[payZone][band][level].baseUp || 0
+        merit = payZoneRates[payZone][band][level].merit || 0
+      } else if (adjustmentMode === 'advanced' && bandFinalRates[band]?.[level]) {
+        // Advanced 모드: 직군×직급별 인상률
+        baseUp = bandFinalRates[band][level].baseUp || 0
+        merit = bandFinalRates[band][level].merit || 0
+      } else {
+        // Simple 모드: 직급별 인상률
+        baseUp = levelRates[level]?.baseUp || contextBaseUpRate
+        merit = levelRates[level]?.merit || contextMeritRate
+      }
+      
+      totalBaseUp += baseUp
+      totalMerit += merit
+      totalCount++
+    })
+    
+    return {
+      baseUp: totalCount > 0 ? totalBaseUp / totalCount : 0,
+      merit: totalCount > 0 ? totalMerit / totalCount : 0,
+      total: totalCount > 0 ? (totalBaseUp + totalMerit) / totalCount : 0
+    }
+  }, [contextEmployeeData, adjustmentMode, levelRates, bandFinalRates, payZoneRates, contextBaseUpRate, contextMeritRate])
+  
+  // 직급별 통계 계산
+  const levelBreakdown = useMemo(() => {
+    if (!contextEmployeeData) return {}
+    
+    const breakdown: { [level: string]: { count: number; baseUp: number; merit: number } } = {}
+    
+    dynamicStructure.levels.forEach(level => {
+      const employees = contextEmployeeData.filter(emp => emp.level === level)
+      breakdown[level] = {
+        count: employees.length,
+        baseUp: levelRates[level]?.baseUp || contextBaseUpRate,
+        merit: levelRates[level]?.merit || contextMeritRate
+      }
+    })
+    
+    return breakdown
+  }, [contextEmployeeData, dynamicStructure.levels, levelRates, contextBaseUpRate, contextMeritRate])
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       <main className="pt-20 pb-8">
@@ -250,8 +316,20 @@ export default function SimulationPage() {
             {/* 인상률 조정 뷰 */}
             {viewMode === 'adjustment' && (
               <>
+                {/* 전체 인상률 요약 카드 추가 */}
+                <RateSummaryCard
+                  aiBaseUp={contextBaseUpRate}
+                  aiMerit={contextMeritRate}
+                  currentBaseUp={weightedAverageRates.baseUp}
+                  currentMerit={weightedAverageRates.merit}
+                  totalBudget={availableBudget - welfareBudget}
+                  usedBudget={budgetUsage.total}
+                  totalEmployees={totalEmployees}
+                  levelBreakdown={levelBreakdown}
+                />
+                
                 {/* 통합 예산 현황 및 사용량 표시 */}
-                <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-blue-100">
+                <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-blue-100 mt-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,7 +521,7 @@ export default function SimulationPage() {
                           </div>
                         </div>
                         
-                        {/* Level별 개별 조정 */}
+                        {/* Level별 개별 조정 - RateInputWithIndicator 적용 */}
                         <div className="space-y-3">
                           {dynamicStructure.levels.map(level => (
                             <div key={level} className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
@@ -454,26 +532,20 @@ export default function SimulationPage() {
                                 </span>
                               </div>
                               <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">Base-up (%)</label>
-                                  <input
-                                    type="number"
-                                    value={levelRates[level]?.baseUp || 0}
-                                    onChange={(e) => handleLevelRateChange(level, 'baseUp', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                                    step="0.1"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">성과인상률 (%)</label>
-                                  <input
-                                    type="number"
-                                    value={levelRates[level]?.merit || 0}
-                                    onChange={(e) => handleLevelRateChange(level, 'merit', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                                    step="0.1"
-                                  />
-                                </div>
+                                <RateInputWithIndicator
+                                  value={levelRates[level]?.baseUp || 0}
+                                  originalValue={contextBaseUpRate}
+                                  onChange={(value) => handleLevelRateChange(level, 'baseUp', value)}
+                                  label="Base-up (%)"
+                                  step={0.1}
+                                />
+                                <RateInputWithIndicator
+                                  value={levelRates[level]?.merit || 0}
+                                  originalValue={contextMeritRate}
+                                  onChange={(value) => handleLevelRateChange(level, 'merit', value)}
+                                  label="성과인상률 (%)"
+                                  step={0.1}
+                                />
                                 <div>
                                   <label className="block text-xs text-gray-600 mb-1">총 인상률</label>
                                   <div className="px-2 py-1 text-sm bg-gray-100 rounded text-center font-medium">
