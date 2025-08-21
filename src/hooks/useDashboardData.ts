@@ -68,7 +68,8 @@ export function useDashboardData() {
             console.log('useDashboardData - 클라이언트 데이터:', {
               competitorData: clientData.competitorData,
               competitorIncreaseRate: clientData.competitorIncreaseRate,
-              aiSettings: clientData.aiSettings
+              aiSettings: clientData.aiSettings,
+              employees: clientData.employees?.length || 0
             })
             
             // 클라이언트 데이터를 대시보드 형식으로 변환
@@ -91,6 +92,7 @@ export function useDashboardData() {
               departmentDistribution: [],
               performanceDistribution: [],
               competitorData: clientData.competitorData,
+              competitorIncreaseRate: clientData.competitorIncreaseRate || 0,
               industryComparison: {
                 ourCompany: clientData.aiSettings?.totalPercentage || 0,
                 competitor: clientData.competitorIncreaseRate || 0

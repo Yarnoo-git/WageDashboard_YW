@@ -729,18 +729,52 @@ export default function SimulationPage() {
             )}
             
             {/* 전체 직군 현황 뷰 */}
-            {viewMode === 'all' && (
-              <div className="grid grid-cols-2 gap-6">
-                {dynamicStructure.bands.map(band => (
+            {viewMode === 'all' && bandsData && bandsData.length > 0 && (
+              <div className="grid grid-cols-1 gap-6">
+                {bandsData.map(band => (
                   <PayBandCard
-                    key={band}
-                    band={band}
-                    employees={contextEmployeeData.filter(emp => emp.band === band)}
-                    averageSalary={calculateAverageSalary(0, band)}
-                    baseUpRate={calculateBandAverage(band, 'baseUp')}
-                    meritRate={calculateBandAverage(band, 'merit')}
+                    key={band.id}
+                    bandId={band.id}
+                    bandName={band.name}
+                    levels={band.levels}
+                    initialBaseUp={contextBaseUpRate || 0}
+                    initialMerit={contextMeritRate || 0}
+                    levelRates={levelRates}
+                    currentRates={{
+                      baseUpRate: calculateBandAverage(band.name, 'baseUp'),
+                      additionalRate: 0,
+                      meritMultipliers: performanceWeights
+                    }}
+                    isReadOnly={true}
+                    bands={bandsData}
                   />
                 ))}
+              </div>
+            )}
+            
+            {/* 직군별 분석 뷰 (읽기 전용 - 정보 표시용) */}
+            {viewMode === 'band' && selectedViewBand && bandsData && (
+              <div>
+                {bandsData
+                  .filter(band => band.name === selectedViewBand)
+                  .map(band => (
+                    <PayBandCard
+                      key={band.id}
+                      bandId={band.id}
+                      bandName={band.name}
+                      levels={band.levels}
+                      initialBaseUp={contextBaseUpRate || 0}
+                      initialMerit={contextMeritRate || 0}
+                      levelRates={levelRates}
+                      currentRates={{
+                        baseUpRate: calculateBandAverage(band.name, 'baseUp'),
+                        additionalRate: 0,
+                        meritMultipliers: performanceWeights
+                      }}
+                      isReadOnly={true}
+                      bands={bandsData}
+                    />
+                  ))}
               </div>
             )}
             
