@@ -149,9 +149,10 @@ export function Navigation({ children }: NavigationProps) {
       )}
       
       <nav className="bg-white shadow-sm border-b">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center flex-shrink-0">
             <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text mr-4 md:mr-8">
               인건비 대시보드
             </h1>
@@ -186,9 +187,9 @@ export function Navigation({ children }: NavigationProps) {
                 </Link>
               ))}
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
+              </div>
+              
+              <div className="flex items-center gap-2 flex-shrink-0">
             {/* 시나리오 버튼 */}
             <button 
               onClick={() => setShowScenarioManager(!showScenarioManager)}
@@ -233,10 +234,10 @@ export function Navigation({ children }: NavigationProps) {
                 )}
               </svg>
             </button>
-          </div>
-        </div>
-        
-        {/* 모바일 메뉴 */}
+              </div>
+            </div>
+            
+            {/* 모바일 메뉴 */}
         {isMenuOpen && (
           <div className="md:hidden py-2 border-t">
             {navItems.map((item) => (
@@ -273,7 +274,8 @@ export function Navigation({ children }: NavigationProps) {
               </div>
             )}
           </div>
-        )}
+          )}
+        </div>
       </div>
     </nav>
     </Fragment>
