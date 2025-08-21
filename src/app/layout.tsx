@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/Footer'
 import { WageProvider } from '@/context/WageContext'
@@ -9,7 +9,11 @@ export const metadata: Metadata = {
   description: '실시간 인상률 조정 및 인건비 배분 최적화 대시보드',
   keywords: '인건비, 급여, 임금, 대시보드, HR, 인사관리',
   authors: [{ name: '인사팀' }],
-  viewport: 'width=device-width, initial-scale=1',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: '#0ea5e9',
 }
 

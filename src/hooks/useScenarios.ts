@@ -5,11 +5,9 @@ import { Scenario } from '@/types/scenario'
 
 // 기본 시나리오 생성 함수 - AI 제안값 또는 0으로 초기화
 function createDefaultScenario(aiData?: { baseUpPercentage?: number, meritIncreasePercentage?: number }): Scenario {
-  console.log('[createDefaultScenario] AI 데이터:', aiData)
   const baseUp = aiData?.baseUpPercentage || 0
   const merit = aiData?.meritIncreasePercentage || 0
   const totalRate = baseUp + merit
-  console.log('[createDefaultScenario] 생성된 Default 시나리오:', { baseUp, merit, totalRate })
   
   return {
     id: 'default',

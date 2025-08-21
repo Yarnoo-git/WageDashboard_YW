@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useWageContext } from '@/context/WageContext'
 import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
@@ -1353,15 +1353,15 @@ export default function SimulationPage() {
               initialMerit={contextMeritRate || 0}
             />
           )}
-          </div>
         </div>
-      </main>
-      
-      {/* 평가가중치 설정 모달 */}
-      <PerformanceWeightModal 
-        isOpen={isWeightModalOpen}
-        onClose={() => setIsWeightModalOpen(false)}
-      />
-    </div>
+      </div>
+    </main>
+    
+    {/* 평가가중치 설정 모달 */}
+    <PerformanceWeightModal 
+      isOpen={isWeightModalOpen}
+      onClose={() => setIsWeightModalOpen(false)}
+    />
+  </div>
   )
 }
