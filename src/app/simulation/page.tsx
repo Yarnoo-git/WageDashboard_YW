@@ -14,7 +14,12 @@ import { RateSummaryCard } from '@/components/simulation/RateSummaryCard'
 import { RateInputWithIndicator } from '@/components/simulation/RateChangeIndicator'
 import { RateHeatmap } from '@/components/simulation/RateHeatmap'
 import { FixedSummaryBar } from '@/components/simulation/FixedSummaryBar'
-import { MatrixEditor } from '@/components/simulation/MatrixEditor'
+import { AdjustmentScope } from '@/components/simulation/AdjustmentScope'
+import { BandFilter } from '@/components/simulation/BandFilter'
+import { ApplyBar } from '@/components/simulation/ApplyBar'
+import { AllAdjustment } from '@/components/simulation/AllAdjustment'
+import { LevelAdjustment } from '@/components/simulation/LevelAdjustment'
+import { PayZoneAdjustment } from '@/components/simulation/PayZoneAdjustment'
 
 export default function SimulationPage() {
   const router = useRouter()
@@ -35,10 +40,29 @@ export default function SimulationPage() {
     contextMeritRate,
     levelRates,
     bandFinalRates,
-    payZoneRates,  // payZoneRates 추가
-    adjustmentMode,
-    setAdjustmentMode,
+    payZoneRates,
     performanceWeights,
+    
+    // Pending states
+    pendingLevelRates,
+    pendingBandFinalRates,
+    pendingPayZoneRates,
+    hasPendingChanges,
+    pendingChangeCount,
+    applyPendingChanges,
+    resetPendingChanges,
+    
+    // Adjustment controls
+    adjustmentScope,
+    setAdjustmentScope,
+    additionalType,
+    setAdditionalType,
+    
+    // Band filter
+    selectedBands,
+    handleBandToggle,
+    handleSelectAllBands,
+    handleClearAllBands,
     
     // Local state
     dynamicStructure,
@@ -47,29 +71,16 @@ export default function SimulationPage() {
     setViewMode,
     selectedViewBand,
     setSelectedViewBand,
-    selectedLevel,
-    setSelectedLevel,
-    selectedBand,
-    setSelectedBand,
-    selectedPayZone,
-    setSelectedPayZone,
-    selectedBandExpert,
-    setSelectedBandExpert,
     isWeightModalOpen,
     setIsWeightModalOpen,
     
     // Handlers
     handleLevelRateChange,
     handleGlobalAdjustment,
-    handleBandLevelChange,
-    handlePayZoneBandLevelChange,
-    handleExpertChange,
+    handlePayZoneLevelGradeChange,
     
     // Helper functions
-    getActualCombinationCount,
     calculateBandAverage,
-    calculateAverageSalary,
-    calculateZoneBandBudget,
     
     // Total employees
     totalEmployees
@@ -144,11 +155,12 @@ export default function SimulationPage() {
   // 전체 인상률 계산 (가중평균)
   const calculateWeightedAverageRates = () => {
     if (!contextEmployeeData || contextEmployeeData.length === 0) {
-      return { baseUp: 0, merit: 0, total: 0 }
+      return { baseUp: 0, merit: 0, additional: 0, total: 0 }
     }
     
     let totalBaseUp = 0
     let totalMerit = 0
+    let totalAdditional = 0
     let totalCount = 0
     
     // 조정 모드에 따라 다른 인상률 적용
@@ -159,30 +171,42 @@ export default function SimulationPage() {
       
       let baseUp = 0
       let merit = 0
+      let additional = 0
       
-      if (adjustmentMode === 'expert' && payZone && payZoneRates[payZone]?.[band]?.[level]) {
-        // Expert 모드: Pay Zone별 인상률
-        baseUp = payZoneRates[payZone][band][level].baseUp || 0
-        merit = payZoneRates[payZone][band][level].merit || 0
-      } else if (adjustmentMode === 'advanced' && bandFinalRates[band]?.[level]) {
-        // Advanced 모드: 직군×직급별 인상률
-        baseUp = bandFinalRates[band][level].baseUp || 0
-        merit = bandFinalRates[band][level].merit || 0
+      if (adjustmentScope === 'payzone' && payZone && emp.performanceGrade) {
+        // PayZone별 조정: PayZone-Level-Grade별 인상률 (pending rates 사용)
+        const grade = emp.performanceGrade
+        if (pendingPayZoneRates[payZone]?.[level]?.[grade]) {
+          baseUp = pendingPayZoneRates[payZone][level][grade].baseUp || 0
+          merit = pendingPayZoneRates[payZone][level][grade].merit || 0
+          additional = pendingPayZoneRates[payZone][level][grade].additional || 0
+        }
+      } else if (adjustmentScope === 'level') {
+        // 레벨별 조정: 레벨별 인상률 (pending rates 사용)
+        baseUp = pendingLevelRates[level]?.baseUp || 0
+        merit = pendingLevelRates[level]?.merit || 0
+        additional = pendingLevelRates[level]?.additional || 0
       } else {
-        // Simple 모드: 직급별 인상률
-        baseUp = levelRates[level]?.baseUp || contextBaseUpRate
-        merit = levelRates[level]?.merit || contextMeritRate
+        // 전체 조정: 모든 직원 동일 (pending rates의 평균)
+        const levels = Object.keys(pendingLevelRates)
+        if (levels.length > 0) {
+          baseUp = levels.reduce((sum, l) => sum + (pendingLevelRates[l]?.baseUp || 0), 0) / levels.length
+          merit = levels.reduce((sum, l) => sum + (pendingLevelRates[l]?.merit || 0), 0) / levels.length
+          additional = levels.reduce((sum, l) => sum + (pendingLevelRates[l]?.additional || 0), 0) / levels.length
+        }
       }
       
       totalBaseUp += baseUp
       totalMerit += merit
+      totalAdditional += additional
       totalCount++
     })
     
     return {
       baseUp: totalCount > 0 ? totalBaseUp / totalCount : 0,
       merit: totalCount > 0 ? totalMerit / totalCount : 0,
-      total: totalCount > 0 ? (totalBaseUp + totalMerit) / totalCount : 0
+      additional: totalCount > 0 ? totalAdditional / totalCount : 0,
+      total: totalCount > 0 ? (totalBaseUp + totalMerit + (additionalType === 'percentage' ? totalAdditional : 0)) / totalCount : 0
     }
   }
   
@@ -216,6 +240,8 @@ export default function SimulationPage() {
           totalEmployees={totalEmployees}
           currentBaseUp={weightedAverageRates.baseUp}
           currentMerit={weightedAverageRates.merit}
+          currentAdditional={weightedAverageRates.additional}
+          additionalType={additionalType}
           aiBaseUp={contextBaseUpRate}
           aiMerit={contextMeritRate}
           totalBudget={availableBudget - welfareBudget}
@@ -371,447 +397,80 @@ export default function SimulationPage() {
                   
                 </div>
                 
-                {/* 개선된 인상률 조정 섹션 */}
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
-                  {/* 컴팩트한 탭 헤더 */}
-                  <div className="bg-gray-50 px-4 py-2 border-b">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-gray-700">인상률 조정</h3>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => setAdjustmentMode('simple')}
-                          className={`px-3 py-1 text-xs rounded font-medium transition-all ${
-                            adjustmentMode === 'simple'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          직급별
-                        </button>
-                        <button
-                          onClick={() => setAdjustmentMode('matrix')}
-                          className={`px-3 py-1 text-xs rounded font-medium transition-all ${
-                            adjustmentMode === 'matrix'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          매트릭스
-                        </button>
-                        <button
-                          onClick={() => setAdjustmentMode('advanced')}
-                          className={`px-3 py-1 text-xs rounded font-medium transition-all ${
-                            adjustmentMode === 'advanced'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          상세
-                        </button>
-                      </div>
-                    </div>
+                {/* 새로운 계층적 인상률 조정 섹션 */}
+                <div className="flex gap-6">
+                  {/* 좌측 제어 패널 */}
+                  <div className="w-80 space-y-4">
+                    <AdjustmentScope 
+                      scope={adjustmentScope}
+                      onChange={setAdjustmentScope}
+                      pendingChanges={pendingChangeCount}
+                    />
+                    <BandFilter
+                      bands={dynamicStructure.bands}
+                      selectedBands={selectedBands}
+                      onBandToggle={handleBandToggle}
+                      onSelectAll={handleSelectAllBands}
+                      onClearAll={handleClearAllBands}
+                    />
                   </div>
                   
-                  {/* 탭 컨텐츠 */}
-                  <div className="p-4">
-                    {/* Matrix Mode: 매트릭스 편집기 */}
-                    {adjustmentMode === 'matrix' && (
-                      <MatrixEditor
-                        levels={dynamicStructure.levels}
-                        bands={dynamicStructure.bands}
-                        rates={bandFinalRates}
-                        onCellChange={(band, level, type, value) => {
-                          handleBandLevelChange(band, level, type, value)
+                  {/* 메인 조정 영역 */}
+                  <div className="flex-1">
+                    {adjustmentScope === 'all' && (
+                      <AllAdjustment
+                        pendingLevelRates={pendingLevelRates}
+                        onRateChange={(field, value) => {
+                          // 모든 레벨에 동일한 값 적용
+                          dynamicStructure.levels.forEach(level => {
+                            handleLevelRateChange(level, field, value)
+                          })
                         }}
-                        onBulkChange={(type, target, rateType, value) => {
-                          if (type === 'all') {
-                            dynamicStructure.bands.forEach(band => {
-                              dynamicStructure.levels.forEach(level => {
-                                handleBandLevelChange(band, level, rateType, value)
-                              })
-                            })
-                          } else if (type === 'row' && target) {
-                            dynamicStructure.levels.forEach(level => {
-                              handleBandLevelChange(target, level, rateType, value)
-                            })
-                          } else if (type === 'column' && target) {
-                            dynamicStructure.bands.forEach(band => {
-                              handleBandLevelChange(band, target, rateType, value)
-                            })
-                          }
-                        }}
-                        employeeCounts={
-                          contextEmployeeData.reduce((acc, emp) => {
-                            if (!acc[emp.bandName]) acc[emp.bandName] = {}
-                            if (!acc[emp.bandName][emp.level]) acc[emp.bandName][emp.level] = 0
-                            acc[emp.bandName][emp.level]++
-                            return acc
-                          }, {} as { [band: string]: { [level: string]: number } })
-                        }
-                        showMerit={true}
+                        additionalType={additionalType}
+                        onAdditionalTypeChange={setAdditionalType}
                       />
                     )}
                     
-                    {/* Simple Mode: Level별 조정 */}
-                    {adjustmentMode === 'simple' && (
-                      <div>
-                        {/* 빠른 조정 도구 */}
-                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-xs font-medium text-gray-700">빠른 조정</h4>
-                            <button
-                              onClick={() => setIsWeightModalOpen(true)}
-                              className="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700"
-                            >
-                              가중치
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-4 gap-2">
-                            <button
-                              onClick={() => {
-                                handleGlobalAdjustment('baseUp', contextBaseUpRate)
-                                handleGlobalAdjustment('merit', contextMeritRate)
-                              }}
-                              className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                            >
-                              AI 제안
-                            </button>
-                            <button
-                              onClick={() => {
-                                handleGlobalAdjustment('baseUp', 5.0)
-                                handleGlobalAdjustment('merit', 2.0)
-                              }}
-                              className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                            >
-                              업계 평균
-                            </button>
-                            <button
-                              onClick={() => {
-                                handleGlobalAdjustment('baseUp', 0)
-                                handleGlobalAdjustment('merit', 0)
-                              }}
-                              className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
-                            >
-                              초기화
-                            </button>
-                            <button
-                              className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
-                            >
-                              저장
-                            </button>
-                          </div>
-                        </div>
-                        
-                        {/* 컴팩트한 일괄 조정 */}
-                        <div className="mb-3 flex gap-2">
-                          <input
-                            type="number"
-                            step="0.1"
-                            placeholder="Base-up 일괄"
-                            onChange={(e) => handleGlobalAdjustment('baseUp', parseFloat(e.target.value) || 0)}
-                            className="w-24 px-2 py-1 text-xs border border-gray-300 rounded"
-                          />
-                          <input
-                            type="number"
-                            step="0.1"
-                            placeholder="성과 일괄"
-                            onChange={(e) => handleGlobalAdjustment('merit', parseFloat(e.target.value) || 0)}
-                            className="w-24 px-2 py-1 text-xs border border-gray-300 rounded"
-                          />
-                        </div>
-                        
-                        {/* 컴팩트한 Level별 조정 */}
-                        <div className="space-y-2">
-                          {dynamicStructure.levels.map(level => {
-                            const empCount = contextEmployeeData.filter(emp => emp.level === level).length
-                            const baseUp = levelRates[level]?.baseUp || 0
-                            const merit = levelRates[level]?.merit || 0
-                            const total = baseUp + merit
-                            
-                            return (
-                              <div key={level} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                                <div className="w-16 font-medium text-sm">{level}</div>
-                                <div className="text-xs text-gray-500 w-12">{empCount}명</div>
-                                <div className="flex-1 grid grid-cols-3 gap-2">
-                                  <div className="flex items-center gap-1">
-                                    <label className="text-xs text-gray-600 w-12">Base:</label>
-                                    <input
-                                      type="number"
-                                      step="0.1"
-                                      value={baseUp}
-                                      onChange={(e) => handleLevelRateChange(level, 'baseUp', parseFloat(e.target.value) || 0)}
-                                      className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded text-center"
-                                    />
-                                    <span className="text-xs">%</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <label className="text-xs text-gray-600 w-12">성과:</label>
-                                    <input
-                                      type="number"
-                                      step="0.1"
-                                      value={merit}
-                                      onChange={(e) => handleLevelRateChange(level, 'merit', parseFloat(e.target.value) || 0)}
-                                      className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded text-center"
-                                    />
-                                    <span className="text-xs">%</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <label className="text-xs text-gray-600 w-12">총:</label>
-                                    <div className="w-16 px-1 py-0.5 text-xs bg-blue-100 rounded text-center font-medium text-blue-700">
-                                      {total.toFixed(1)}%
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
+                    {adjustmentScope === 'level' && (
+                      <LevelAdjustment
+                        levels={dynamicStructure.levels}
+                        pendingLevelRates={pendingLevelRates}
+                        onRateChange={handleLevelRateChange}
+                        additionalType={additionalType}
+                        employeeCounts={
+                          dynamicStructure.levels.reduce((acc, level) => {
+                            acc[level] = contextEmployeeData.filter(emp => emp.level === level).length
+                            return acc
+                          }, {} as { [level: string]: number })
+                        }
+                      />
                     )}
                     
-                    {/* Advanced Mode: Band×Level 조정 */}
-                    {adjustmentMode === 'advanced' && (
-                      <div>
-                        {/* 평가가중치 설정 */}
-                        <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-700">평가가중치 설정</h3>
-                          <p className="text-xs text-gray-500 mt-1">성과평가 등급별 인상률 가중치를 조정합니다</p>
-                        </div>
-                        <button
-                          onClick={() => setIsWeightModalOpen(true)}
-                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
-                        >
-                          가중치 설정
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Band 선택 */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">직군 선택</label>
-                      <div className="flex flex-wrap gap-2">
-                        {dynamicStructure.bands.map(band => (
-                          <button
-                            key={band}
-                            onClick={() => setSelectedBand(band)}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                              selectedBand === band
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {band}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* 선택된 Band의 Level별 조정 */}
-                    {selectedBand && (
-                      <div className="space-y-3">
-                        {dynamicStructure.levels.map(level => {
-                          const empCount = contextEmployeeData.filter(
-                            emp => emp.band === selectedBand && emp.level === level
-                          ).length;
-                          
-                          if (empCount === 0) return null;
-                          
-                          return (
-                            <div key={level} className="p-4 bg-white border border-gray-200 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="font-medium text-gray-900">{level}</h4>
-                                <span className="text-sm text-gray-500">{empCount}명</span>
-                              </div>
-                              <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">Base-up (%)</label>
-                                  <input
-                                    type="number"
-                                    value={bandFinalRates[selectedBand]?.[level]?.baseUp || 0}
-                                    onChange={(e) => handleBandLevelChange(selectedBand, level, 'baseUp', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                                    step="0.1"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">성과인상률 (%)</label>
-                                  <input
-                                    type="number"
-                                    value={bandFinalRates[selectedBand]?.[level]?.merit || 0}
-                                    onChange={(e) => handleBandLevelChange(selectedBand, level, 'merit', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                                    step="0.1"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">총 인상률</label>
-                                  <div className="px-2 py-1 text-sm bg-gray-100 rounded text-center font-medium">
-                                    {((bandFinalRates[selectedBand]?.[level]?.baseUp || 0) + 
-                                      (bandFinalRates[selectedBand]?.[level]?.merit || 0)).toFixed(1)}%
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Expert Mode: Level×Band×PayZone 조정 */}
-                {adjustmentMode === 'expert' && (
-                  <div>
-                    {/* 평가가중치 설정 */}
-                    <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-700">평가가중치 설정</h3>
-                          <p className="text-xs text-gray-500 mt-1">성과평가 등급별 인상률 가중치를 조정합니다</p>
-                        </div>
-                        <button
-                          onClick={() => setIsWeightModalOpen(true)}
-                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
-                        >
-                          가중치 설정
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Level & Band 선택 (Pay Zone은 아래에서 선택) */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">직급 선택</label>
-                        <div className="flex flex-wrap gap-2">
-                          {dynamicStructure.levels.map(level => (
-                            <button
-                              key={level}
-                              onClick={() => setSelectedLevel(level)}
-                              className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                                selectedLevel === level
-                                  ? 'bg-purple-600 text-white'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
-                            >
-                              {level}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">직군 선택</label>
-                        <div className="flex flex-wrap gap-2">
-                          {dynamicStructure.bands.map(band => (
-                            <button
-                              key={band}
-                              onClick={() => setSelectedBandExpert(band)}
-                              className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                                selectedBandExpert === band
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
-                            >
-                              {band}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* 선택된 Level×Band의 Pay Zone별 조정 */}
-                    {selectedLevel && selectedBandExpert && (
-                      <div className="space-y-3">
-                        <div className="p-3 bg-purple-50 rounded-lg mb-3">
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700">
-                              {selectedLevel} / {selectedBandExpert}
-                            </span>
-                            <span className="ml-4 text-gray-600">
-                              총 {contextEmployeeData.filter(
-                                emp => emp.level === selectedLevel && emp.band === selectedBandExpert
-                              ).length}명
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* Pay Zone별 그리드 */}
-                        <div className="grid grid-cols-1 gap-3">
-                          {dynamicStructure.payZones.map(zone => {
-                            const empCount = contextEmployeeData.filter(
-                              emp => emp.payZone === zone && 
-                                     emp.band === selectedBandExpert && 
-                                     emp.level === selectedLevel
-                            ).length;
-                            
-                            if (empCount === 0) return null;
-                            
-                            const avgSalary = contextEmployeeData
-                              .filter(emp => emp.payZone === zone && emp.band === selectedBandExpert && emp.level === selectedLevel)
-                              .reduce((sum, emp) => sum + (emp.currentSalary || 0), 0) / (empCount || 1);
-                            
-                            return (
-                              <div key={zone} className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                                <div className="flex items-center justify-between mb-3">
-                                  <div className="flex items-center gap-3">
-                                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm font-medium">
-                                      Pay Zone {zone}
-                                    </span>
-                                    <span className="text-sm text-gray-600">{empCount}명</span>
-                                    <span className="text-sm text-gray-600">
-                                      평균: {formatKoreanCurrency(avgSalary, '만원', 10000)}
-                                    </span>
-                                  </div>
-                                </div>
-                                
-                                <div className="grid grid-cols-4 gap-3">
-                                  <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Base-up (%)</label>
-                                    <input
-                                      type="number"
-                                      value={payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.baseUp || 0}
-                                      onChange={(e) => handleExpertChange(zone, selectedBandExpert, selectedLevel, 'baseUp', parseFloat(e.target.value) || 0)}
-                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                      step="0.1"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs text-gray-600 mb-1">성과인상률 (%)</label>
-                                    <input
-                                      type="number"
-                                      value={payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.merit || 0}
-                                      onChange={(e) => handleExpertChange(zone, selectedBandExpert, selectedLevel, 'merit', parseFloat(e.target.value) || 0)}
-                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                      step="0.1"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs text-gray-600 mb-1">추가인상률 (%)</label>
-                                    <input
-                                      type="number"
-                                      value={payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.additional || 0}
-                                      onChange={(e) => handleExpertChange(zone, selectedBandExpert, selectedLevel, 'additional', parseFloat(e.target.value) || 0)}
-                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                      step="0.1"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs text-gray-600 mb-1">총 인상률</label>
-                                    <div className="px-2 py-1 text-sm bg-gradient-to-r from-purple-50 to-blue-50 rounded text-center font-bold text-purple-700">
-                                      {((payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.baseUp || 0) + 
-                                        (payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.merit || 0) +
-                                        (payZoneRates[zone]?.[selectedBandExpert]?.[selectedLevel]?.additional || 0)).toFixed(1)}%
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                      </div>
+                    {adjustmentScope === 'payzone' && (
+                      <PayZoneAdjustment
+                        levels={dynamicStructure.levels}
+                        payZones={dynamicStructure.payZones}
+                        performanceGrades={dynamicStructure.grades}
+                        pendingPayZoneRates={pendingPayZoneRates}
+                        onRateChange={handlePayZoneLevelGradeChange}
+                        additionalType={additionalType}
+                        selectedBands={selectedBands}
+                        employeeCounts={
+                          (() => {
+                            const counts: { [key: string]: number } = {}
+                            dynamicStructure.levels.forEach(level => {
+                              dynamicStructure.payZones.forEach(zone => {
+                                const key = `${level}-PZ${zone}`
+                                counts[key] = contextEmployeeData.filter(
+                                  emp => emp.level === level && emp.payZone === zone &&
+                                  (selectedBands.length === 0 || selectedBands.includes(emp.band))
+                                ).length
+                              })
+                            })
+                            return counts
+                          })()
+                        }
+                      />
                     )}
                   </div>
                 </div>
@@ -926,6 +585,15 @@ export default function SimulationPage() {
         isOpen={isWeightModalOpen}
         onClose={() => setIsWeightModalOpen(false)}
       />
+      
+      {/* Apply Bar - 펜딩 변경사항이 있을 때만 표시 */}
+      {hasPendingChanges && (
+        <ApplyBar
+          pendingCount={pendingChangeCount}
+          onApply={applyPendingChanges}
+          onReset={resetPendingChanges}
+        />
+      )}
     </div>
   )
 }
