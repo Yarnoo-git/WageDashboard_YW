@@ -7,24 +7,28 @@ interface FixedSummaryBarProps {
   totalEmployees: number
   currentBaseUp: number
   currentMerit: number
+  currentAdditional?: number
   aiBaseUp: number
   aiMerit: number
   totalBudget: number
   usedBudget: number
   budgetPercentage: number
+  additionalType?: 'percentage' | 'amount'
 }
 
 export function FixedSummaryBar({
   totalEmployees,
   currentBaseUp,
   currentMerit,
+  currentAdditional = 0,
   aiBaseUp,
   aiMerit,
   totalBudget,
   usedBudget,
-  budgetPercentage
+  budgetPercentage,
+  additionalType = 'percentage'
 }: FixedSummaryBarProps) {
-  const totalRate = currentBaseUp + currentMerit
+  const totalRate = currentBaseUp + currentMerit + (additionalType === 'percentage' ? currentAdditional : 0)
   const aiTotalRate = aiBaseUp + aiMerit
   const remainingBudget = totalBudget - usedBudget
   
@@ -60,6 +64,20 @@ export function FixedSummaryBar({
                   </span>
                 )}
               </div>
+              {currentAdditional > 0 && (
+                <>
+                  <div className="w-px h-4 bg-gray-300"/>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600">추가:</span>
+                    <span className="font-bold text-purple-700">
+                      {additionalType === 'percentage' 
+                        ? `${currentAdditional.toFixed(1)}%`
+                        : `${currentAdditional.toFixed(0)}만원`
+                      }
+                    </span>
+                  </div>
+                </>
+              )}
               <div className="w-px h-4 bg-gray-300"/>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-600">총:</span>

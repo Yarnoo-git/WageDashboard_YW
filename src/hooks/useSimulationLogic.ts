@@ -64,6 +64,25 @@ export function useSimulationLogic() {
     payZones: [] as number[]
   })
   
+  // Pending rates (적용 전 임시 값)
+  const [pendingLevelRates, setPendingLevelRates] = useState<LevelRates>({})
+  const [pendingBandFinalRates, setPendingBandFinalRates] = useState<BandFinalRates>({})
+  const [pendingPayZoneRates, setPendingPayZoneRates] = useState<PayZoneRates>({})
+  const [hasPendingChanges, setHasPendingChanges] = useState(false)
+  const [pendingChangeCount, setPendingChangeCount] = useState(0)
+  
+  // 조정 범위 (전체/레벨별/PayZone별)
+  const [adjustmentScope, setAdjustmentScope] = useState<'all' | 'level' | 'payzone'>('all')
+  
+  // 추가인상률 타입 (비율/정액)
+  const [additionalType, setAdditionalType] = useState<'percentage' | 'amount'>('percentage')
+  
+  // 직군 필터
+  const [selectedBands, setSelectedBands] = useState<string[]>([])
+  
+  // PayZone 뷰 모드
+  const [payZoneViewMode, setPayZoneViewMode] = useState<'grouped' | 'matrix' | 'performance'>('grouped')
+  
   // 계산된 예산 사용량
   const [budgetUsage, setBudgetUsage] = useState<BudgetUsage>({
     direct: 0,
@@ -85,6 +104,69 @@ export function useSimulationLogic() {
   
   // 평가가중치 모달 상태
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false)
+  
+  // Pending rates 초기화
+  useEffect(() => {
+    setPendingLevelRates(levelRates)
+    setPendingBandFinalRates(bandFinalRates)
+    setPendingPayZoneRates(payZoneRates)
+  }, [levelRates, bandFinalRates, payZoneRates])
+  
+  // Pending 변경사항 카운트
+  useEffect(() => {
+    let count = 0
+    // Level rates 변경 확인
+    Object.keys(pendingLevelRates).forEach(level => {
+      if (JSON.stringify(pendingLevelRates[level]) !== JSON.stringify(levelRates[level])) {
+        count++
+      }
+    })
+    // Band rates 변경 확인
+    Object.keys(pendingBandFinalRates).forEach(band => {
+      Object.keys(pendingBandFinalRates[band] || {}).forEach(level => {
+        if (JSON.stringify(pendingBandFinalRates[band][level]) !== JSON.stringify(bandFinalRates[band]?.[level])) {
+          count++
+        }
+      })
+    })
+    setPendingChangeCount(count)
+    setHasPendingChanges(count > 0)
+  }, [pendingLevelRates, pendingBandFinalRates, pendingPayZoneRates, levelRates, bandFinalRates, payZoneRates])
+  
+  // Pending 변경사항 적용
+  const applyPendingChanges = () => {
+    setLevelRates(pendingLevelRates)
+    setBandFinalRates(pendingBandFinalRates)
+    setPayZoneRates(pendingPayZoneRates)
+    setHasPendingChanges(false)
+    setPendingChangeCount(0)
+  }
+  
+  // Pending 변경사항 초기화
+  const resetPendingChanges = () => {
+    setPendingLevelRates(levelRates)
+    setPendingBandFinalRates(bandFinalRates)
+    setPendingPayZoneRates(payZoneRates)
+    setHasPendingChanges(false)
+    setPendingChangeCount(0)
+  }
+  
+  // 직군 필터 핸들러
+  const handleBandToggle = (band: string) => {
+    setSelectedBands(prev => 
+      prev.includes(band) 
+        ? prev.filter(b => b !== band)
+        : [...prev, band]
+    )
+  }
+  
+  const handleSelectAllBands = () => {
+    setSelectedBands(dynamicStructure.bands)
+  }
+  
+  const handleClearAllBands = () => {
+    setSelectedBands([])
+  }
   
   // Excel 데이터에서 동적 구조 추출
   useEffect(() => {
@@ -117,20 +199,16 @@ export function useSimulationLogic() {
     }
   }, [contextEmployeeData, selectedBand, selectedViewBand, selectedBandExpert, selectedPayZone])
   
-  // Simple Mode: Level별 조정
+  // Level별 조정 (Pending)
   const handleLevelRateChange = (level: string, field: keyof AdjustmentRates, value: number) => {
-    setLevelRates((prev: any) => ({
+    setPendingLevelRates((prev: any) => ({
       ...prev,
       [level]: {
         ...prev[level],
         [field]: value
       }
     }))
-    
-    // Top-down: Level → Band×Level → PayZone×Band×Level
-    if (adjustmentMode === 'simple') {
-      propagateToLowerModes(level, field as 'baseUp' | 'merit', value)
-    }
+    setHasPendingChanges(true)
   }
   
   // 하위 모드로 전파
@@ -159,22 +237,19 @@ export function useSimulationLogic() {
     setPayZoneRates(newPayZoneRates)
   }
   
-  // 전체 일괄 조정
-  const handleGlobalAdjustment = (field: keyof AdjustmentRates, value: number) => {
-    if (field === 'additional') {
-      // additional은 Simple 모드에서 지원하지 않음
-      return
+  // 전체 일괄 조정 (Pending)
+  const handleGlobalAdjustment = (type: 'all' | 'row' | 'column', target: string | null, field: keyof AdjustmentRates, value: number) => {
+    if (type === 'all') {
+      const newRates: LevelRates = {}
+      dynamicStructure.levels.forEach(level => {
+        newRates[level] = {
+          ...pendingLevelRates[level],
+          [field]: value
+        }
+      })
+      setPendingLevelRates(newRates)
     }
-    
-    const newRates: LevelRates = {}
-    dynamicStructure.levels.forEach(level => {
-      newRates[level] = {
-        ...levelRates[level],
-        [field]: value
-      }
-    })
-    setLevelRates(newRates)
-    updateGlobalRates(newRates)
+    setHasPendingChanges(true)
   }
   
   // 전역 업데이트
@@ -185,9 +260,9 @@ export function useSimulationLogic() {
     setContextMeritRate(avgMerit)
   }
   
-  // Advanced Mode: Band×Level 조정
+  // Advanced Mode: Band×Level 조정 (Pending)
   const handleBandLevelChange = (band: string, level: string, field: 'baseUp' | 'merit', value: number) => {
-    setBandFinalRates(prev => ({
+    setPendingBandFinalRates(prev => ({
       ...prev,
       [band]: {
         ...prev[band],
@@ -197,9 +272,7 @@ export function useSimulationLogic() {
         }
       }
     }))
-    
-    // 양방향 동기화
-    updateLevelRatesFromBandsWrapper(level, field)
+    setHasPendingChanges(true)
   }
   
   // Band 데이터로부터 Level 평균 계산 래퍼
@@ -224,28 +297,19 @@ export function useSimulationLogic() {
     }
   }
   
-  // Expert Mode: PayZone×Band×Level 조정
+  // Expert Mode: PayZone×Band×Level 조정 (Pending)
   const handlePayZoneBandLevelChange = (zone: number, band: string, level: string, field: 'baseUp' | 'merit' | 'additional', value: number) => {
-    const newPayZoneRates = {
-      ...payZoneRates,
-      [zone]: {
-        ...payZoneRates[zone],
-        [band]: {
-          ...payZoneRates[zone]?.[band],
-          [level]: {
-            ...payZoneRates[zone]?.[band]?.[level],
-            [field]: value
-          }
-        }
+    setPendingPayZoneRates(prev => {
+      const newRates = { ...prev }
+      if (!newRates[zone]) newRates[zone] = {}
+      if (!newRates[zone][band]) newRates[zone][band] = {}
+      if (!newRates[zone][band][level]) {
+        newRates[zone][band][level] = { baseUp: 0, merit: 0, additional: 0 }
       }
-    }
-    setPayZoneRates(newPayZoneRates)
-    
-    // Bottom-up: PayZone → Band → Level 가중평균 업데이트
-    if (adjustmentMode === 'expert') {
-      updateAdvancedFromExpertWrapper(newPayZoneRates)
-      updateSimpleFromExpertWrapper(newPayZoneRates)
-    }
+      newRates[zone][band][level][field] = value
+      return newRates
+    })
+    setHasPendingChanges(true)
   }
   
   // Expert → Advanced 동기화 래퍼
@@ -269,9 +333,23 @@ export function useSimulationLogic() {
     updateGlobalRates(newLevelRates)
   }
   
-  // Expert Mode 핸들러
+  // PayZone-Level 단위 조정 핸들러 (Band 제외)
+  const handlePayZoneLevelChange = (payZone: number, level: string, field: keyof AdjustmentRates, value: number) => {
+    setPendingPayZoneRates(prev => {
+      const newRates = { ...prev }
+      if (!newRates[payZone]) newRates[payZone] = {}
+      if (!newRates[payZone][level]) {
+        newRates[payZone][level] = { baseUp: 0, merit: 0, additional: 0 }
+      }
+      newRates[payZone][level][field] = value
+      return newRates
+    })
+    setHasPendingChanges(true)
+  }
+  
+  // Expert Mode 핸들러 (기존 유지)
   const handleExpertChange = (payZone: number, band: string, level: string, field: keyof AdjustmentRates, value: number) => {
-    setPayZoneRates(prev => ({
+    setPendingPayZoneRates(prev => ({
       ...prev,
       [payZone]: {
         ...prev[payZone],
@@ -284,9 +362,7 @@ export function useSimulationLogic() {
         }
       }
     }))
-    
-    // 양방향 동기화: Expert → Advanced → Simple
-    updateBandRatesFromPayZonesWrapper(band, level, field as 'baseUp' | 'merit')
+    setHasPendingChanges(true)
   }
   
   // PayZone 데이터로부터 Band×Level 평균 계산 래퍼
@@ -389,6 +465,34 @@ export function useSimulationLogic() {
     setAdjustmentMode,
     performanceWeights,
     
+    // Pending states
+    pendingLevelRates,
+    setPendingLevelRates,
+    pendingBandFinalRates,
+    setPendingBandFinalRates,
+    pendingPayZoneRates,
+    setPendingPayZoneRates,
+    hasPendingChanges,
+    pendingChangeCount,
+    applyPendingChanges,
+    resetPendingChanges,
+    
+    // Adjustment controls
+    adjustmentScope,
+    setAdjustmentScope,
+    additionalType,
+    setAdditionalType,
+    
+    // Band filter
+    selectedBands,
+    handleBandToggle,
+    handleSelectAllBands,
+    handleClearAllBands,
+    
+    // PayZone view
+    payZoneViewMode,
+    setPayZoneViewMode,
+    
     // Local state
     dynamicStructure,
     budgetUsage,
@@ -412,6 +516,7 @@ export function useSimulationLogic() {
     handleGlobalAdjustment,
     handleBandLevelChange,
     handlePayZoneBandLevelChange,
+    handlePayZoneLevelChange,
     handleExpertChange,
     
     // Helper functions
