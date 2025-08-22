@@ -251,63 +251,54 @@ export default function SimulationPage() {
       )}
       
       <main className="pt-20 pb-8">
-        <div className="flex gap-6">
+        <div className="flex gap-3">
           {/* 좌측 메뉴 */}
-          <div className="w-80 bg-white rounded-lg shadow-sm h-fit p-4 ml-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">뷰 모드</h2>
+          <div className="w-60 bg-white rounded-lg shadow-sm h-fit p-2 ml-3">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-bold text-gray-900">뷰 모드</h2>
             </div>
-            <nav className="space-y-2">
+            <nav className="space-y-1">
               <button
                 onClick={() => setViewMode('adjustment')}
-                className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 ${
                   viewMode === 'adjustment'
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
                     : 'hover:bg-gray-100 text-gray-700'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                  </svg>
-                  <span className="font-medium">인상률 조정</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">인상률 조정</span>
                 </div>
               </button>
               
               <button
                 onClick={() => setViewMode('all')}
-                className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 ${
                   viewMode === 'all'
                     ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-md'
                     : 'hover:bg-gray-100 text-gray-700'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span className="font-medium">종합 현황</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">종합 현황</span>
                 </div>
               </button>
               
               <button
                 onClick={() => setViewMode('competitiveness')}
-                className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 ${
                   viewMode === 'competitiveness'
                     ? 'bg-gradient-to-r from-green-500 to-teal-500 text-white shadow-md'
                     : 'hover:bg-gray-100 text-gray-700'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <span className="font-medium">경쟁력 분석</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">경쟁력 분석</span>
                 </div>
               </button>
               
-              <div className="pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 mb-2 px-4">직군별 분석</p>
+              <div className="pt-1 border-t border-gray-200">
+                <p className="text-xs text-gray-500 mb-1 px-3">직군별 분석</p>
                 {dynamicStructure.bands.map(band => (
                   <button
                     key={band}
@@ -315,7 +306,7 @@ export default function SimulationPage() {
                       setViewMode('band')
                       setSelectedViewBand(band)
                     }}
-                    className={`w-full text-left px-4 py-2 rounded-lg transition-all duration-200 ${
+                    className={`w-full text-left px-3 py-1.5 rounded-lg transition-all duration-200 ${
                       viewMode === 'band' && selectedViewBand === band
                         ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
                         : 'hover:bg-gray-100 text-gray-700'
@@ -329,18 +320,18 @@ export default function SimulationPage() {
           </div>
           
           {/* 오른쪽 콘텐츠 영역 */}
-          <div className="flex-1 pr-6">
+          <div className="flex-1 pr-3">
             {/* 헤더 섹션 */}
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">
+            <div className="mb-3">
+              <h1 className="text-xl font-bold text-gray-900">
                 시뮬레이션 센터
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="text-sm text-gray-600 mt-1">
                 {viewMode === 'adjustment' ? '인상률 조정 및 예산 시뮬레이션' :
                  viewMode === 'all' ? '전체 직군 통합 집계 현황' :
                  viewMode === 'band' ? `${selectedViewBand} 직군 상세 분석` :
                  '직군별 경쟁력 분석'}
-                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                   {totalEmployees.toLocaleString()}명
                 </span>
               </p>
@@ -348,7 +339,7 @@ export default function SimulationPage() {
             
             {/* 인상률 조정 모드일 때만 C사 대비 섹션 표시 */}
             {viewMode === 'adjustment' && (
-              <div className="mb-6">
+              <div className="mb-3">
                 <IndustryComparisonSection 
                   baseUpRate={contextBaseUpRate}
                   meritRate={contextMeritRate}
@@ -364,9 +355,9 @@ export default function SimulationPage() {
               <>
                 
                 {/* 컴팩트한 예산 현황 - 우측 상단에 작게 표시 */}
-                <div className="bg-white rounded-lg shadow-sm p-3 mb-4 border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-gray-700">예산 상세</h3>
+                <div className="bg-white rounded-lg shadow-sm p-2 mb-2 border border-gray-200">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-xs font-medium text-gray-700">예산 상세</h3>
                     <button 
                       onClick={() => router.push('/dashboard')}
                       className="text-xs text-blue-600 hover:text-blue-700"
@@ -378,7 +369,7 @@ export default function SimulationPage() {
                 </div>
                 
                 {/* 예산 요약 한 줄 */}
-                <div className="bg-white rounded-lg shadow-sm px-4 py-2 mb-3 flex items-center justify-between text-sm">
+                <div className="bg-white rounded-lg shadow-sm px-3 py-1.5 mb-2 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-6">
                     <span className="text-gray-600">
                       예산: <span className="font-semibold text-gray-900">{formatKoreanCurrency(availableBudget, '억원')}</span>
@@ -406,7 +397,7 @@ export default function SimulationPage() {
                 </div>
                 
                 {/* 상단 컨트롤 */}
-                <div className="bg-white rounded-lg shadow-sm px-4 py-3 mb-4">
+                <div className="bg-white rounded-lg shadow-sm px-3 py-2 mb-2">
                   <div className="flex items-center justify-between">
                     {/* 조정 범위 탭 */}
                     <div className="flex gap-1">
@@ -632,10 +623,10 @@ export default function SimulationPage() {
         onClose={() => setIsWeightModalOpen(false)}
       />
       
-      {/* Apply Bar - 펜딩 변경사항이 있을 때만 표시 */}
-      {hasPendingChanges && (
+      {/* Apply Bar - 항상 표시 */}
+      {viewMode === 'adjustment' && (
         <ApplyBar
-          pendingCount={pendingChangeCount}
+          pendingChangeCount={pendingChangeCount}
           onApply={applyPendingChanges}
           onReset={resetPendingChanges}
         />

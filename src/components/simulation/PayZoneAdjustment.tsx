@@ -5,7 +5,7 @@ import React, { useMemo } from 'react'
 interface PayZoneAdjustmentProps {
   levels: string[]
   payZones: number[]
-  performanceGrades?: string[]
+  performanceGrades: string[]
   pendingPayZoneRates: any
   onRateChange: (payZone: number, level: string, grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
   additionalType: 'percentage' | 'amount'
@@ -17,7 +17,7 @@ interface PayZoneAdjustmentProps {
 export function PayZoneAdjustment({
   levels,
   payZones,
-  performanceGrades = ['S', 'A', 'B', 'C'],
+  performanceGrades,
   pendingPayZoneRates,
   onRateChange,
   additionalType,
@@ -50,9 +50,9 @@ export function PayZoneAdjustment({
     if (levelEmployees.length === 0) return null
     
     return (
-      <div key={level} className="bg-white rounded-lg shadow-sm p-3 mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-semibold text-gray-700">
+      <div key={level} className="bg-white rounded-lg shadow-sm p-2 mb-2">
+        <div className="flex items-center justify-between mb-1">
+          <h4 className="text-xs font-semibold text-gray-700">
             {level} 레벨
           </h4>
           <span className="text-xs text-gray-500">
@@ -64,22 +64,22 @@ export function PayZoneAdjustment({
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
-                <th rowSpan={2} className="px-3 py-2 text-left text-xs font-medium text-gray-700">
-                  Pay Zone
+                <th rowSpan={2} className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                  PZ
                 </th>
                 {performanceGrades.map(grade => (
-                  <th key={grade} colSpan={3} className="px-2 py-2 text-center text-xs font-medium text-gray-700 border-l border-gray-200">
-                    {grade}등급
+                  <th key={grade} colSpan={3} className="px-1 py-1 text-center text-xs font-medium text-gray-700 border-l border-gray-200">
+                    {grade}
                   </th>
                 ))}
               </tr>
               <tr className="border-b border-gray-200">
                 {performanceGrades.map(grade => (
                   <React.Fragment key={grade}>
-                    <th className="px-1 py-1 text-center text-xs text-gray-500 border-l border-gray-100">Base</th>
-                    <th className="px-1 py-1 text-center text-xs text-gray-500 border-l border-gray-100">성과</th>
-                    <th className="px-1 py-1 text-center text-xs text-gray-500 border-l border-gray-200">
-                      추가{additionalType === 'percentage' ? '(%)' : '(만)'}
+                    <th className="px-0.5 py-0.5 text-center text-xs text-gray-500 border-l border-gray-100">B</th>
+                    <th className="px-0.5 py-0.5 text-center text-xs text-gray-500 border-l border-gray-100">M</th>
+                    <th className="px-0.5 py-0.5 text-center text-xs text-gray-500 border-l border-gray-200">
+                      {additionalType === 'percentage' ? '%' : '만'}
                     </th>
                   </React.Fragment>
                 ))}
@@ -94,9 +94,9 @@ export function PayZoneAdjustment({
                 
                 return (
                   <tr key={zone} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-3 py-2 text-sm font-medium text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <span>Zone {zone}</span>
+                    <td className="px-2 py-1 text-xs font-medium text-gray-700">
+                      <div className="flex items-center gap-1">
+                        <span>{zone}</span>
                         <span className="text-xs text-gray-400">({zoneCount})</span>
                       </div>
                     </td>
@@ -172,72 +172,75 @@ export function PayZoneAdjustment({
   
   return (
     <div>
-      <div className="space-y-4">
-        {levels.map(level => renderLevelGroup(level))}
-      </div>
-      
-      {/* 일괄 조정 도구 - 우측 하단 고정 */}
-      <div className="fixed bottom-20 right-4 bg-white rounded-lg shadow-lg p-3 w-56">
-        <p className="text-xs font-semibold text-gray-700 mb-2">일괄 조정</p>
-        <div className="space-y-2">
-          <div>
-            <label className="text-xs text-gray-600">Base-up 일괄</label>
-            <input
-              type="number"
-              placeholder="0"
-              onChange={(e) => {
-                const value = Number(e.target.value)
-                payZones.forEach(zone => {
-                  levels.forEach(level => {
-                    performanceGrades.forEach(grade => {
-                      onRateChange(zone, level, grade, 'baseUp', value)
+      {/* 일괄 조정 도구 - 상단에 인라인으로 배치 */}
+      <div className="bg-white rounded-lg shadow-sm p-2 mb-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-gray-600">일괄 조정:</span>
+          <div className="flex gap-2">
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                placeholder="Base"
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  payZones.forEach(zone => {
+                    levels.forEach(level => {
+                      performanceGrades.forEach(grade => {
+                        onRateChange(zone, level, grade, 'baseUp', value)
+                      })
                     })
                   })
-                })
-              }}
-              step="0.1"
-              className="w-full mt-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-gray-600">성과 일괄</label>
-            <input
-              type="number"
-              placeholder="0"
-              onChange={(e) => {
-                const value = Number(e.target.value)
-                payZones.forEach(zone => {
-                  levels.forEach(level => {
-                    performanceGrades.forEach(grade => {
-                      onRateChange(zone, level, grade, 'merit', value)
+                }}
+                step="0.1"
+                className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded placeholder:text-gray-400"
+              />
+              <span className="text-xs text-gray-500">%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                placeholder="성과"
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  payZones.forEach(zone => {
+                    levels.forEach(level => {
+                      performanceGrades.forEach(grade => {
+                        onRateChange(zone, level, grade, 'merit', value)
+                      })
                     })
                   })
-                })
-              }}
-              step="0.1"
-              className="w-full mt-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-gray-600">추가 일괄</label>
-            <input
-              type="number"
-              placeholder="0"
-              onChange={(e) => {
-                const value = Number(e.target.value)
-                payZones.forEach(zone => {
-                  levels.forEach(level => {
-                    performanceGrades.forEach(grade => {
-                      onRateChange(zone, level, grade, 'additional', value)
+                }}
+                step="0.1"
+                className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded placeholder:text-gray-400"
+              />
+              <span className="text-xs text-gray-500">%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                placeholder="추가"
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  payZones.forEach(zone => {
+                    levels.forEach(level => {
+                      performanceGrades.forEach(grade => {
+                        onRateChange(zone, level, grade, 'additional', value)
+                      })
                     })
                   })
-                })
-              }}
-              step={additionalType === 'percentage' ? 0.1 : 10}
-              className="w-full mt-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-            />
+                }}
+                step={additionalType === 'percentage' ? 0.1 : 10}
+                className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded placeholder:text-gray-400"
+              />
+              <span className="text-xs text-gray-500">{additionalType === 'percentage' ? '%' : '만'}</span>
+            </div>
           </div>
         </div>
+      </div>
+      
+      {/* 레벨별 그룹 표시 */}
+      <div className="space-y-2">
+        {levels.map(level => renderLevelGroup(level))}
       </div>
     </div>
   )

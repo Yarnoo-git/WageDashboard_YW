@@ -181,7 +181,7 @@ export function useSimulationLogic() {
         levels,
         bands,
         payZones: payZones.map(Number),
-        grades: grades.length > 0 ? grades : ['S', 'A', 'B', 'C'] // 기본값 설정
+        grades: grades.length > 0 ? grades : []
       })
       
       // 첫 번째 값으로 초기화
