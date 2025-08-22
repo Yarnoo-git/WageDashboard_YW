@@ -375,32 +375,52 @@ export default function SimulationPage() {
                     </button>
                   </div>
                   
-                  {/* 컴팩트한 예산 개요 */}
-                  <div className="grid grid-cols-4 gap-2 text-xs">
+                </div>
+                
+                {/* 예산 현황 카드 */}
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                  <h3 className="text-lg font-semibold mb-4">예산 현황</h3>
+                  <div className="grid grid-cols-4 gap-4">
                     <div>
-                      <span className="text-gray-500">총예산:</span>
-                      <span className="ml-1 font-medium">{formatKoreanCurrency(availableBudget, '억', 100000000)}</span>
+                      <p className="text-sm text-gray-600">총예산</p>
+                      <p className="text-xl font-bold text-gray-900">{formatKoreanCurrency(availableBudget, '억', 100000000)}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500">복리:</span>
-                      <span className="ml-1 font-medium">{formatKoreanCurrency(welfareBudget, '억', 100000000)}</span>
+                      <p className="text-sm text-gray-600">복리후생</p>
+                      <p className="text-xl font-bold text-gray-900">{formatKoreanCurrency(welfareBudget, '억', 100000000)}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500">인건비:</span>
-                      <span className="ml-1 font-medium">{formatKoreanCurrency((availableBudget - welfareBudget), '억', 100000000)}</span>
+                      <p className="text-sm text-gray-600">인건비 예산</p>
+                      <p className="text-xl font-bold text-gray-900">{formatKoreanCurrency((availableBudget - welfareBudget), '억', 100000000)}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500">잔여:</span>
-                      <span className="ml-1 font-medium text-green-600">{formatKoreanCurrency((availableBudget - welfareBudget - budgetUsage.total), '억', 100000000)}</span>
+                      <p className="text-sm text-gray-600">잔여 예산</p>
+                      <p className="text-xl font-bold text-green-600">{formatKoreanCurrency((availableBudget - welfareBudget - budgetUsage.total), '억', 100000000)}</p>
                     </div>
                   </div>
                   
+                  {/* 예산 사용률 표시 */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">예산 사용률</span>
+                      <span className="text-sm font-bold text-blue-600">{budgetUsage.percentage.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all ${
+                          budgetUsage.percentage > 90 ? 'bg-red-500' : 
+                          budgetUsage.percentage > 70 ? 'bg-yellow-500' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${Math.min(budgetUsage.percentage, 100)}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
-                {/* 새로운 계층적 인상률 조정 섹션 */}
-                <div className="flex gap-6">
+                {/* 메인 콘텐츠 영역 */}
+                <div className="grid grid-cols-12 gap-6">
                   {/* 좌측 제어 패널 */}
-                  <div className="w-80 space-y-4">
+                  <div className="col-span-3 space-y-4">
                     <AdjustmentScope 
                       scope={adjustmentScope}
                       onChange={setAdjustmentScope}
@@ -416,7 +436,7 @@ export default function SimulationPage() {
                   </div>
                   
                   {/* 메인 조정 영역 */}
-                  <div className="flex-1">
+                  <div className="col-span-9">
                     {adjustmentScope === 'all' && (
                       <AllAdjustment
                         pendingLevelRates={pendingLevelRates}
@@ -455,6 +475,7 @@ export default function SimulationPage() {
                         onRateChange={handlePayZoneLevelGradeChange}
                         additionalType={additionalType}
                         selectedBands={selectedBands}
+                        contextEmployeeData={contextEmployeeData}
                         employeeCounts={
                           (() => {
                             const counts: { [key: string]: number } = {}
