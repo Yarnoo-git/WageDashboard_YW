@@ -10,6 +10,7 @@ export interface DynamicStructure {
   levels: string[]
   bands: string[]
   payZones: number[]
+  grades: string[]
 }
 
 export interface BudgetUsage {

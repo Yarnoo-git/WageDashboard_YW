@@ -61,7 +61,8 @@ export function useSimulationLogic() {
   const [dynamicStructure, setDynamicStructure] = useState<DynamicStructure>({
     levels: [] as string[],
     bands: [] as string[],
-    payZones: [] as number[]
+    payZones: [] as number[],
+    grades: [] as string[]
   })
   
   // Pending rates (적용 전 임시 값)
@@ -174,11 +175,13 @@ export function useSimulationLogic() {
       const levels = Array.from(new Set(contextEmployeeData.map(emp => emp.level))).sort()
       const bands = Array.from(new Set(contextEmployeeData.map(emp => emp.band))).filter(Boolean).sort()
       const payZones = Array.from(new Set(contextEmployeeData.map(emp => emp.payZone))).filter(zone => zone !== undefined).sort((a, b) => Number(a) - Number(b))
+      const grades = Array.from(new Set(contextEmployeeData.map(emp => emp.performanceGrade))).filter(Boolean).sort()
       
       setDynamicStructure({
         levels,
         bands,
-        payZones: payZones.map(Number)
+        payZones: payZones.map(Number),
+        grades: grades.length > 0 ? grades : ['S', 'A', 'B', 'C'] // 기본값 설정
       })
       
       // 첫 번째 값으로 초기화
@@ -333,15 +336,16 @@ export function useSimulationLogic() {
     updateGlobalRates(newLevelRates)
   }
   
-  // PayZone-Level 단위 조정 핸들러 (Band 제외)
-  const handlePayZoneLevelChange = (payZone: number, level: string, field: keyof AdjustmentRates, value: number) => {
+  // PayZone-Level-Grade 단위 조정 핸들러
+  const handlePayZoneLevelGradeChange = (payZone: number, level: string, grade: string, field: keyof AdjustmentRates, value: number) => {
     setPendingPayZoneRates(prev => {
       const newRates = { ...prev }
       if (!newRates[payZone]) newRates[payZone] = {}
-      if (!newRates[payZone][level]) {
-        newRates[payZone][level] = { baseUp: 0, merit: 0, additional: 0 }
+      if (!newRates[payZone][level]) newRates[payZone][level] = {}
+      if (!newRates[payZone][level][grade]) {
+        newRates[payZone][level][grade] = { baseUp: 0, merit: 0, additional: 0 }
       }
-      newRates[payZone][level][field] = value
+      newRates[payZone][level][grade][field] = value
       return newRates
     })
     setHasPendingChanges(true)
@@ -516,7 +520,7 @@ export function useSimulationLogic() {
     handleGlobalAdjustment,
     handleBandLevelChange,
     handlePayZoneBandLevelChange,
-    handlePayZoneLevelChange,
+    handlePayZoneLevelGradeChange,
     handleExpertChange,
     
     // Helper functions
