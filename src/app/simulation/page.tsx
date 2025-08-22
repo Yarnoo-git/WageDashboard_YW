@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSimulationLogic } from '@/hooks/useSimulationLogic'
 import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
@@ -140,7 +140,7 @@ export default function SimulationPage() {
   }
   
   // 전체 인상률 계산 (가중평균)
-  const weightedAverageRates = useMemo<{ baseUp: number; merit: number; total: number }>(() => {
+  const calculateWeightedAverageRates = () => {
     if (!contextEmployeeData || contextEmployeeData.length === 0) {
       return { baseUp: 0, merit: 0, total: 0 }
     }
@@ -182,10 +182,12 @@ export default function SimulationPage() {
       merit: totalCount > 0 ? totalMerit / totalCount : 0,
       total: totalCount > 0 ? (totalBaseUp + totalMerit) / totalCount : 0
     }
-  }, [contextEmployeeData, adjustmentMode, levelRates, bandFinalRates, payZoneRates, contextBaseUpRate, contextMeritRate])
+  }
+  
+  const weightedAverageRates = calculateWeightedAverageRates()
   
   // 직급별 통계 계산
-  const levelBreakdown = useMemo(() => {
+  const calculateLevelBreakdown = () => {
     if (!contextEmployeeData) return {}
     
     const breakdown: { [level: string]: { count: number; baseUp: number; merit: number } } = {}
@@ -200,7 +202,9 @@ export default function SimulationPage() {
     })
     
     return breakdown
-  }, [contextEmployeeData, dynamicStructure.levels, levelRates, contextBaseUpRate, contextMeritRate])
+  }
+  
+  const levelBreakdown = calculateLevelBreakdown()
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">

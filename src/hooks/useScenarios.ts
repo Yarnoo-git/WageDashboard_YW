@@ -79,32 +79,27 @@ export function useScenarios(
     }
   }, [aiData, scenarios])
 
-  // Load scenarios from API on mount or when fileId/aiData changes
+  // Load scenarios from localStorage on mount or when fileId/aiData changes
   useEffect(() => {
-    loadScenariosFromAPI()
+    loadScenariosFromStorage()
   }, [fileId, aiData])
 
-  const loadScenariosFromAPI = async () => {
+  const loadScenariosFromStorage = async () => {
     try {
-      // AI 설정을 query parameter로 추가
-      let url = fileId ? `/api/scenarios?fileId=${fileId}` : '/api/scenarios'
-      if (aiData) {
-        const baseUp = aiData.baseUpPercentage || 0
-        const merit = aiData.meritIncreasePercentage || 0
-        url += `${url.includes('?') ? '&' : '?'}baseUp=${baseUp}&merit=${merit}`
-      }
+      // Use localStorage for client-side storage
+      const storageKey = fileId ? `scenarios_${fileId}` : 'scenarios_default'
+      const stored = localStorage.getItem(storageKey)
       
-      const response = await fetch(url)
-      if (response.ok) {
-        const data = await response.json()
-        // API에서 불러온 시나리오 사용 (Default 포함)
+      if (stored) {
+        const data = JSON.parse(stored)
+        // Use scenarios from storage (including Default)
         const loadedScenarios = data.scenarios || []
-        console.log('[loadScenariosFromAPI] 로드된 시나리오:', loadedScenarios)
+        console.log('[loadScenariosFromStorage] 로드된 시나리오:', loadedScenarios)
         
-        // Default 시나리오가 있는지 확인하고 콘솔에 출력
+        // Check for Default scenario and log it
         const defaultScenario = loadedScenarios.find((s: Scenario) => s.id === 'default')
         if (defaultScenario) {
-          console.log('[loadScenariosFromAPI] Default 시나리오 발견:', {
+          console.log('[loadScenariosFromStorage] Default 시나리오 발견:', {
             baseUp: defaultScenario.data.baseUpRate,
             merit: defaultScenario.data.meritRate
           })
@@ -112,29 +107,27 @@ export function useScenarios(
         
         setScenarios(loadedScenarios)
         setActiveScenarioId(data.activeScenarioId || null)
+      } else {
+        // No stored data, create default scenario
+        setScenarios([createDefaultScenario(aiData || undefined)])
       }
     } catch (error) {
       console.error('Failed to load scenarios:', error)
-      // API 실패시에도 기본 시나리오는 유지
+      // On failure, maintain default scenario
       setScenarios([createDefaultScenario(aiData || undefined)])
     } finally {
       setLoading(false)
     }
   }
 
-  const saveToAPI = async (scenariosData: Scenario[], activeId: string | null) => {
+  const saveToStorage = async (scenariosData: Scenario[], activeId: string | null) => {
     try {
-      await fetch('/api/scenarios', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scenarios: scenariosData,
-          activeScenarioId: activeId,
-          fileId
-        })
-      })
+      const storageKey = fileId ? `scenarios_${fileId}` : 'scenarios_default'
+      localStorage.setItem(storageKey, JSON.stringify({
+        scenarios: scenariosData,
+        activeScenarioId: activeId,
+        fileId
+      }))
     } catch (error) {
       console.error('Failed to save scenarios:', error)
     }
@@ -151,25 +144,16 @@ export function useScenarios(
     }
     
     try {
-      const response = await fetch('/api/scenarios', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scenario: newScenario,
-          fileId
-        })
-      })
+      // 기본 시나리오는 항상 첫 번째 위치 유지
+      const nonDefaultScenarios = scenarios.filter(s => s.id !== 'default')
+      const defaultScenario = scenarios.find(s => s.id === 'default') || createDefaultScenario(aiData || undefined)
+      const updatedScenarios = [defaultScenario, ...nonDefaultScenarios, newScenario]
       
-      if (response.ok) {
-        // 기본 시나리오는 항상 첫 번째 위치 유지
-        const nonDefaultScenarios = scenarios.filter(s => s.id !== 'default')
-        const defaultScenario = scenarios.find(s => s.id === 'default') || createDefaultScenario(aiData || undefined)
-        const updatedScenarios = [defaultScenario, ...nonDefaultScenarios, newScenario]
-        setScenarios(updatedScenarios)
-        setActiveScenarioId(newScenario.id)
-      }
+      // Save to localStorage
+      await saveToStorage(updatedScenarios, newScenario.id)
+      
+      setScenarios(updatedScenarios)
+      setActiveScenarioId(newScenario.id)
     } catch (error) {
       console.error('Failed to save scenario:', error)
     }
@@ -190,7 +174,7 @@ export function useScenarios(
     })
     
     setScenarios(updatedScenarios)
-    await saveToAPI(updatedScenarios, activeScenarioId)
+    await saveToStorage(updatedScenarios, activeScenarioId)
   }
 
   const deleteScenario = async (id: string) => {
@@ -201,18 +185,14 @@ export function useScenarios(
     }
     
     try {
-      const url = fileId ? `/api/scenarios?id=${id}&fileId=${fileId}` : `/api/scenarios?id=${id}`
-      const response = await fetch(url, {
-        method: 'DELETE'
-      })
+      const updatedScenarios = scenarios.filter(s => s.id !== id)
+      const newActiveId = activeScenarioId === id ? null : activeScenarioId
       
-      if (response.ok) {
-        const updatedScenarios = scenarios.filter(s => s.id !== id)
-        const newActiveId = activeScenarioId === id ? null : activeScenarioId
-        
-        setScenarios(updatedScenarios)
-        setActiveScenarioId(newActiveId)
-      }
+      // Save to localStorage
+      await saveToStorage(updatedScenarios, newActiveId)
+      
+      setScenarios(updatedScenarios)
+      setActiveScenarioId(newActiveId)
     } catch (error) {
       console.error('Failed to delete scenario:', error)
     }
@@ -222,7 +202,7 @@ export function useScenarios(
     const scenario = scenarios.find(s => s.id === id)
     if (scenario) {
       setActiveScenarioId(id)
-      saveToAPI(scenarios, id)
+      saveToStorage(scenarios, id)
       return scenario.data
     }
     return null
@@ -241,7 +221,7 @@ export function useScenarios(
     })
     
     setScenarios(updatedScenarios)
-    await saveToAPI(updatedScenarios, activeScenarioId)
+    await saveToStorage(updatedScenarios, activeScenarioId)
   }
 
   // Default 시나리오를 AI 데이터로 업데이트하는 함수
