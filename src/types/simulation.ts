@@ -29,6 +29,7 @@ export type LevelRates = {
   [level: string]: {
     baseUp: number
     merit: number
+    additional: number
   }
 }
 
@@ -37,6 +38,7 @@ export type BandFinalRates = {
     [level: string]: {
       baseUp: number
       merit: number
+      additional: number
     }
   }
 }

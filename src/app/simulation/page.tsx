@@ -377,66 +377,92 @@ export default function SimulationPage() {
                   
                 </div>
                 
-                {/* 예산 현황 카드 */}
-                <div className="bg-white rounded-lg shadow p-6 mb-6">
-                  <h3 className="text-lg font-semibold mb-4">예산 현황</h3>
-                  <div className="grid grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600">총예산</p>
-                      <p className="text-xl font-bold text-gray-900">{formatKoreanCurrency(availableBudget, '억', 100000000)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">복리후생</p>
-                      <p className="text-xl font-bold text-gray-900">{formatKoreanCurrency(welfareBudget, '억', 100000000)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">인건비 예산</p>
-                      <p className="text-xl font-bold text-gray-900">{formatKoreanCurrency((availableBudget - welfareBudget), '억', 100000000)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">잔여 예산</p>
-                      <p className="text-xl font-bold text-green-600">{formatKoreanCurrency((availableBudget - welfareBudget - budgetUsage.total), '억', 100000000)}</p>
-                    </div>
+                {/* 예산 요약 한 줄 */}
+                <div className="bg-white rounded-lg shadow-sm px-4 py-2 mb-3 flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-6">
+                    <span className="text-gray-600">
+                      예산: <span className="font-semibold text-gray-900">{formatKoreanCurrency(availableBudget, '억원')}</span>
+                    </span>
+                    <span className="text-gray-600">
+                      사용: <span className="font-semibold text-gray-900">{formatKoreanCurrency(budgetUsage.total, '억원')}</span>
+                      <span className={`ml-1 font-semibold ${
+                        budgetUsage.percentage > 90 ? 'text-red-600' : 
+                        budgetUsage.percentage > 70 ? 'text-yellow-600' : 'text-blue-600'
+                      }`}>
+                        ({budgetUsage.percentage.toFixed(1)}%)
+                      </span>
+                    </span>
+                    <span className="text-gray-600">
+                      잔여: <span className="font-semibold text-green-600">{formatKoreanCurrency((availableBudget - welfareBudget - budgetUsage.total), '억', 100000000)}</span>
+                    </span>
                   </div>
-                  
-                  {/* 예산 사용률 표시 */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">예산 사용률</span>
-                      <span className="text-sm font-bold text-blue-600">{budgetUsage.percentage.toFixed(1)}%</span>
+                  <div className="flex items-center gap-4">
+                    {pendingChangeCount > 0 && (
+                      <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium">
+                        {pendingChangeCount}개 변경사항
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* 상단 컨트롤 */}
+                <div className="bg-white rounded-lg shadow-sm px-4 py-3 mb-4">
+                  <div className="flex items-center justify-between">
+                    {/* 조정 범위 탭 */}
+                    <div className="flex gap-1">
+                      {(['all', 'level', 'payzone'] as const).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setAdjustmentScope(s)}
+                          className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                            adjustmentScope === s
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {s === 'all' ? '전체 조정' : s === 'level' ? '레벨별' : 'Pay Zone별'}
+                        </button>
+                      ))}
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all ${
-                          budgetUsage.percentage > 90 ? 'bg-red-500' : 
-                          budgetUsage.percentage > 70 ? 'bg-yellow-500' : 'bg-blue-500'
-                        }`}
-                        style={{ width: `${Math.min(budgetUsage.percentage, 100)}%` }}
-                      />
+                    
+                    {/* 직군 필터 */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-600">직군:</span>
+                      <div className="flex gap-1">
+                        {dynamicStructure.bands.map((band) => (
+                          <button
+                            key={band}
+                            onClick={() => handleBandToggle(band)}
+                            className={`px-3 py-1 text-xs rounded-full transition-all ${
+                              selectedBands.includes(band)
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                            }`}
+                          >
+                            {band}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-1 border-l pl-3">
+                        <button
+                          onClick={handleSelectAllBands}
+                          className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
+                        >
+                          전체
+                        </button>
+                        <button
+                          onClick={handleClearAllBands}
+                          className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 rounded"
+                        >
+                          해제
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                {/* 메인 콘텐츠 영역 */}
-                <div className="grid grid-cols-12 gap-6">
-                  {/* 좌측 제어 패널 */}
-                  <div className="col-span-3 space-y-4">
-                    <AdjustmentScope 
-                      scope={adjustmentScope}
-                      onChange={setAdjustmentScope}
-                      pendingChanges={pendingChangeCount}
-                    />
-                    <BandFilter
-                      bands={dynamicStructure.bands}
-                      selectedBands={selectedBands}
-                      onBandToggle={handleBandToggle}
-                      onSelectAll={handleSelectAllBands}
-                      onClearAll={handleClearAllBands}
-                    />
-                  </div>
-                  
-                  {/* 메인 조정 영역 */}
-                  <div className="col-span-9">
+                {/* 메인 조정 영역 (전체 너비) */}
+                <div>
                     {adjustmentScope === 'all' && (
                       <AllAdjustment
                         pendingLevelRates={pendingLevelRates}
@@ -494,7 +520,6 @@ export default function SimulationPage() {
                       />
                     )}
                   </div>
-                </div>
               </>
             )}
             

@@ -50,8 +50,8 @@ export function PayZoneAdjustment({
     if (levelEmployees.length === 0) return null
     
     return (
-      <div key={level} className="bg-white rounded-lg shadow p-4 mb-4">
-        <div className="flex items-center justify-between mb-3">
+      <div key={level} className="bg-white rounded-lg shadow-sm p-3 mb-3">
+        <div className="flex items-center justify-between mb-2">
           <h4 className="text-sm font-semibold text-gray-700">
             {level} 레벨
           </h4>
@@ -114,16 +114,13 @@ export function PayZoneAdjustment({
                                 type="number"
                                 value={rates.baseUp || ''}
                                 onChange={(e) => onRateChange(zone, level, grade, 'baseUp', Number(e.target.value))}
-                                className={`w-full px-1 py-1 text-xs text-center border rounded ${
-                                  gradeCount === 0 
-                                    ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' 
-                                    : hasValue 
-                                      ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium' 
-                                      : 'border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                                className={`w-full px-1 py-0.5 text-xs text-center border rounded ${
+                                  rates.baseUp > 0
+                                    ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium' 
+                                    : 'border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
                                 }`}
                                 step="0.1"
                                 placeholder="0"
-                                disabled={gradeCount === 0}
                               />
                               {gradeCount > 0 && (
                                 <span className="absolute -top-1 -right-1 text-[10px] text-gray-400">
@@ -137,16 +134,13 @@ export function PayZoneAdjustment({
                               type="number"
                               value={rates.merit || ''}
                               onChange={(e) => onRateChange(zone, level, grade, 'merit', Number(e.target.value))}
-                              className={`w-full px-1 py-1 text-xs text-center border rounded ${
-                                gradeCount === 0 
-                                  ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' 
-                                  : rates.merit > 0 
-                                    ? 'bg-green-50 border-green-300 text-green-700 font-medium' 
-                                    : 'border-gray-300 hover:border-gray-400 focus:border-green-500 focus:ring-1 focus:ring-green-500'
+                              className={`w-full px-1 py-0.5 text-xs text-center border rounded ${
+                                rates.merit > 0 
+                                  ? 'bg-green-50 border-green-300 text-green-700 font-medium' 
+                                  : 'border-gray-300 hover:border-gray-400 focus:border-green-500 focus:ring-1 focus:ring-green-500'
                               }`}
                               step="0.1"
                               placeholder="0"
-                              disabled={gradeCount === 0}
                             />
                           </td>
                           <td className="px-1 py-1 border-l border-gray-200">
@@ -154,16 +148,13 @@ export function PayZoneAdjustment({
                               type="number"
                               value={rates.additional || ''}
                               onChange={(e) => onRateChange(zone, level, grade, 'additional', Number(e.target.value))}
-                              className={`w-full px-1 py-1 text-xs text-center border rounded ${
-                                gradeCount === 0 
-                                  ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' 
-                                  : rates.additional > 0 
-                                    ? 'bg-purple-50 border-purple-300 text-purple-700 font-medium' 
-                                    : 'border-gray-300 hover:border-gray-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500'
+                              className={`w-full px-1 py-0.5 text-xs text-center border rounded ${
+                                rates.additional > 0 
+                                  ? 'bg-purple-50 border-purple-300 text-purple-700 font-medium' 
+                                  : 'border-gray-300 hover:border-gray-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500'
                               }`}
                               step={additionalType === 'percentage' ? 0.1 : 10}
                               placeholder="0"
-                              disabled={gradeCount === 0}
                             />
                           </td>
                         </React.Fragment>
@@ -185,9 +176,9 @@ export function PayZoneAdjustment({
         {levels.map(level => renderLevelGroup(level))}
       </div>
       
-      {/* 일괄 조정 도구 - 우측 상단에 작은 카드로 */}
-      <div className="fixed bottom-20 right-6 bg-white rounded-lg shadow-lg p-4 w-64">
-        <p className="text-sm font-semibold text-gray-700 mb-3">일괄 조정</p>
+      {/* 일괄 조정 도구 - 우측 하단 고정 */}
+      <div className="fixed bottom-20 right-4 bg-white rounded-lg shadow-lg p-3 w-56">
+        <p className="text-xs font-semibold text-gray-700 mb-2">일괄 조정</p>
         <div className="space-y-2">
           <div>
             <label className="text-xs text-gray-600">Base-up 일괄</label>
