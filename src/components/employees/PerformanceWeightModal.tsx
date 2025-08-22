@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useWageContext } from '@/context/WageContext'
+import { getPerformanceWeights } from '@/services/gradeSettingsService'
 
 interface PerformanceWeightModalProps {
   isOpen: boolean
@@ -9,7 +10,7 @@ interface PerformanceWeightModalProps {
 }
 
 export function PerformanceWeightModal({ isOpen, onClose }: PerformanceWeightModalProps) {
-  const { performanceWeights, setPerformanceWeights } = useWageContext()
+  const { performanceWeights, setPerformanceWeights, gradeSettings } = useWageContext()
   const [localWeights, setLocalWeights] = useState(performanceWeights)
 
   useEffect(() => {
@@ -24,7 +25,8 @@ export function PerformanceWeightModal({ isOpen, onClose }: PerformanceWeightMod
   }
 
   const handleReset = () => {
-    const defaultWeights = { ST: 1.5, AT: 1.2, OT: 1.0, BT: 0.8 }
+    // 엑셀에서 로드된 기본값 사용, 없으면 하드코딩된 값 사용
+    const defaultWeights = getPerformanceWeights(gradeSettings || undefined)
     setLocalWeights(defaultWeights)
   }
 

@@ -51,13 +51,8 @@ export interface Scenario {
       }
     }
     
-    // 평가등급별 가중치
-    performanceWeights?: {
-      ST: number
-      AT: number
-      OT: number
-      BT: number
-    }
+    // 평가등급별 가중치 (동적)
+    performanceWeights?: Record<string, number>
   }
 }
 

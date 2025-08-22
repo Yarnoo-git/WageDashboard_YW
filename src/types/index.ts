@@ -1,8 +1,8 @@
-// 직급 레벨
-export type EmployeeLevel = 'Lv.1' | 'Lv.2' | 'Lv.3' | 'Lv.4'
+// 직급 레벨 - 동적으로 확장 가능
+export type EmployeeLevel = string  // 엑셀에서 읽어온 직급 사용 (예: Lv.1, Lv.2, ...)
 
-// 평가 등급
-export type PerformanceRating = 'ST' | 'AT' | 'OT' | 'BT'
+// 평가 등급 - 동적으로 확장 가능
+export type PerformanceRating = string  // 엑셀에서 읽어온 등급 사용 (예: ST, AT, OT, BT, ...)
 
 // 직원 정보
 export interface Employee {

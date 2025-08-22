@@ -4,15 +4,21 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useScenarios } from '@/hooks/useScenarios'
 import { Scenario } from '@/types/scenario'
 import { getCurrentFileId, loadExcelData } from '@/lib/clientStorage'
+import { 
+  loadGradeSettingsFromExcel, 
+  getPerformanceWeights, 
+  getLevelRates, 
+  getDetailedLevelRates,
+  GradeSettings 
+} from '@/services/gradeSettingsService'
 
-interface PerformanceWeights {
-  ST: number
-  AT: number
-  OT: number
-  BT: number
-}
+// 동적 평가등급 가중치 타입
+type PerformanceWeights = { [key: string]: number }
 
 interface WageContextType {
+  // 엑셀에서 로드된 직급/평가등급 설정
+  gradeSettings: GradeSettings | null
+  
   // 대시보드에서 설정한 기본 인상률
   baseUpRate: number
   meritRate: number
@@ -165,24 +171,21 @@ export function WageProvider({ children }: { children: ReactNode }) {
     setTotalBudget(availableBudget - welfareBudget)
   }, [availableBudget, welfareBudget])
   const [aiSettings, setAiSettings] = useState<{ baseUpPercentage?: number, meritIncreasePercentage?: number } | null>(null)
-  const [performanceWeights, setPerformanceWeights] = useState<PerformanceWeights>({
-    ST: 1.5,
-    AT: 1.2,
-    OT: 1.0,
-    BT: 0.8
-  })
-  const [levelRates, setLevelRates] = useState({
-    'Lv.1': { baseUp: 0, merit: 0 },
-    'Lv.2': { baseUp: 0, merit: 0 },
-    'Lv.3': { baseUp: 0, merit: 0 },
-    'Lv.4': { baseUp: 0, merit: 0 }
-  })
-  const [detailedLevelRates, setDetailedLevelRates] = useState({
-    'Lv.1': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 },
-    'Lv.2': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 },
-    'Lv.3': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 },
-    'Lv.4': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 }
-  })
+  // 엑셀에서 로드된 설정 저장
+  const [gradeSettings, setGradeSettings] = useState<GradeSettings | null>(null)
+  
+  // 동적으로 로드된 가중치와 인상률
+  const [performanceWeights, setPerformanceWeights] = useState<PerformanceWeights>({})
+  const [levelRates, setLevelRates] = useState<{ [level: string]: { baseUp: number; merit: number } }>({})
+  const [detailedLevelRates, setDetailedLevelRates] = useState<{ 
+    [level: string]: { 
+      baseUp: number; 
+      merit: number; 
+      promotion: number; 
+      advancement: number; 
+      additional: number 
+    } 
+  }>({})
   const [bandAdjustments, setBandAdjustments] = useState<{
     [bandName: string]: {
       baseUpAdjustment: number
@@ -242,6 +245,26 @@ export function WageProvider({ children }: { children: ReactNode }) {
     const fetchInitialData = async () => {
       try {
         console.log('[WageContext] 초기 데이터 로드 시작...')
+        
+        // 1. zone,grade 설정 먼저 로드
+        const settings = await loadGradeSettingsFromExcel()
+        setGradeSettings(settings)
+        
+        // 동적으로 로드된 값들로 초기화
+        const loadedWeights = getPerformanceWeights(settings)
+        const loadedLevelRates = getLevelRates(settings)
+        const loadedDetailedRates = getDetailedLevelRates(settings)
+        
+        setPerformanceWeights(loadedWeights)
+        setLevelRates(loadedLevelRates)
+        setDetailedLevelRates(loadedDetailedRates)
+        
+        console.log('[WageContext] 직급/평가등급 설정 로드 완료:', {
+          평가등급: Object.keys(loadedWeights),
+          직급: Object.keys(loadedLevelRates)
+        })
+        
+        // 2. 기존 직원 데이터 로드
         const { hasStoredData } = await import('@/lib/clientStorage')
         const hasData = await hasStoredData()
         
@@ -267,13 +290,14 @@ export function WageProvider({ children }: { children: ReactNode }) {
             setBaseUpRate(newAiSettings.baseUpPercentage)
             setMeritRate(newAiSettings.meritIncreasePercentage)
             
-            // 직급별 인상률도 AI 값으로 초기화
-            const aiLevelRates = {
-              'Lv.1': { baseUp: newAiSettings.baseUpPercentage, merit: newAiSettings.meritIncreasePercentage },
-              'Lv.2': { baseUp: newAiSettings.baseUpPercentage, merit: newAiSettings.meritIncreasePercentage },
-              'Lv.3': { baseUp: newAiSettings.baseUpPercentage, merit: newAiSettings.meritIncreasePercentage },
-              'Lv.4': { baseUp: newAiSettings.baseUpPercentage, merit: newAiSettings.meritIncreasePercentage }
-            }
+            // 직급별 인상률도 AI 값으로 초기화 (동적 직급 사용)
+            const aiLevelRates: { [level: string]: { baseUp: number; merit: number } } = {}
+            Object.keys(loadedLevelRates).forEach(level => {
+              aiLevelRates[level] = { 
+                baseUp: newAiSettings.baseUpPercentage, 
+                merit: newAiSettings.meritIncreasePercentage 
+              }
+            })
             setLevelRates(aiLevelRates)
           }
         } else {
@@ -397,21 +421,16 @@ export function WageProvider({ children }: { children: ReactNode }) {
             const parsed = JSON.parse(savedState)
             setBaseUpRate(parsed.baseUpRate ?? 0)
             setMeritRate(parsed.meritRate ?? 0)
-            setPerformanceWeights(parsed.performanceWeights ?? {
-              ST: 1.5, AT: 1.2, OT: 1.0, BT: 0.8
-            })
-            setLevelRates(parsed.levelRates ?? {
-              'Lv.1': { baseUp: 0, merit: 0 },
-              'Lv.2': { baseUp: 0, merit: 0 },
-              'Lv.3': { baseUp: 0, merit: 0 },
-              'Lv.4': { baseUp: 0, merit: 0 }
-            })
-            setDetailedLevelRates(parsed.detailedLevelRates ?? {
-              'Lv.1': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 },
-              'Lv.2': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 },
-              'Lv.3': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 },
-              'Lv.4': { baseUp: 0, merit: 0, promotion: 0, advancement: 0, additional: 0 }
-            })
+            // 동적 값들 처리 - 기본값은 이미 로드된 설정 사용
+            if (parsed.performanceWeights) {
+              setPerformanceWeights(parsed.performanceWeights)
+            }
+            if (parsed.levelRates) {
+              setLevelRates(parsed.levelRates)
+            }
+            if (parsed.detailedLevelRates) {
+              setDetailedLevelRates(parsed.detailedLevelRates)
+            }
             setBandAdjustments(parsed.bandAdjustments ?? {})
             setBandFinalRates(parsed.bandFinalRates ?? {})
             setEmployeeWeights(parsed.employeeWeights ?? {})
@@ -620,6 +639,7 @@ export function WageProvider({ children }: { children: ReactNode }) {
   }
   
   const value: WageContextType = {
+    gradeSettings,
     baseUpRate,
     meritRate,
     availableBudget,

@@ -384,7 +384,7 @@ export default function SimulationPage() {
                       </span>
                     </span>
                     <span className="text-gray-600">
-                      잔여: <span className="font-semibold text-green-600">{formatKoreanCurrency((availableBudget - welfareBudget - budgetUsage.total), '억', 100000000)}</span>
+                      잔여: <span className="font-semibold text-green-600">{formatKoreanCurrency((availableBudget - welfareBudget - budgetUsage.total), '억원', 100000000)}</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-4">

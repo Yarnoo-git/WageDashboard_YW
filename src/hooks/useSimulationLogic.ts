@@ -108,8 +108,31 @@ export function useSimulationLogic() {
   
   // Pending rates 초기화
   useEffect(() => {
-    setPendingLevelRates(levelRates)
-    setPendingBandFinalRates(bandFinalRates)
+    // levelRates를 LevelRates 타입으로 변환 (additional 필드 추가)
+    const convertedLevelRates: LevelRates = {}
+    Object.keys(levelRates).forEach(level => {
+      convertedLevelRates[level] = {
+        baseUp: levelRates[level].baseUp,
+        merit: levelRates[level].merit,
+        additional: 0  // 기본값으로 0 설정
+      }
+    })
+    
+    // bandFinalRates를 BandFinalRates 타입으로 변환 (additional 필드 추가)
+    const convertedBandFinalRates: BandFinalRates = {}
+    Object.keys(bandFinalRates).forEach(band => {
+      convertedBandFinalRates[band] = {}
+      Object.keys(bandFinalRates[band]).forEach(level => {
+        convertedBandFinalRates[band][level] = {
+          baseUp: bandFinalRates[band][level].baseUp,
+          merit: bandFinalRates[band][level].merit,
+          additional: 0  // 기본값으로 0 설정
+        }
+      })
+    })
+    
+    setPendingLevelRates(convertedLevelRates)
+    setPendingBandFinalRates(convertedBandFinalRates)
     setPendingPayZoneRates(payZoneRates)
   }, [levelRates, bandFinalRates, payZoneRates])
   
@@ -145,8 +168,31 @@ export function useSimulationLogic() {
   
   // Pending 변경사항 초기화
   const resetPendingChanges = () => {
-    setPendingLevelRates(levelRates)
-    setPendingBandFinalRates(bandFinalRates)
+    // levelRates 변환
+    const convertedLevelRates: LevelRates = {}
+    Object.keys(levelRates).forEach(level => {
+      convertedLevelRates[level] = {
+        baseUp: levelRates[level].baseUp,
+        merit: levelRates[level].merit,
+        additional: 0
+      }
+    })
+    
+    // bandFinalRates 변환
+    const convertedBandFinalRates: BandFinalRates = {}
+    Object.keys(bandFinalRates).forEach(band => {
+      convertedBandFinalRates[band] = {}
+      Object.keys(bandFinalRates[band]).forEach(level => {
+        convertedBandFinalRates[band][level] = {
+          baseUp: bandFinalRates[band][level].baseUp,
+          merit: bandFinalRates[band][level].merit,
+          additional: 0
+        }
+      })
+    })
+    
+    setPendingLevelRates(convertedLevelRates)
+    setPendingBandFinalRates(convertedBandFinalRates)
     setPendingPayZoneRates(payZoneRates)
     setHasPendingChanges(false)
     setPendingChangeCount(0)
@@ -280,13 +326,36 @@ export function useSimulationLogic() {
   
   // Band 데이터로부터 Level 평균 계산 래퍼
   const updateLevelRatesFromBandsWrapper = (level: string, field: 'baseUp' | 'merit') => {
+    // bandFinalRates를 BandFinalRates 타입으로 변환
+    const convertedBandFinalRates: BandFinalRates = {}
+    Object.keys(bandFinalRates).forEach(band => {
+      convertedBandFinalRates[band] = {}
+      Object.keys(bandFinalRates[band]).forEach(lvl => {
+        convertedBandFinalRates[band][lvl] = {
+          baseUp: bandFinalRates[band][lvl].baseUp,
+          merit: bandFinalRates[band][lvl].merit,
+          additional: 0
+        }
+      })
+    })
+    
+    // levelRates를 LevelRates 타입으로 변환
+    const convertedLevelRates: LevelRates = {}
+    Object.keys(levelRates).forEach(lvl => {
+      convertedLevelRates[lvl] = {
+        baseUp: levelRates[lvl].baseUp,
+        merit: levelRates[lvl].merit,
+        additional: 0
+      }
+    })
+    
     const avgRate = updateLevelRatesFromBands(
       level,
       field,
       contextEmployeeData,
       dynamicStructure,
-      bandFinalRates,
-      levelRates
+      convertedBandFinalRates,
+      convertedLevelRates
     )
     
     if (avgRate !== null) {
@@ -371,6 +440,29 @@ export function useSimulationLogic() {
   
   // PayZone 데이터로부터 Band×Level 평균 계산 래퍼
   const updateBandRatesFromPayZonesWrapper = (band: string, level: string, field: 'baseUp' | 'merit') => {
+    // bandFinalRates를 BandFinalRates 타입으로 변환
+    const convertedBandFinalRates: BandFinalRates = {}
+    Object.keys(bandFinalRates).forEach(b => {
+      convertedBandFinalRates[b] = {}
+      Object.keys(bandFinalRates[b]).forEach(l => {
+        convertedBandFinalRates[b][l] = {
+          baseUp: bandFinalRates[b][l].baseUp,
+          merit: bandFinalRates[b][l].merit,
+          additional: 0
+        }
+      })
+    })
+    
+    // levelRates를 LevelRates 타입으로 변환
+    const convertedLevelRates: LevelRates = {}
+    Object.keys(levelRates).forEach(l => {
+      convertedLevelRates[l] = {
+        baseUp: levelRates[l].baseUp,
+        merit: levelRates[l].merit,
+        additional: 0
+      }
+    })
+    
     const avgRate = updateBandRatesFromPayZones(
       band,
       level,
@@ -378,8 +470,8 @@ export function useSimulationLogic() {
       contextEmployeeData,
       dynamicStructure,
       payZoneRates,
-      bandFinalRates,
-      levelRates
+      convertedBandFinalRates,
+      convertedLevelRates
     )
     
     if (avgRate !== null) {
@@ -402,11 +494,34 @@ export function useSimulationLogic() {
   
   // 예산 계산
   useEffect(() => {
+    // levelRates를 LevelRates 타입으로 변환
+    const convertedLevelRates: LevelRates = {}
+    Object.keys(levelRates).forEach(level => {
+      convertedLevelRates[level] = {
+        baseUp: levelRates[level].baseUp,
+        merit: levelRates[level].merit,
+        additional: 0
+      }
+    })
+    
+    // bandFinalRates를 BandFinalRates 타입으로 변환
+    const convertedBandFinalRates: BandFinalRates = {}
+    Object.keys(bandFinalRates).forEach(band => {
+      convertedBandFinalRates[band] = {}
+      Object.keys(bandFinalRates[band]).forEach(level => {
+        convertedBandFinalRates[band][level] = {
+          baseUp: bandFinalRates[band][level].baseUp,
+          merit: bandFinalRates[band][level].merit,
+          additional: 0
+        }
+      })
+    })
+    
     const usage = calculateBudgetUsage(
       contextEmployeeData,
       adjustmentMode,
-      levelRates,
-      bandFinalRates,
+      convertedLevelRates,
+      convertedBandFinalRates,
       payZoneRates,
       availableBudget,
       welfareBudget

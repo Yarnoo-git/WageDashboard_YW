@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
+import { useWageContext } from '@/context/WageContext'
 
 interface RaiseSliderPanelProps {
   bandId: string
@@ -31,9 +32,12 @@ export function RaiseSliderPanel({
   onReset,
   budgetImpact = 0
 }: RaiseSliderPanelProps) {
+  const { gradeSettings } = useWageContext()
+  
   // 직급별 최종 인상률 계산
   const calculateFinalRates = () => {
-    const levels = ['Lv.1', 'Lv.2', 'Lv.3', 'Lv.4']
+    // 동적으로 직급 목록 가져오기
+    const levels = gradeSettings?.levels.map(l => l.name) || ['Lv.1', 'Lv.2', 'Lv.3', 'Lv.4']
     return levels.map(level => ({
       level,
       baseUp: (levelRates[level]?.baseUp || 0) + baseUpAdjustment,
@@ -50,7 +54,7 @@ export function RaiseSliderPanel({
       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
         <h4 className="text-sm font-semibold text-blue-900 mb-2">대시보드 기준 인상률</h4>
         <div className="space-y-1 text-sm">
-          {['Lv.4', 'Lv.3', 'Lv.2', 'Lv.1'].map(level => (
+          {(gradeSettings?.levels.map(l => l.name).reverse() || ['Lv.4', 'Lv.3', 'Lv.2', 'Lv.1']).map(level => (
             <div key={level} className="flex justify-between text-gray-700">
               <span>{level}:</span>
               <span className="font-medium">
