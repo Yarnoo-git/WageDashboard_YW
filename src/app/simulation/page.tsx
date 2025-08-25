@@ -465,6 +465,8 @@ export default function SimulationPage() {
                         }}
                         additionalType={additionalType}
                         onAdditionalTypeChange={setAdditionalType}
+                        contextEmployeeData={contextEmployeeData}
+                        performanceGrades={dynamicStructure.grades}
                       />
                     )}
                     
@@ -480,6 +482,8 @@ export default function SimulationPage() {
                             return acc
                           }, {} as { [level: string]: number })
                         }
+                        contextEmployeeData={contextEmployeeData}
+                        performanceGrades={dynamicStructure.grades}
                       />
                     )}
                     

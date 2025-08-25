@@ -1,13 +1,18 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useMemo } from 'react'
+import { GRADE_COLORS } from '@/types/simulation'
+import { Employee } from '@/types/employee'
+import { useWageContext } from '@/context/WageContext'
 
 interface LevelAdjustmentProps {
   levels: string[]
   pendingLevelRates: any
-  onRateChange: (level: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
+  onRateChange: (level: string, field: 'baseUp' | 'merit' | 'additional', value: number, grade?: string) => void
   additionalType: 'percentage' | 'amount'
   employeeCounts?: { [level: string]: number }
+  contextEmployeeData?: Employee[]
+  performanceGrades?: string[]
 }
 
 export function LevelAdjustment({
@@ -15,116 +20,336 @@ export function LevelAdjustment({
   pendingLevelRates,
   onRateChange,
   additionalType,
-  employeeCounts = {}
+  employeeCounts = {},
+  contextEmployeeData = [],
+  performanceGrades = ['ST', 'AT', 'OT', 'BT']
 }: LevelAdjustmentProps) {
+  const { performanceWeights } = useWageContext()
+  const [expandedLevels, setExpandedLevels] = useState<string[]>(levels) // 모두 펼친 상태로 시작
+  
+  // 레벨별, 평가등급별 인원수 계산
+  const employeeCountByLevelAndGrade = useMemo(() => {
+    const counts: { 
+      [level: string]: { 
+        [grade: string]: number 
+        total: number 
+      }
+    } = {}
+    
+    levels.forEach(level => {
+      counts[level] = { total: 0 }
+      performanceGrades.forEach(grade => {
+        counts[level][grade] = 0
+      })
+    })
+    
+    contextEmployeeData.forEach(emp => {
+      if (emp.level && emp.performanceRating && 
+          levels.includes(emp.level) && 
+          performanceGrades.includes(emp.performanceRating)) {
+        counts[emp.level][emp.performanceRating]++
+        counts[emp.level].total++
+      }
+    })
+    
+    return counts
+  }, [contextEmployeeData, levels, performanceGrades])
+  
+  // 레벨 토글
+  const toggleLevel = (level: string) => {
+    setExpandedLevels(prev => 
+      prev.includes(level)
+        ? prev.filter(l => l !== level)
+        : [...prev, level]
+    )
+  }
+  
+  // 평가등급별 Merit 계산
+  const calculateMeritByGrade = (baseMerit: number, grade: string) => {
+    const weight = performanceWeights[grade] || 1.0
+    return (baseMerit * weight).toFixed(2)
+  }
+  
+  // 총 인상률 계산
+  const calculateTotalRate = (baseUp: number, merit: number, additional: number, grade?: string) => {
+    const effectiveMerit = grade ? Number(calculateMeritByGrade(merit, grade)) : merit
+    return (baseUp + effectiveMerit + (additionalType === 'percentage' ? additional : 0)).toFixed(1)
+  }
+  
   return (
-    <div className="bg-white rounded-lg shadow-sm p-2">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold">레벨별 조정</h3>
-        <span className="text-xs text-gray-500">레벨별 차등 적용</span>
+    <div className="space-y-3">
+      {/* 컨트롤 바 */}
+      <div className="bg-white rounded-lg shadow-sm px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold text-gray-900">레벨별 조정</h3>
+          <span className="text-xs text-gray-500">레벨-평가등급별 세분화 조정</span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setExpandedLevels(levels)}
+            className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          >
+            모두 펼치기
+          </button>
+          <button
+            onClick={() => setExpandedLevels([])}
+            className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 rounded transition-colors"
+          >
+            모두 접기
+          </button>
+        </div>
       </div>
       
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-1 px-2 text-xs font-medium text-gray-700">레벨</th>
-              <th className="text-center py-1 px-2 text-xs font-medium text-gray-700">인원</th>
-              <th className="text-center py-1 px-2 text-xs font-medium text-gray-700">Base-up (%)</th>
-              <th className="text-center py-1 px-2 text-xs font-medium text-gray-700">성과 (%)</th>
-              <th className="text-center py-1 px-2 text-xs font-medium text-gray-700">
-                추가 {additionalType === 'percentage' ? '(%)' : '(만원)'}
-              </th>
-              <th className="text-center py-1 px-2 text-xs font-medium text-gray-700">총 인상률</th>
-            </tr>
-          </thead>
-          <tbody>
-            {levels.map((level, index) => {
-              const rates = pendingLevelRates[level] || { baseUp: 0, merit: 0, additional: 0 }
-              const total = rates.baseUp + rates.merit + (additionalType === 'percentage' ? rates.additional : 0)
-              const empCount = employeeCounts[level] || 0
-              
-              return (
-                <tr key={level} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                  <td className="py-1 px-1.5 text-xs font-medium text-gray-900">{level}</td>
-                  <td className="py-1 px-1.5 text-xs text-center text-gray-600">
-                    {empCount.toLocaleString()}
-                  </td>
-                  <td className="py-1 px-1">
-                    <input
-                      type="number"
-                      value={rates.baseUp}
-                      onChange={(e) => onRateChange(level, 'baseUp', Number(e.target.value))}
-                      step="0.1"
-                      className="w-14 px-1 py-0.5 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="0"
-                    />
-                  </td>
-                  <td className="py-1 px-1">
-                    <input
-                      type="number"
-                      value={rates.merit}
-                      onChange={(e) => onRateChange(level, 'merit', Number(e.target.value))}
-                      step="0.1"
-                      className="w-14 px-1 py-0.5 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="0"
-                    />
-                  </td>
-                  <td className="py-1 px-1">
-                    <input
-                      type="number"
-                      value={rates.additional}
-                      onChange={(e) => onRateChange(level, 'additional', Number(e.target.value))}
-                      step={additionalType === 'percentage' ? 0.1 : 10}
-                      className="w-14 px-1 py-0.5 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="0"
-                    />
-                  </td>
-                  <td className="py-1 px-1.5 text-center">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
-                      {total.toFixed(1)}%
-                      {additionalType === 'amount' && rates.additional > 0 && (
-                        <span className="ml-1 text-xs">+ {rates.additional}만원</span>
-                      )}
+      {/* 레벨별 테이블 */}
+      {levels.map((level, levelIndex) => {
+        const rates = pendingLevelRates[level] || { baseUp: 0, merit: 0, additional: 0 }
+        const levelCounts = employeeCountByLevelAndGrade[level] || { total: 0 }
+        const isExpanded = expandedLevels.includes(level)
+        
+        return (
+          <div 
+            key={level} 
+            className="bg-white rounded-lg shadow-lg overflow-hidden"
+          >
+            {/* 레벨 헤더 */}
+            <div 
+              className={`px-4 py-3 bg-gradient-to-r ${
+                levelIndex === 0 ? 'from-purple-50 to-purple-100' :
+                levelIndex === 1 ? 'from-blue-50 to-blue-100' :
+                levelIndex === 2 ? 'from-green-50 to-green-100' :
+                'from-orange-50 to-orange-100'
+              } border-b cursor-pointer hover:opacity-90 transition-opacity`}
+              onClick={() => toggleLevel(level)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className={`
+                    px-3 py-1 rounded-full text-sm font-bold text-white bg-gradient-to-r
+                    ${levelIndex === 0 ? 'from-purple-500 to-purple-600' :
+                      levelIndex === 1 ? 'from-blue-500 to-blue-600' :
+                      levelIndex === 2 ? 'from-green-500 to-green-600' :
+                      'from-orange-500 to-orange-600'}
+                  `}>
+                    {level}
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    {levelCounts.total.toLocaleString()}명
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-gray-600">현재 인상률:</span>
+                    <span className="font-bold text-blue-600">
+                      {calculateTotalRate(rates.baseUp, rates.merit, rates.additional)}%
                     </span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                  </div>
+                  <svg 
+                    className={`w-5 h-5 text-gray-500 transition-transform ${
+                      isExpanded ? 'transform rotate-180' : ''
+                    }`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            
+            {/* 평가등급별 테이블 (펼쳤을 때) */}
+            {isExpanded && (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 w-32">구분</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 w-24 bg-gray-100">
+                        평균
+                      </th>
+                      {performanceGrades.map(grade => (
+                        <th 
+                          key={grade}
+                          className={`px-3 py-3 text-center text-xs font-semibold ${
+                            GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.text || 'text-gray-700'
+                          } ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || 'bg-gray-50'}`}
+                        >
+                          <div className="flex flex-col items-center">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r ${
+                              GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.gradient || 'from-gray-500 to-gray-600'
+                            } text-white`}>
+                              {grade}
+                            </span>
+                            <div className="text-xs font-normal mt-1 text-gray-600">
+                              {levelCounts[grade]?.toLocaleString() || 0}명
+                            </div>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Base-up 행 */}
+                    <tr className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                        Base-up (%)
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <input
+                          type="number"
+                          value={rates.baseUp}
+                          onChange={(e) => onRateChange(level, 'baseUp', Number(e.target.value))}
+                          step="0.1"
+                          className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          placeholder="0.0"
+                        />
+                      </td>
+                      {performanceGrades.map(grade => (
+                        <td key={grade} className={`px-3 py-3 text-center ${
+                          GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
+                        }`}>
+                          <span className="text-sm text-gray-500">-</span>
+                        </td>
+                      ))}
+                    </tr>
+                    
+                    {/* Merit 행 */}
+                    <tr className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                        Merit (%)
+                        <div className="text-xs text-gray-500 mt-0.5">기본값</div>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <input
+                          type="number"
+                          value={rates.merit}
+                          onChange={(e) => onRateChange(level, 'merit', Number(e.target.value))}
+                          step="0.1"
+                          className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          placeholder="0.0"
+                        />
+                      </td>
+                      {performanceGrades.map(grade => {
+                        const weight = performanceWeights[grade] || 1.0
+                        return (
+                          <td key={grade} className={`px-3 py-3 text-center ${
+                            GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
+                          }`}>
+                            <div className="flex flex-col items-center">
+                              <span className="text-sm font-semibold text-gray-700">
+                                {calculateMeritByGrade(rates.merit, grade)}
+                              </span>
+                              <span className="text-xs text-gray-500">×{weight}</span>
+                            </div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                    
+                    {/* 추가 행 */}
+                    <tr className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                        추가 ({additionalType === 'percentage' ? '%' : '만원'})
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <input
+                          type="number"
+                          value={rates.additional}
+                          onChange={(e) => onRateChange(level, 'additional', Number(e.target.value))}
+                          step={additionalType === 'percentage' ? 0.1 : 10}
+                          className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          placeholder="0"
+                        />
+                      </td>
+                      {performanceGrades.map(grade => (
+                        <td key={grade} className={`px-3 py-3 text-center ${
+                          GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
+                        }`}>
+                          <span className="text-sm text-gray-500">-</span>
+                        </td>
+                      ))}
+                    </tr>
+                    
+                    {/* 총 인상률 행 */}
+                    <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 font-semibold">
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900">
+                        총 인상률 (%)
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className="text-base font-bold text-blue-600">
+                          {calculateTotalRate(rates.baseUp, rates.merit, rates.additional)}
+                        </span>
+                        {additionalType === 'amount' && rates.additional > 0 && (
+                          <div className="text-xs text-gray-600 mt-0.5">+{rates.additional}만</div>
+                        )}
+                      </td>
+                      {performanceGrades.map(grade => (
+                        <td key={grade} className={`px-3 py-3 text-center ${
+                          GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
+                        }`}>
+                          <span className={`text-base font-bold ${
+                            GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.text || 'text-gray-700'
+                          }`}>
+                            {calculateTotalRate(rates.baseUp, rates.merit, rates.additional, grade)}
+                          </span>
+                          {additionalType === 'amount' && rates.additional > 0 && (
+                            <div className="text-xs text-gray-600 mt-0.5">+{rates.additional}만</div>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })}
       
       {/* 일괄 조정 도구 */}
-      <div className="mt-2 pt-2 border-t flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-600">일괄:</span>
-        <div className="flex gap-2">
-          <div className="flex items-center gap-1">
+      <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-700">전체 레벨 일괄 설정</span>
+        <div className="flex gap-3">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-600">Base-up:</label>
             <input
               type="number"
-              placeholder="Base"
+              placeholder="0.0"
               onChange={(e) => {
                 const value = Number(e.target.value)
                 levels.forEach(level => onRateChange(level, 'baseUp', value))
               }}
               step="0.1"
-              className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded placeholder:text-gray-400"
+              className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             <span className="text-xs text-gray-500">%</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-600">Merit:</label>
             <input
               type="number"
-              placeholder="성과"
+              placeholder="0.0"
               onChange={(e) => {
                 const value = Number(e.target.value)
                 levels.forEach(level => onRateChange(level, 'merit', value))
               }}
               step="0.1"
-              className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded placeholder:text-gray-400"
+              className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             <span className="text-xs text-gray-500">%</span>
           </div>
+          <button
+            onClick={() => {
+              levels.forEach(level => {
+                onRateChange(level, 'baseUp', 0)
+                onRateChange(level, 'merit', 0)
+                onRateChange(level, 'additional', 0)
+              })
+            }}
+            className="px-3 py-1.5 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors font-medium"
+          >
+            초기화
+          </button>
         </div>
       </div>
     </div>
