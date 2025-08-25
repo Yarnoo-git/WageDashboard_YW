@@ -77,9 +77,9 @@ export function LevelAdjustment({
   }
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* 컨트롤 바 */}
-      <div className="bg-white rounded-lg shadow-sm px-4 py-2 flex items-center justify-between">
+      <div className="bg-white rounded-lg shadow-sm px-3 py-1.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold text-gray-900">레벨별 조정</h3>
           <span className="text-xs text-gray-500">레벨-평가등급별 세분화 조정</span>
@@ -87,13 +87,13 @@ export function LevelAdjustment({
         <div className="flex gap-2">
           <button
             onClick={() => setExpandedLevels(levels)}
-            className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            className="px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-50 rounded transition-colors"
           >
             모두 펼치기
           </button>
           <button
             onClick={() => setExpandedLevels([])}
-            className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 rounded transition-colors"
+            className="px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 rounded transition-colors"
           >
             모두 접기
           </button>
@@ -113,7 +113,7 @@ export function LevelAdjustment({
           >
             {/* 레벨 헤더 */}
             <div 
-              className={`px-4 py-3 bg-gradient-to-r ${
+              className={`px-3 py-2 bg-gradient-to-r ${
                 levelIndex === 0 ? 'from-purple-50 to-purple-100' :
                 levelIndex === 1 ? 'from-blue-50 to-blue-100' :
                 levelIndex === 2 ? 'from-green-50 to-green-100' :
@@ -122,9 +122,9 @@ export function LevelAdjustment({
               onClick={() => toggleLevel(level)}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <span className={`
-                    px-3 py-1 rounded-full text-sm font-bold text-white bg-gradient-to-r
+                    px-2 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r
                     ${levelIndex === 0 ? 'from-purple-500 to-purple-600' :
                       levelIndex === 1 ? 'from-blue-500 to-blue-600' :
                       levelIndex === 2 ? 'from-green-500 to-green-600' :
@@ -132,19 +132,19 @@ export function LevelAdjustment({
                   `}>
                     {level}
                   </span>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-xs text-gray-600">
                     {levelCounts.total.toLocaleString()}명
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 text-xs">
                     <span className="text-gray-600">현재 인상률:</span>
                     <span className="font-bold text-blue-600">
                       {calculateTotalRate(rates.baseUp, rates.merit, rates.additional)}%
                     </span>
                   </div>
                   <svg 
-                    className={`w-5 h-5 text-gray-500 transition-transform ${
+                    className={`w-4 h-4 text-gray-500 transition-transform ${
                       isExpanded ? 'transform rotate-180' : ''
                     }`} 
                     fill="none" 
@@ -163,24 +163,24 @@ export function LevelAdjustment({
                 <table className="w-full">
                   <thead>
                     <tr className="border-b bg-gray-50">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 w-32">구분</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 w-24 bg-gray-100">
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 w-28">구분</th>
+                      <th className="px-2 py-2 text-center text-xs font-semibold text-gray-700 w-20 bg-gray-100">
                         평균
                       </th>
                       {performanceGrades.map(grade => (
                         <th 
                           key={grade}
-                          className={`px-3 py-3 text-center text-xs font-semibold ${
+                          className={`px-2 py-2 text-center text-xs font-semibold ${
                             GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.text || 'text-gray-700'
                           } ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || 'bg-gray-50'}`}
                         >
                           <div className="flex flex-col items-center">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r ${
+                            <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r ${
                               GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.gradient || 'from-gray-500 to-gray-600'
                             } text-white`}>
                               {grade}
                             </span>
-                            <div className="text-xs font-normal mt-1 text-gray-600">
+                            <div className="text-xs font-normal mt-0.5 text-gray-600">
                               {levelCounts[grade]?.toLocaleString() || 0}명
                             </div>
                           </div>
@@ -191,52 +191,52 @@ export function LevelAdjustment({
                   <tbody>
                     {/* Base-up 행 */}
                     <tr className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                      <td className="px-3 py-2 text-xs font-medium text-gray-700">
                         Base-up (%)
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-2 py-2 text-center">
                         <input
                           type="number"
                           value={rates.baseUp}
                           onChange={(e) => onRateChange(level, 'baseUp', Number(e.target.value))}
                           step="0.1"
-                          className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           placeholder="0.0"
                         />
                       </td>
                       {performanceGrades.map(grade => (
-                        <td key={grade} className={`px-3 py-3 text-center ${
+                        <td key={grade} className={`px-2 py-2 text-center ${
                           GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
                         }`}>
-                          <span className="text-sm text-gray-500">-</span>
+                          <span className="text-xs text-gray-500">-</span>
                         </td>
                       ))}
                     </tr>
                     
                     {/* Merit 행 */}
                     <tr className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                      <td className="px-3 py-2 text-xs font-medium text-gray-700">
                         Merit (%)
                         <div className="text-xs text-gray-500 mt-0.5">기본값</div>
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-2 py-2 text-center">
                         <input
                           type="number"
                           value={rates.merit}
                           onChange={(e) => onRateChange(level, 'merit', Number(e.target.value))}
                           step="0.1"
-                          className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           placeholder="0.0"
                         />
                       </td>
                       {performanceGrades.map(grade => {
                         const weight = performanceWeights[grade] || 1.0
                         return (
-                          <td key={grade} className={`px-3 py-3 text-center ${
+                          <td key={grade} className={`px-2 py-2 text-center ${
                             GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
                           }`}>
                             <div className="flex flex-col items-center">
-                              <span className="text-sm font-semibold text-gray-700">
+                              <span className="text-xs font-semibold text-gray-700">
                                 {calculateMeritByGrade(rates.merit, grade)}
                               </span>
                               <span className="text-xs text-gray-500">×{weight}</span>
@@ -248,35 +248,35 @@ export function LevelAdjustment({
                     
                     {/* 추가 행 */}
                     <tr className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                      <td className="px-3 py-2 text-xs font-medium text-gray-700">
                         추가 ({additionalType === 'percentage' ? '%' : '만원'})
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-2 py-2 text-center">
                         <input
                           type="number"
                           value={rates.additional}
                           onChange={(e) => onRateChange(level, 'additional', Number(e.target.value))}
                           step={additionalType === 'percentage' ? 0.1 : 10}
-                          className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           placeholder="0"
                         />
                       </td>
                       {performanceGrades.map(grade => (
-                        <td key={grade} className={`px-3 py-3 text-center ${
+                        <td key={grade} className={`px-2 py-2 text-center ${
                           GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
                         }`}>
-                          <span className="text-sm text-gray-500">-</span>
+                          <span className="text-xs text-gray-500">-</span>
                         </td>
                       ))}
                     </tr>
                     
                     {/* 총 인상률 행 */}
                     <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 font-semibold">
-                      <td className="px-4 py-3 text-sm font-bold text-gray-900">
+                      <td className="px-3 py-2 text-xs font-bold text-gray-900">
                         총 인상률 (%)
                       </td>
-                      <td className="px-3 py-3 text-center">
-                        <span className="text-base font-bold text-blue-600">
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-sm font-bold text-blue-600">
                           {calculateTotalRate(rates.baseUp, rates.merit, rates.additional)}
                         </span>
                         {additionalType === 'amount' && rates.additional > 0 && (
@@ -284,17 +284,17 @@ export function LevelAdjustment({
                         )}
                       </td>
                       {performanceGrades.map(grade => (
-                        <td key={grade} className={`px-3 py-3 text-center ${
+                        <td key={grade} className={`px-2 py-2 text-center ${
                           GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
                         }`}>
-                          <span className={`text-base font-bold ${
+                          <span className={`text-sm font-bold ${
                             GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.text || 'text-gray-700'
                           }`}>
                             {calculateTotalRate(rates.baseUp, rates.merit, rates.additional, grade)}
                           </span>
                           {additionalType === 'amount' && rates.additional > 0 && (
                             <div className="text-xs text-gray-600 mt-0.5">+{rates.additional}만</div>
-                          )}
+                        )}
                         </td>
                       ))}
                     </tr>
@@ -307,10 +307,10 @@ export function LevelAdjustment({
       })}
       
       {/* 일괄 조정 도구 */}
-      <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700">전체 레벨 일괄 설정</span>
-        <div className="flex gap-3">
-          <div className="flex items-center gap-2">
+      <div className="bg-white rounded-lg shadow-sm px-3 py-2 flex items-center justify-between">
+        <span className="text-xs font-medium text-gray-700">전체 레벨 일괄 설정</span>
+        <div className="flex gap-2">
+          <div className="flex items-center gap-1">
             <label className="text-xs text-gray-600">Base-up:</label>
             <input
               type="number"
@@ -320,11 +320,11 @@ export function LevelAdjustment({
                 levels.forEach(level => onRateChange(level, 'baseUp', value))
               }}
               step="0.1"
-              className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             />
             <span className="text-xs text-gray-500">%</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <label className="text-xs text-gray-600">Merit:</label>
             <input
               type="number"
@@ -334,7 +334,7 @@ export function LevelAdjustment({
                 levels.forEach(level => onRateChange(level, 'merit', value))
               }}
               step="0.1"
-              className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             />
             <span className="text-xs text-gray-500">%</span>
           </div>
@@ -346,7 +346,7 @@ export function LevelAdjustment({
                 onRateChange(level, 'additional', 0)
               })
             }}
-            className="px-3 py-1.5 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors font-medium"
+            className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors font-medium"
           >
             초기화
           </button>
