@@ -22,11 +22,13 @@
     "dist:linux": "npm run build:electron && electron-builder --linux"
   },
   "dependencies": {
+    "@types/react-window": "^1.8.8",
     "express": "^5.1.0",
     "html2canvas": "^1.4.1",
     "next": "14.2.31",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-window": "^1.8.11",
     "recharts": "^3.1.0",
     "xlsx": "^0.18.5"
   },
