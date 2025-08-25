@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useMetadata } from '@/hooks/useMetadata'
 import { useWageContext } from '@/context/WageContext'
-import { EmployeeTable } from '@/components/employees/EmployeeTable'
+import { VirtualizedEmployeeTable } from '@/components/employees/VirtualizedEmployeeTable'
 import { SimpleExportButton } from '@/components/ExportButton'
 import { ScenarioManager } from '@/components/ScenarioManager'
 import { PerformanceWeightModal } from '@/components/employees/PerformanceWeightModal'
@@ -132,7 +132,7 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        <EmployeeTable 
+        <VirtualizedEmployeeTable 
           level={selectedLevel} 
           department={selectedDepartment}
           performanceRating={selectedRating}

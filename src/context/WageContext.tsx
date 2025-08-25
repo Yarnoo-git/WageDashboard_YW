@@ -11,6 +11,7 @@ import {
   getDetailedLevelRates,
   GradeSettings 
 } from '@/services/gradeSettingsService'
+import { Employee } from '@/types/employee'
 
 // 동적 평가등급 가중치 타입
 type PerformanceWeights = { [key: string]: number }
@@ -93,7 +94,7 @@ interface WageContextType {
   }
   
   // 직원 데이터 (Pay Zone 포함)
-  contextEmployeeData: any[]
+  contextEmployeeData: Employee[]
   
   // 설정 업데이트 함수들
   setBaseUpRate: (rate: number) => void
@@ -217,7 +218,7 @@ export function WageProvider({ children }: { children: ReactNode }) {
       }
     }
   }>({})
-  const [contextEmployeeData, setContextEmployeeData] = useState<any[]>([])
+  const [contextEmployeeData, setContextEmployeeData] = useState<Employee[]>([])
   const [hasLoadedActiveScenario, setHasLoadedActiveScenario] = useState(false)
   const [currentFileId, setCurrentFileId] = useState<string | undefined>(undefined)
   
