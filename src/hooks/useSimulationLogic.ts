@@ -11,7 +11,11 @@ import {
   AdjustmentMode,
   LevelRates,
   BandFinalRates,
-  PayZoneRates
+  PayZoneRates,
+  GradeAdjustmentRates,
+  AllAdjustmentRates,
+  LevelGradeRates,
+  PayZoneLevelGradeRates
 } from '@/types/simulation'
 import {
   calculateBudgetUsage,
@@ -22,7 +26,14 @@ import {
   getActualCombinationCount,
   calculateBandAverage,
   calculateAverageSalary,
-  calculateZoneBandBudget
+  calculateZoneBandBudget,
+  calculateWeightedAverage,
+  countEmployeesByGrade,
+  propagateAllToLevel,
+  propagateLevelToPayZone,
+  aggregatePayZoneToLevel,
+  aggregateLevelToAll,
+  calculateAverageFromGrades
 } from '@/utils/simulationHelpers'
 
 export function useSimulationLogic() {
@@ -105,6 +116,14 @@ export function useSimulationLogic() {
   
   // 평가가중치 모달 상태
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false)
+  
+  // 평가등급별 상태 관리 (중앙 집중식)
+  const [allGradeRates, setAllGradeRates] = useState<AllAdjustmentRates>({
+    average: { baseUp: 0, merit: 0, additional: 0 },
+    byGrade: {}
+  })
+  const [levelGradeRates, setLevelGradeRates] = useState<LevelGradeRates>({})
+  const [payZoneLevelGradeRates, setPayZoneLevelGradeRates] = useState<PayZoneLevelGradeRates>({})
   
   // Pending rates 초기화
   useEffect(() => {
@@ -229,6 +248,58 @@ export function useSimulationLogic() {
         payZones: payZones.map(Number),
         grades: grades.length > 0 ? grades : []
       })
+      
+      // 평가등급별 상태 초기화
+      if (grades.length > 0) {
+        const initialGradeRates: GradeAdjustmentRates = {}
+        grades.forEach(grade => {
+          initialGradeRates[grade] = { baseUp: 0, merit: 0, additional: 0 }
+        })
+        
+        setAllGradeRates({
+          average: { baseUp: 0, merit: 0, additional: 0 },
+          byGrade: initialGradeRates
+        })
+        
+        // 레벨별 평가등급 초기화
+        const initialLevelGradeRates: LevelGradeRates = {}
+        levels.forEach(level => {
+          const levelEmployees = contextEmployeeData.filter(emp => emp.level === level)
+          const gradeCounts = countEmployeesByGrade(levelEmployees)
+          
+          initialLevelGradeRates[level] = {
+            average: { baseUp: 0, merit: 0, additional: 0 },
+            byGrade: { ...initialGradeRates },
+            employeeCount: {
+              total: levelEmployees.length,
+              byGrade: gradeCounts
+            }
+          }
+        })
+        setLevelGradeRates(initialLevelGradeRates)
+        
+        // PayZone별 평가등급 초기화
+        const initialPayZoneRates: PayZoneLevelGradeRates = {}
+        payZones.forEach(zone => {
+          initialPayZoneRates[zone.toString()] = {}
+          levels.forEach(level => {
+            const zoneEmployees = contextEmployeeData.filter(
+              emp => emp.payZone === zone && emp.level === level
+            )
+            const gradeCounts = countEmployeesByGrade(zoneEmployees)
+            
+            initialPayZoneRates[zone.toString()][level] = {
+              average: { baseUp: 0, merit: 0, additional: 0 },
+              byGrade: { ...initialGradeRates },
+              employeeCount: {
+                total: zoneEmployees.length,
+                byGrade: gradeCounts
+              }
+            }
+          })
+        })
+        setPayZoneLevelGradeRates(initialPayZoneRates)
+      }
       
       // 첫 번째 값으로 초기화
       if (bands.length > 0) {
@@ -420,6 +491,139 @@ export function useSimulationLogic() {
     setHasPendingChanges(true)
   }
   
+  // 양방향 동기화 핸들러
+  // 전체 평가등급 변경 → 하위 전파
+  const handleAllGradeChange = (grade: string, field: keyof AdjustmentRates, value: number) => {
+    // 전체 업데이트
+    setAllGradeRates(prev => ({
+      ...prev,
+      byGrade: {
+        ...prev.byGrade,
+        [grade]: {
+          ...prev.byGrade[grade],
+          [field]: value
+        }
+      }
+    }))
+    
+    // 레벨별로 전파
+    setLevelGradeRates(prev => {
+      const newRates = { ...prev }
+      Object.keys(newRates).forEach(level => {
+        newRates[level].byGrade[grade][field] = value
+      })
+      return newRates
+    })
+    
+    // PayZone별로 전파
+    setPayZoneLevelGradeRates(prev => {
+      const newRates = { ...prev }
+      Object.keys(newRates).forEach(zone => {
+        Object.keys(newRates[zone]).forEach(level => {
+          newRates[zone][level].byGrade[grade][field] = value
+        })
+      })
+      return newRates
+    })
+    
+    setHasPendingChanges(true)
+  }
+  
+  // 레벨별 평가등급 변경 → 상위/하위 동기화
+  const handleLevelGradeChange = (level: string, grade: string, field: keyof AdjustmentRates, value: number) => {
+    // 레벨 업데이트
+    setLevelGradeRates(prev => ({
+      ...prev,
+      [level]: {
+        ...prev[level],
+        byGrade: {
+          ...prev[level].byGrade,
+          [grade]: {
+            ...prev[level].byGrade[grade],
+            [field]: value
+          }
+        }
+      }
+    }))
+    
+    // PayZone으로 전파
+    setPayZoneLevelGradeRates(prev => {
+      const newRates = { ...prev }
+      Object.keys(newRates).forEach(zone => {
+        if (newRates[zone][level]) {
+          newRates[zone][level].byGrade[grade][field] = value
+        }
+      })
+      return newRates
+    })
+    
+    // 전체로 역전파 (가중평균)
+    const updatedLevelRates = {
+      ...levelGradeRates,
+      [level]: {
+        ...levelGradeRates[level],
+        byGrade: {
+          ...levelGradeRates[level].byGrade,
+          [grade]: {
+            ...levelGradeRates[level].byGrade[grade],
+            [field]: value
+          }
+        }
+      }
+    }
+    const newAllRates = aggregateLevelToAll(updatedLevelRates, contextEmployeeData, dynamicStructure.grades)
+    setAllGradeRates(newAllRates)
+    
+    setHasPendingChanges(true)
+  }
+  
+  // PayZone별 평가등급 변경 → 상위 역전파
+  const handlePayZoneGradeChange = (payZone: number, level: string, grade: string, field: keyof AdjustmentRates, value: number) => {
+    // PayZone 업데이트
+    setPayZoneLevelGradeRates(prev => ({
+      ...prev,
+      [payZone.toString()]: {
+        ...prev[payZone.toString()],
+        [level]: {
+          ...prev[payZone.toString()][level],
+          byGrade: {
+            ...prev[payZone.toString()][level].byGrade,
+            [grade]: {
+              ...prev[payZone.toString()][level].byGrade[grade],
+              [field]: value
+            }
+          }
+        }
+      }
+    }))
+    
+    // 레벨로 역전파 (가중평균)
+    const updatedPayZoneRates = {
+      ...payZoneLevelGradeRates,
+      [payZone.toString()]: {
+        ...payZoneLevelGradeRates[payZone.toString()],
+        [level]: {
+          ...payZoneLevelGradeRates[payZone.toString()][level],
+          byGrade: {
+            ...payZoneLevelGradeRates[payZone.toString()][level].byGrade,
+            [grade]: {
+              ...payZoneLevelGradeRates[payZone.toString()][level].byGrade[grade],
+              [field]: value
+            }
+          }
+        }
+      }
+    }
+    const newLevelRates = aggregatePayZoneToLevel(updatedPayZoneRates, contextEmployeeData, dynamicStructure.levels, dynamicStructure.grades)
+    setLevelGradeRates(newLevelRates)
+    
+    // 전체로 역전파 (가중평균)
+    const newAllRates = aggregateLevelToAll(newLevelRates, contextEmployeeData, dynamicStructure.grades)
+    setAllGradeRates(newAllRates)
+    
+    setHasPendingChanges(true)
+  }
+  
   // Expert Mode 핸들러 (기존 유지)
   const handleExpertChange = (payZone: number, band: string, level: string, field: keyof AdjustmentRates, value: number) => {
     setPendingPayZoneRates(prev => ({
@@ -584,6 +788,14 @@ export function useSimulationLogic() {
     setAdjustmentMode,
     performanceWeights,
     
+    // Grade-based states
+    allGradeRates,
+    setAllGradeRates,
+    levelGradeRates,
+    setLevelGradeRates,
+    payZoneLevelGradeRates,
+    setPayZoneLevelGradeRates,
+    
     // Pending states
     pendingLevelRates,
     setPendingLevelRates,
@@ -637,6 +849,9 @@ export function useSimulationLogic() {
     handlePayZoneBandLevelChange,
     handlePayZoneLevelGradeChange,
     handleExpertChange,
+    handleAllGradeChange,
+    handleLevelGradeChange,
+    handlePayZoneGradeChange,
     
     // Helper functions
     getActualCombinationCount: getActualCombinationCountWrapper,

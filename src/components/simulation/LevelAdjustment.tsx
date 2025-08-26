@@ -1,82 +1,37 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { GRADE_COLORS } from '@/types/simulation'
+import { GRADE_COLORS, LevelGradeRates } from '@/types/simulation'
 import { Employee } from '@/types/employee'
 import { useWageContext } from '@/context/WageContext'
+import { calculateWeightedAverage } from '@/utils/simulationHelpers'
 
 interface LevelAdjustmentProps {
   levels: string[]
-  pendingLevelRates: any
-  onRateChange: (level: string, field: 'baseUp' | 'merit' | 'additional', value: number, grade?: string) => void
+  levelGradeRates: LevelGradeRates
+  onLevelGradeChange: (level: string, grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
+  onApply?: () => void
+  onReset?: () => void
   additionalType: 'percentage' | 'amount'
-  employeeCounts?: { [level: string]: number }
   contextEmployeeData?: Employee[]
   performanceGrades?: string[]
+  hasPendingChanges?: boolean
 }
 
 export function LevelAdjustment({
   levels,
-  pendingLevelRates,
-  onRateChange,
+  levelGradeRates,
+  onLevelGradeChange,
+  onApply,
+  onReset,
   additionalType,
-  employeeCounts = {},
   contextEmployeeData = [],
-  performanceGrades = ['ST', 'AT', 'OT', 'BT']
+  performanceGrades = ['ST', 'AT', 'OT', 'BT'],
+  hasPendingChanges = false
 }: LevelAdjustmentProps) {
   const { performanceWeights } = useWageContext()
   const [expandedLevels, setExpandedLevels] = useState<string[]>(levels) // 모두 펼친 상태로 시작
   
-  // 레벨-평가등급별 상태 관리
-  const [levelGradeRates, setLevelGradeRates] = useState<{
-    [level: string]: {
-      [grade: string]: {
-        baseUp: number
-        merit: number
-        additional: number
-      }
-    }
-  }>(() => {
-    const initial: any = {}
-    levels.forEach(level => {
-      initial[level] = {}
-      performanceGrades.forEach(grade => {
-        initial[level][grade] = {
-          baseUp: 0,
-          merit: 0,
-          additional: 0
-        }
-      })
-    })
-    return initial
-  })
-  
-  // 레벨별, 평가등급별 인원수 계산
-  const employeeCountByLevelAndGrade = useMemo(() => {
-    const counts: { 
-      [level: string]: { 
-        [grade: string]: number 
-        total: number 
-      }
-    } = {}
-    
-    levels.forEach(level => {
-      counts[level] = { total: 0 }
-      performanceGrades.forEach(grade => {
-        counts[level][grade] = 0
-      })
-    })
-    
-    contextEmployeeData.forEach(emp => {
-      if (emp.level && emp.performanceRating && 
-          levels.includes(emp.level) && 
-          performanceGrades.includes(emp.performanceRating)) {
-        counts[emp.level][emp.performanceRating]++
-        counts[emp.level].total++
-      }
-    })
-    return counts
-  }, [contextEmployeeData, levels, performanceGrades])
   
   // 레벨 토글
   const toggleLevel = (level: string) => {
@@ -89,30 +44,27 @@ export function LevelAdjustment({
   
   // 레벨-평가등급별 값 변경 핸들러
   const handleGradeRateChange = (level: string, grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => {
-    setLevelGradeRates(prev => ({
-      ...prev,
-      [level]: {
-        ...prev[level],
-        [grade]: {
-          ...prev[level][grade],
-          [field]: value
-        }
-      }
-    }))
+    onLevelGradeChange(level, grade, field, value)
   }
   
-  // 레벨별 평균 계산
+  // 레벨별 가중평균 계산
   const calculateLevelAverage = (level: string, field: 'baseUp' | 'merit' | 'additional') => {
-    let sum = 0
-    let count = 0
-    performanceGrades.forEach(grade => {
-      const gradeCount = employeeCountByLevelAndGrade[level]?.[grade] || 0
-      if (gradeCount > 0) {
-        sum += (levelGradeRates[level]?.[grade]?.[field] || 0) * gradeCount
-        count += gradeCount
-      }
-    })
-    return count > 0 ? (sum / count).toFixed(1) : '0.0'
+    const items: { value: number; count: number }[] = []
+    const levelData = levelGradeRates[level]
+    
+    if (levelData) {
+      performanceGrades.forEach(grade => {
+        const gradeCount = levelData.employeeCount?.byGrade[grade] || 0
+        if (gradeCount > 0 && levelData.byGrade[grade]) {
+          items.push({
+            value: levelData.byGrade[grade][field] || 0,
+            count: gradeCount
+          })
+        }
+      })
+    }
+    
+    return items.length > 0 ? calculateWeightedAverage(items).toFixed(1) : '0.0'
   }
   
   // 총 인상률 계산 (가중치 없이)
@@ -146,8 +98,8 @@ export function LevelAdjustment({
       
       {/* 레벨별 테이블 */}
       {levels.map((level, levelIndex) => {
-        const rates = pendingLevelRates[level] || { baseUp: 0, merit: 0, additional: 0 }
-        const levelCounts = employeeCountByLevelAndGrade[level] || { total: 0 }
+        const levelData = levelGradeRates[level]
+        const levelCounts = levelData?.employeeCount || { total: 0, byGrade: {} }
         const isExpanded = expandedLevels.includes(level)
         
         return (
@@ -182,9 +134,13 @@ export function LevelAdjustment({
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1 text-xs">
-                    <span className="text-gray-600">현재 인상률:</span>
+                    <span className="text-gray-600">평균 인상률:</span>
                     <span className="font-bold text-blue-600">
-                      {calculateTotalRate(rates.baseUp, rates.merit, rates.additional)}%
+                      {calculateTotalRate(
+                        Number(calculateLevelAverage(level, 'baseUp')),
+                        Number(calculateLevelAverage(level, 'merit')),
+                        Number(calculateLevelAverage(level, 'additional'))
+                      )}%
                     </span>
                   </div>
                   <svg 
@@ -225,7 +181,7 @@ export function LevelAdjustment({
                               {grade}
                             </span>
                             <div className="text-xs font-normal mt-0.5 text-gray-600">
-                              {levelCounts[grade]?.toLocaleString() || 0}명
+                              {levelCounts.byGrade[grade]?.toLocaleString() || 0}명
                             </div>
                           </div>
                         </th>
@@ -249,7 +205,7 @@ export function LevelAdjustment({
                         }`}>
                           <input
                             type="number"
-                            value={levelGradeRates[level]?.[grade]?.baseUp || ''}
+                            value={levelData?.byGrade?.[grade]?.baseUp || ''}
                             onChange={(e) => handleGradeRateChange(level, grade, 'baseUp', Number(e.target.value))}
                             step="0.1"
                             className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -275,7 +231,7 @@ export function LevelAdjustment({
                         }`}>
                           <input
                             type="number"
-                            value={levelGradeRates[level]?.[grade]?.merit || ''}
+                            value={levelData?.byGrade?.[grade]?.merit || ''}
                             onChange={(e) => handleGradeRateChange(level, grade, 'merit', Number(e.target.value))}
                             step="0.1"
                             className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-all"
@@ -301,7 +257,7 @@ export function LevelAdjustment({
                         }`}>
                           <input
                             type="number"
-                            value={levelGradeRates[level]?.[grade]?.additional || ''}
+                            value={levelData?.byGrade?.[grade]?.additional || ''}
                             onChange={(e) => handleGradeRateChange(level, grade, 'additional', Number(e.target.value))}
                             step={additionalType === 'percentage' ? 0.1 : 10}
                             className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all"
@@ -336,13 +292,13 @@ export function LevelAdjustment({
                             GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.text || 'text-gray-700'
                           }`}>
                             {calculateTotalRate(
-                              levelGradeRates[level]?.[grade]?.baseUp || 0,
-                              levelGradeRates[level]?.[grade]?.merit || 0,
-                              levelGradeRates[level]?.[grade]?.additional || 0
+                              levelData?.byGrade?.[grade]?.baseUp || 0,
+                              levelData?.byGrade?.[grade]?.merit || 0,
+                              levelData?.byGrade?.[grade]?.additional || 0
                             )}
                           </span>
-                          {additionalType === 'amount' && (levelGradeRates[level]?.[grade]?.additional || 0) > 0 && (
-                            <div className="text-xs text-gray-600 mt-0.5">+{levelGradeRates[level]?.[grade]?.additional}만</div>
+                          {additionalType === 'amount' && (levelData?.byGrade?.[grade]?.additional || 0) > 0 && (
+                            <div className="text-xs text-gray-600 mt-0.5">+{levelData?.byGrade?.[grade]?.additional}만</div>
                         )}
                         </td>
                       ))}
@@ -359,46 +315,36 @@ export function LevelAdjustment({
       <div className="bg-white rounded-lg shadow-sm px-3 py-2 flex items-center justify-between">
         <span className="text-xs font-medium text-gray-700">전체 레벨 일괄 설정</span>
         <div className="flex gap-2">
-          <div className="flex items-center gap-1">
-            <label className="text-xs text-gray-600">Base-up:</label>
-            <input
-              type="number"
-              placeholder="0.0"
-              onChange={(e) => {
-                const value = Number(e.target.value)
-                levels.forEach(level => onRateChange(level, 'baseUp', value))
-              }}
-              step="0.1"
-              className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <span className="text-xs text-gray-500">%</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <label className="text-xs text-gray-600">Merit:</label>
-            <input
-              type="number"
-              placeholder="0.0"
-              onChange={(e) => {
-                const value = Number(e.target.value)
-                levels.forEach(level => onRateChange(level, 'merit', value))
-              }}
-              step="0.1"
-              className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <span className="text-xs text-gray-500">%</span>
-          </div>
           <button
             onClick={() => {
               levels.forEach(level => {
-                onRateChange(level, 'baseUp', 0)
-                onRateChange(level, 'merit', 0)
-                onRateChange(level, 'additional', 0)
+                performanceGrades.forEach(grade => {
+                  onLevelGradeChange(level, grade, 'baseUp', 3.2)
+                  onLevelGradeChange(level, grade, 'merit', 2.5)
+                  onLevelGradeChange(level, grade, 'additional', 0)
+                })
               })
             }}
-            className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors font-medium"
+            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors font-medium"
           >
-            초기화
+            AI 권장값
           </button>
+          {hasPendingChanges && (
+            <>
+              <button
+                onClick={onApply}
+                className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors font-medium"
+              >
+                적용
+              </button>
+              <button
+                onClick={onReset}
+                className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors font-medium"
+              >
+                초기화
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

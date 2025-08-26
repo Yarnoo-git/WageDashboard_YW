@@ -6,8 +6,46 @@ import {
   BandFinalRates, 
   LevelRates, 
   PayZoneRates,
-  DynamicStructure 
+  DynamicStructure,
+  GradeAdjustmentRates,
+  AllAdjustmentRates,
+  LevelGradeRates,
+  PayZoneLevelGradeRates
 } from '@/types/simulation'
+
+// 가중평균 계산 헬퍼
+export const calculateWeightedAverage = (
+  items: { value: number; count: number }[]
+): number => {
+  const totalWeight = items.reduce((sum, item) => sum + item.count, 0)
+  if (totalWeight === 0) return 0
+  
+  const weightedSum = items.reduce(
+    (sum, item) => sum + (item.value * item.count), 
+    0
+  )
+  return weightedSum / totalWeight
+}
+
+// 평가등급별 인원수 계산
+export const countEmployeesByGrade = (
+  employees: Employee[],
+  filter?: { level?: string; payZone?: number }
+): { [grade: string]: number } => {
+  const counts: { [grade: string]: number } = {}
+  
+  employees.forEach(emp => {
+    if (filter?.level && emp.level !== filter.level) return
+    if (filter?.payZone !== undefined && emp.payZone !== filter.payZone) return
+    
+    const grade = emp.performanceRating
+    if (grade) {
+      counts[grade] = (counts[grade] || 0) + 1
+    }
+  })
+  
+  return counts
+}
 
 // 실제 조합 개수 계산
 export const getActualCombinationCount = (
@@ -328,5 +366,173 @@ export const calculateBudgetUsage = (
     total,
     remaining,
     percentage: Math.min(percentage, 200) // 최대 200%까지 표시
+  }
+}
+
+// 전체 → 레벨별 평가등급 전파
+export const propagateAllToLevel = (
+  allGradeRates: GradeAdjustmentRates,
+  levels: string[]
+): LevelGradeRates => {
+  const levelGradeRates: LevelGradeRates = {}
+  
+  levels.forEach(level => {
+    levelGradeRates[level] = {
+      average: { baseUp: 0, merit: 0, additional: 0 },
+      byGrade: { ...allGradeRates },
+      employeeCount: { total: 0, byGrade: {} }
+    }
+  })
+  
+  return levelGradeRates
+}
+
+// 레벨별 → PayZone별 평가등급 전파
+export const propagateLevelToPayZone = (
+  levelGradeRates: LevelGradeRates,
+  payZones: number[]
+): PayZoneLevelGradeRates => {
+  const payZoneRates: PayZoneLevelGradeRates = {}
+  
+  payZones.forEach(zone => {
+    payZoneRates[zone.toString()] = {}
+    Object.keys(levelGradeRates).forEach(level => {
+      payZoneRates[zone.toString()][level] = { ...levelGradeRates[level] }
+    })
+  })
+  
+  return payZoneRates
+}
+
+// PayZone별 → 레벨별 역전파 (가중평균)
+export const aggregatePayZoneToLevel = (
+  payZoneRates: PayZoneLevelGradeRates,
+  employees: Employee[],
+  levels: string[],
+  grades: string[]
+): LevelGradeRates => {
+  const levelGradeRates: LevelGradeRates = {}
+  
+  levels.forEach(level => {
+    const levelEmployees = employees.filter(emp => emp.level === level)
+    const gradeRates: GradeAdjustmentRates = {}
+    
+    grades.forEach(grade => {
+      const items: { value: { baseUp: number; merit: number; additional: number }; count: number }[] = []
+      
+      // 각 PayZone별 값과 인원수 수집
+      Object.keys(payZoneRates).forEach(zoneStr => {
+        const zone = parseInt(zoneStr)
+        const gradeEmployees = levelEmployees.filter(
+          emp => emp.payZone === zone && emp.performanceRating === grade
+        )
+        
+        if (gradeEmployees.length > 0 && payZoneRates[zoneStr][level]?.byGrade?.[grade]) {
+          items.push({
+            value: payZoneRates[zoneStr][level].byGrade[grade],
+            count: gradeEmployees.length
+          })
+        }
+      })
+      
+      // 가중평균 계산
+      if (items.length > 0) {
+        gradeRates[grade] = {
+          baseUp: calculateWeightedAverage(items.map(i => ({ value: i.value.baseUp, count: i.count }))),
+          merit: calculateWeightedAverage(items.map(i => ({ value: i.value.merit, count: i.count }))),
+          additional: calculateWeightedAverage(items.map(i => ({ value: i.value.additional, count: i.count })))
+        }
+      } else {
+        gradeRates[grade] = { baseUp: 0, merit: 0, additional: 0 }
+      }
+    })
+    
+    // 평균 계산
+    const gradeCounts = countEmployeesByGrade(levelEmployees)
+    const average = calculateAverageFromGrades(gradeRates, gradeCounts)
+    
+    levelGradeRates[level] = {
+      average,
+      byGrade: gradeRates,
+      employeeCount: {
+        total: levelEmployees.length,
+        byGrade: gradeCounts
+      }
+    }
+  })
+  
+  return levelGradeRates
+}
+
+// 레벨별 → 전체 역전파 (가중평균)
+export const aggregateLevelToAll = (
+  levelGradeRates: LevelGradeRates,
+  employees: Employee[],
+  grades: string[]
+): AllAdjustmentRates => {
+  const gradeRates: GradeAdjustmentRates = {}
+  
+  grades.forEach(grade => {
+    const items: { value: AdjustmentRates; count: number }[] = []
+    
+    // 각 레벨별 값과 인원수 수집
+    Object.keys(levelGradeRates).forEach(level => {
+      const gradeCount = levelGradeRates[level].employeeCount.byGrade[grade] || 0
+      
+      if (gradeCount > 0 && levelGradeRates[level].byGrade[grade]) {
+        items.push({
+          value: levelGradeRates[level].byGrade[grade],
+          count: gradeCount
+        })
+      }
+    })
+    
+    // 가중평균 계산
+    if (items.length > 0) {
+      gradeRates[grade] = {
+        baseUp: calculateWeightedAverage(items.map(i => ({ value: i.value.baseUp, count: i.count }))),
+        merit: calculateWeightedAverage(items.map(i => ({ value: i.value.merit, count: i.count }))),
+        additional: calculateWeightedAverage(items.map(i => ({ value: i.value.additional, count: i.count })))
+      }
+    } else {
+      gradeRates[grade] = { baseUp: 0, merit: 0, additional: 0 }
+    }
+  })
+  
+  // 전체 평균 계산
+  const gradeCounts = countEmployeesByGrade(employees)
+  const average = calculateAverageFromGrades(gradeRates, gradeCounts)
+  
+  return {
+    average,
+    byGrade: gradeRates
+  }
+}
+
+// 평가등급별 값으로부터 가중평균 계산
+export const calculateAverageFromGrades = (
+  gradeRates: GradeAdjustmentRates,
+  gradeCounts: { [grade: string]: number }
+): AdjustmentRates => {
+  const items: { value: AdjustmentRates; count: number }[] = []
+  
+  Object.keys(gradeRates).forEach(grade => {
+    const count = gradeCounts[grade] || 0
+    if (count > 0) {
+      items.push({
+        value: gradeRates[grade],
+        count
+      })
+    }
+  })
+  
+  if (items.length === 0) {
+    return { baseUp: 0, merit: 0, additional: 0 }
+  }
+  
+  return {
+    baseUp: calculateWeightedAverage(items.map(i => ({ value: i.value.baseUp, count: i.count }))),
+    merit: calculateWeightedAverage(items.map(i => ({ value: i.value.merit, count: i.count }))),
+    additional: calculateWeightedAverage(items.map(i => ({ value: i.value.additional, count: i.count })))
   }
 }

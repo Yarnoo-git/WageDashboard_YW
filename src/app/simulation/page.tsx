@@ -43,6 +43,11 @@ export default function SimulationPage() {
     payZoneRates,
     performanceWeights,
     
+    // Grade-based states
+    allGradeRates,
+    levelGradeRates,
+    payZoneLevelGradeRates,
+    
     // Pending states
     pendingLevelRates,
     pendingBandFinalRates,
@@ -78,6 +83,9 @@ export default function SimulationPage() {
     handleLevelRateChange,
     handleGlobalAdjustment,
     handlePayZoneLevelGradeChange,
+    handleAllGradeChange,
+    handleLevelGradeChange,
+    handlePayZoneGradeChange,
     
     // Helper functions
     calculateBandAverage,
@@ -456,34 +464,29 @@ export default function SimulationPage() {
                 <div>
                     {adjustmentScope === 'all' && (
                       <AllAdjustment
-                        pendingLevelRates={pendingLevelRates}
-                        onRateChange={(field, value) => {
-                          // 모든 레벨에 동일한 값 적용
-                          dynamicStructure.levels.forEach(level => {
-                            handleLevelRateChange(level, field, value)
-                          })
-                        }}
+                        allGradeRates={allGradeRates}
+                        onGradeChange={handleAllGradeChange}
+                        onApply={applyPendingChanges}
+                        onReset={resetPendingChanges}
                         additionalType={additionalType}
                         onAdditionalTypeChange={setAdditionalType}
                         contextEmployeeData={contextEmployeeData}
                         performanceGrades={dynamicStructure.grades}
+                        hasPendingChanges={hasPendingChanges}
                       />
                     )}
                     
                     {adjustmentScope === 'level' && (
                       <LevelAdjustment
                         levels={dynamicStructure.levels}
-                        pendingLevelRates={pendingLevelRates}
-                        onRateChange={handleLevelRateChange}
+                        levelGradeRates={levelGradeRates}
+                        onLevelGradeChange={handleLevelGradeChange}
+                        onApply={applyPendingChanges}
+                        onReset={resetPendingChanges}
                         additionalType={additionalType}
-                        employeeCounts={
-                          dynamicStructure.levels.reduce((acc, level) => {
-                            acc[level] = contextEmployeeData.filter(emp => emp.level === level).length
-                            return acc
-                          }, {} as { [level: string]: number })
-                        }
                         contextEmployeeData={contextEmployeeData}
                         performanceGrades={dynamicStructure.grades}
+                        hasPendingChanges={hasPendingChanges}
                       />
                     )}
                     
@@ -492,26 +495,14 @@ export default function SimulationPage() {
                         levels={dynamicStructure.levels}
                         payZones={dynamicStructure.payZones}
                         performanceGrades={dynamicStructure.grades}
-                        pendingPayZoneRates={pendingPayZoneRates}
-                        onRateChange={handlePayZoneLevelGradeChange}
+                        payZoneLevelGradeRates={payZoneLevelGradeRates}
+                        onPayZoneGradeChange={handlePayZoneGradeChange}
+                        onApply={applyPendingChanges}
+                        onReset={resetPendingChanges}
                         additionalType={additionalType}
                         selectedBands={selectedBands}
                         contextEmployeeData={contextEmployeeData}
-                        employeeCounts={
-                          (() => {
-                            const counts: { [key: string]: number } = {}
-                            dynamicStructure.levels.forEach(level => {
-                              dynamicStructure.payZones.forEach(zone => {
-                                const key = `${level}-PZ${zone}`
-                                counts[key] = contextEmployeeData.filter(
-                                  emp => emp.level === level && emp.payZone === zone &&
-                                  (selectedBands.length === 0 || selectedBands.includes(emp.band))
-                                ).length
-                              })
-                            })
-                            return counts
-                          })()
-                        }
+                        hasPendingChanges={hasPendingChanges}
                       />
                     )}
                   </div>

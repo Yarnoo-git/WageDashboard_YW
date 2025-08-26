@@ -1,47 +1,35 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import { GRADE_COLORS } from '@/types/simulation'
+import { GRADE_COLORS, AllAdjustmentRates } from '@/types/simulation'
 import { Employee } from '@/types/employee'
 import { useWageContext } from '@/context/WageContext'
+import { calculateWeightedAverage } from '@/utils/simulationHelpers'
 
 interface AllAdjustmentProps {
-  pendingLevelRates: any
-  onRateChange: (field: 'baseUp' | 'merit' | 'additional', value: number, grade?: string) => void
+  allGradeRates: AllAdjustmentRates
+  onGradeChange: (grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
+  onApply: () => void
+  onReset: () => void
   additionalType: 'percentage' | 'amount'
   onAdditionalTypeChange: (type: 'percentage' | 'amount') => void
   contextEmployeeData?: Employee[]
   performanceGrades?: string[]
+  hasPendingChanges?: boolean
 }
 
 export function AllAdjustment({
-  pendingLevelRates,
-  onRateChange,
+  allGradeRates,
+  onGradeChange,
+  onApply,
+  onReset,
   additionalType,
   onAdditionalTypeChange,
   contextEmployeeData = [],
-  performanceGrades = ['ST', 'AT', 'OT', 'BT']
+  performanceGrades = ['ST', 'AT', 'OT', 'BT'],
+  hasPendingChanges = false
 }: AllAdjustmentProps) {
   const { performanceWeights } = useWageContext()
-  
-  // 평가등급별 상태 관리
-  const [gradeRates, setGradeRates] = React.useState<{
-    [grade: string]: {
-      baseUp: number
-      merit: number
-      additional: number
-    }
-  }>(() => {
-    const initial: any = {}
-    performanceGrades.forEach(grade => {
-      initial[grade] = {
-        baseUp: 0,
-        merit: 0,
-        additional: 0
-      }
-    })
-    return initial
-  })
   
   // 평가등급별 인원수 계산
   const employeeCountByGrade = useMemo(() => {
@@ -62,31 +50,21 @@ export function AllAdjustment({
     return { ...counts, total }
   }, [contextEmployeeData, performanceGrades])
   
-  // 평가등급별 값 변경 핸들러
-  const handleGradeRateChange = (grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => {
-    setGradeRates(prev => ({
-      ...prev,
-      [grade]: {
-        ...prev[grade],
-        [field]: value
-      }
-    }))
-    // 상위 컴포넌트에 변경사항 전달
-    onRateChange(field, value, grade)
-  }
-  
-  // 평균 계산
+  // 가중평균 계산
   const calculateAverage = (field: 'baseUp' | 'merit' | 'additional') => {
-    let sum = 0
-    let count = 0
+    const items: { value: number; count: number }[] = []
+    
     performanceGrades.forEach(grade => {
       const gradeCount = employeeCountByGrade[grade] || 0
       if (gradeCount > 0) {
-        sum += (gradeRates[grade]?.[field] || 0) * gradeCount
-        count += gradeCount
+        items.push({
+          value: allGradeRates.byGrade[grade]?.[field] || 0,
+          count: gradeCount
+        })
       }
     })
-    return count > 0 ? (sum / count).toFixed(1) : '0.0'
+    
+    return items.length > 0 ? calculateWeightedAverage(items).toFixed(1) : '0.0'
   }
   
   // 총 인상률 계산 (가중치 없이)
@@ -179,8 +157,8 @@ export function AllAdjustment({
                 <td key={grade} className={`px-3 py-3 text-center ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''}`}>
                   <input
                     type="number"
-                    value={gradeRates[grade]?.baseUp || ''}
-                    onChange={(e) => handleGradeRateChange(grade, 'baseUp', Number(e.target.value))}
+                    value={allGradeRates.byGrade[grade]?.baseUp || ''}
+                    onChange={(e) => onGradeChange(grade, 'baseUp', Number(e.target.value))}
                     step="0.1"
                     className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     placeholder="0.0"
@@ -204,8 +182,8 @@ export function AllAdjustment({
                 <td key={grade} className={`px-3 py-3 text-center ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''}`}>
                   <input
                     type="number"
-                    value={gradeRates[grade]?.merit || ''}
-                    onChange={(e) => handleGradeRateChange(grade, 'merit', Number(e.target.value))}
+                    value={allGradeRates.byGrade[grade]?.merit || ''}
+                    onChange={(e) => onGradeChange(grade, 'merit', Number(e.target.value))}
                     step="0.1"
                     className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                     placeholder="0.0"
@@ -229,8 +207,8 @@ export function AllAdjustment({
                 <td key={grade} className={`px-3 py-3 text-center ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''}`}>
                   <input
                     type="number"
-                    value={gradeRates[grade]?.additional || ''}
-                    onChange={(e) => handleGradeRateChange(grade, 'additional', Number(e.target.value))}
+                    value={allGradeRates.byGrade[grade]?.additional || ''}
+                    onChange={(e) => onGradeChange(grade, 'additional', Number(e.target.value))}
                     step={additionalType === 'percentage' ? 0.1 : 10}
                     className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                     placeholder="0"
@@ -261,13 +239,13 @@ export function AllAdjustment({
                 <td key={grade} className={`px-3 py-3 text-center ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''}`}>
                   <span className={`text-base font-bold ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.text || 'text-gray-700'}`}>
                     {calculateTotalRate(
-                      gradeRates[grade]?.baseUp || 0,
-                      gradeRates[grade]?.merit || 0,
-                      gradeRates[grade]?.additional || 0
+                      allGradeRates.byGrade[grade]?.baseUp || 0,
+                      allGradeRates.byGrade[grade]?.merit || 0,
+                      allGradeRates.byGrade[grade]?.additional || 0
                     )}
                   </span>
-                  {additionalType === 'amount' && (gradeRates[grade]?.additional || 0) > 0 && (
-                    <div className="text-xs text-gray-600 mt-0.5">+{gradeRates[grade]?.additional}만</div>
+                  {additionalType === 'amount' && (allGradeRates.byGrade[grade]?.additional || 0) > 0 && (
+                    <div className="text-xs text-gray-600 mt-0.5">+{allGradeRates.byGrade[grade]?.additional}만</div>
                   )}
                 </td>
               ))}
@@ -285,11 +263,11 @@ export function AllAdjustment({
         <div className="flex gap-2">
           <button
             onClick={() => {
-              const newRates = { ...gradeRates }
               performanceGrades.forEach(grade => {
-                newRates[grade] = { baseUp: 3.2, merit: 2.5, additional: 0 }
+                onGradeChange(grade, 'baseUp', 3.2)
+                onGradeChange(grade, 'merit', 2.5)
+                onGradeChange(grade, 'additional', 0)
               })
-              setGradeRates(newRates)
             }}
             className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors font-medium"
           >
@@ -297,28 +275,32 @@ export function AllAdjustment({
           </button>
           <button
             onClick={() => {
-              const newRates = { ...gradeRates }
               performanceGrades.forEach(grade => {
-                newRates[grade] = { baseUp: 5.0, merit: 2.0, additional: 0 }
+                onGradeChange(grade, 'baseUp', 5.0)
+                onGradeChange(grade, 'merit', 2.0)
+                onGradeChange(grade, 'additional', 0)
               })
-              setGradeRates(newRates)
             }}
             className="px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors font-medium"
           >
             업계 평균
           </button>
-          <button
-            onClick={() => {
-              const newRates = { ...gradeRates }
-              performanceGrades.forEach(grade => {
-                newRates[grade] = { baseUp: 0, merit: 0, additional: 0 }
-              })
-              setGradeRates(newRates)
-            }}
-            className="px-3 py-1.5 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors font-medium"
-          >
-            초기화
-          </button>
+          {hasPendingChanges && (
+            <>
+              <button
+                onClick={onApply}
+                className="px-3 py-1.5 text-xs bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors font-medium"
+              >
+                적용
+              </button>
+              <button
+                onClick={onReset}
+                className="px-3 py-1.5 text-xs bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors font-medium"
+              >
+                초기화
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

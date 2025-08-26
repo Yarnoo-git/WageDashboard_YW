@@ -209,15 +209,14 @@ export function PayZoneAdjustment({
                     </span>
                   </td>
                   {performanceGrades.map(grade => {
-                    const rates = pendingPayZoneRates[payZone]?.[level]?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
                     return (
                       <td key={grade} className={`px-2 py-2 text-center ${
                         GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
                       }`}>
                         <input
                           type="number"
-                          value={rates.baseUp || ''}
-                          onChange={(e) => onRateChange(payZone, level, grade, 'baseUp', Number(e.target.value))}
+                          value={groupData?.byGrade?.[grade]?.baseUp || ''}
+                          onChange={(e) => onPayZoneGradeChange(payZone, level, grade, 'baseUp', Number(e.target.value))}
                           step="0.1"
                           className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           placeholder="0.0"
