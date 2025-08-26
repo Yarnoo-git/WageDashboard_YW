@@ -36,6 +36,10 @@ export function LevelAdjustment({
       }
     } = {}
     
+    // 디버깅 로그
+    console.log('[LevelAdjustment] performanceGrades:', performanceGrades)
+    console.log('[LevelAdjustment] Sample employee:', contextEmployeeData[0])
+    
     levels.forEach(level => {
       counts[level] = { total: 0 }
       performanceGrades.forEach(grade => {
@@ -52,6 +56,7 @@ export function LevelAdjustment({
       }
     })
     
+    console.log('[LevelAdjustment] Final counts:', counts)
     return counts
   }, [contextEmployeeData, levels, performanceGrades])
   

@@ -29,7 +29,13 @@ export function PayZoneAdjustment({
   contextEmployeeData = []
 }: PayZoneAdjustmentProps) {
   const { performanceWeights } = useWageContext()
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]) // 기본적으로 모두 접힌 상태
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(() => {
+    // 첫 번째 레벨의 모든 PayZone을 기본으로 펼침
+    if (levels.length > 0 && payZones.length > 0) {
+      return payZones.map(zone => `PZ${zone}-${levels[0]}`)
+    }
+    return []
+  })
   
   // Pay Zone × Level × Grade별 인원수 계산
   const detailedCounts = useMemo(() => {
@@ -41,6 +47,12 @@ export function PayZoneAdjustment({
         }
       }
     } = {}
+    
+    // 디버깅 로그
+    console.log('[PayZoneAdjustment] performanceGrades:', performanceGrades)
+    console.log('[PayZoneAdjustment] payZones:', payZones)
+    console.log('[PayZoneAdjustment] levels:', levels)
+    console.log('[PayZoneAdjustment] Sample employee:', contextEmployeeData[0])
     
     // 초기화
     payZones.forEach(zone => {
@@ -55,7 +67,7 @@ export function PayZoneAdjustment({
     
     // 카운트
     contextEmployeeData.forEach(emp => {
-      if (emp.level && emp.payZone && emp.performanceRating && 
+      if (emp.level && emp.payZone !== undefined && emp.performanceRating && 
           levels.includes(emp.level) && 
           payZones.includes(emp.payZone) &&
           performanceGrades.includes(emp.performanceRating) &&
@@ -65,6 +77,7 @@ export function PayZoneAdjustment({
       }
     })
     
+    console.log('[PayZoneAdjustment] Final counts:', counts)
     return counts
   }, [contextEmployeeData, levels, payZones, performanceGrades, selectedBands])
   
@@ -89,12 +102,6 @@ export function PayZoneAdjustment({
     return (baseUp + effectiveMerit + (additionalType === 'percentage' ? additional : 0)).toFixed(1)
   }
 
-  // 평균값을 모든 평가등급에 적용하는 헬퍼 함수
-  const applyToAllGrades = (payZone: number, level: string, field: 'baseUp' | 'merit' | 'additional', value: number) => {
-    performanceGrades.forEach(grade => {
-      onRateChange(payZone, level, grade, field, value)
-    })
-  }
   
   // PayZone-Level 조합별 렌더링
   const renderPayZoneLevelGroup = (payZone: number, level: string) => {
@@ -142,11 +149,11 @@ export function PayZoneAdjustment({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className={`px-2 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r ${payZoneGradientClass}`}>
-                PZ{payZone}
-              </span>
               <span className="px-2 py-0.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-full text-xs font-bold">
                 {level}
+              </span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r ${payZoneGradientClass}`}>
+                PZ{payZone}
               </span>
               <span className="text-xs text-gray-600">
                 {groupCounts.total.toLocaleString()}명
@@ -210,23 +217,28 @@ export function PayZoneAdjustment({
                   <td className="px-3 py-2 text-xs font-medium text-gray-700">
                     Base-up (%)
                   </td>
-                  <td className="px-2 py-2 text-center">
-                    <input
-                      type="number"
-                      value={avgBaseUp.toFixed(1)}
-                      onChange={(e) => applyToAllGrades(payZone, level, 'baseUp', Number(e.target.value))}
-                      step="0.1"
-                      className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      placeholder="0.0"
-                    />
+                  <td className="px-2 py-2 text-center bg-gray-100">
+                    <span className="text-xs font-semibold text-gray-600">
+                      {avgBaseUp.toFixed(1)}
+                    </span>
                   </td>
-                  {performanceGrades.map(grade => (
-                    <td key={grade} className={`px-2 py-2 text-center ${
-                      GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
-                    }`}>
-                      <span className="text-xs text-gray-500">-</span>
-                    </td>
-                  ))}
+                  {performanceGrades.map(grade => {
+                    const rates = pendingPayZoneRates[payZone]?.[level]?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
+                    return (
+                      <td key={grade} className={`px-2 py-2 text-center ${
+                        GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
+                      }`}>
+                        <input
+                          type="number"
+                          value={rates.baseUp || ''}
+                          onChange={(e) => onRateChange(payZone, level, grade, 'baseUp', Number(e.target.value))}
+                          step="0.1"
+                          className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          placeholder="0.0"
+                        />
+                      </td>
+                    )
+                  })}
                 </tr>
                 
                 {/* Merit 행 */}
@@ -235,15 +247,10 @@ export function PayZoneAdjustment({
                     Merit (%)
                     <div className="text-xs text-gray-500 mt-0.5">기본값</div>
                   </td>
-                  <td className="px-2 py-2 text-center">
-                    <input
-                      type="number"
-                      value={avgMerit.toFixed(1)}
-                      onChange={(e) => applyToAllGrades(payZone, level, 'merit', Number(e.target.value))}
-                      step="0.1"
-                      className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      placeholder="0.0"
-                    />
+                  <td className="px-2 py-2 text-center bg-gray-100">
+                    <span className="text-xs font-semibold text-gray-600">
+                      {avgMerit.toFixed(1)}
+                    </span>
                   </td>
                   {performanceGrades.map(grade => {
                     const rates = pendingPayZoneRates[payZone]?.[level]?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
@@ -252,11 +259,16 @@ export function PayZoneAdjustment({
                       <td key={grade} className={`px-2 py-2 text-center ${
                         GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
                       }`}>
-                        <div className="flex flex-col items-center">
-                          <span className="text-xs font-semibold text-gray-700">
-                            {calculateMeritByGrade(rates.merit, grade)}
-                          </span>
-                          <span className="text-xs text-gray-500">×{weight}</span>
+                        <input
+                          type="number"
+                          value={rates.merit || ''}
+                          onChange={(e) => onRateChange(payZone, level, grade, 'merit', Number(e.target.value))}
+                          step="0.1"
+                          className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-all"
+                          placeholder="0.0"
+                        />
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          ×{weight} = {calculateMeritByGrade(rates.merit, grade)}
                         </div>
                       </td>
                     )
@@ -268,23 +280,28 @@ export function PayZoneAdjustment({
                   <td className="px-3 py-2 text-xs font-medium text-gray-700">
                     추가 ({additionalType === 'percentage' ? '%' : '만원'})
                   </td>
-                  <td className="px-2 py-2 text-center">
-                    <input
-                      type="number"
-                      value={avgAdditional.toFixed(additionalType === 'percentage' ? 1 : 0)}
-                      onChange={(e) => applyToAllGrades(payZone, level, 'additional', Number(e.target.value))}
-                      step={additionalType === 'percentage' ? 0.1 : 10}
-                      className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      placeholder="0"
-                    />
+                  <td className="px-2 py-2 text-center bg-gray-100">
+                    <span className="text-xs font-semibold text-gray-600">
+                      {avgAdditional.toFixed(additionalType === 'percentage' ? 1 : 0)}
+                    </span>
                   </td>
-                  {performanceGrades.map(grade => (
-                    <td key={grade} className={`px-2 py-2 text-center ${
-                      GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
-                    }`}>
-                      <span className="text-xs text-gray-500">-</span>
-                    </td>
-                  ))}
+                  {performanceGrades.map(grade => {
+                    const rates = pendingPayZoneRates[payZone]?.[level]?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
+                    return (
+                      <td key={grade} className={`px-2 py-2 text-center ${
+                        GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
+                      }`}>
+                        <input
+                          type="number"
+                          value={rates.additional || ''}
+                          onChange={(e) => onRateChange(payZone, level, grade, 'additional', Number(e.target.value))}
+                          step={additionalType === 'percentage' ? 0.1 : 10}
+                          className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                          placeholder="0"
+                        />
+                      </td>
+                    )
+                  })}
                 </tr>
                 
                 {/* 총 인상률 행 */}
@@ -355,10 +372,24 @@ export function PayZoneAdjustment({
         </div>
       </div>
       
-      {/* Pay Zone별 그룹 렌더링 */}
-      {payZones.map(payZone => (
-        <div key={payZone} className="space-y-2">
-          {levels.map(level => renderPayZoneLevelGroup(payZone, level))}
+      {/* Level별 그룹 렌더링 (Level 우선) */}
+      {levels.map(level => (
+        <div key={level} className="mb-4">
+          {/* Level 헤더 */}
+          <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-3 py-1.5 rounded-t-lg mb-2">
+            <h4 className="text-sm font-bold text-gray-800">
+              【 {level} 레벨 】
+              <span className="ml-2 text-xs font-normal text-gray-600">
+                전체 {contextEmployeeData.filter(emp => emp.level === level && 
+                  (selectedBands.length === 0 || (emp.band && selectedBands.includes(emp.band)))
+                ).length}명
+              </span>
+            </h4>
+          </div>
+          {/* PayZone별 테이블 */}
+          <div className="space-y-2">
+            {payZones.map(payZone => renderPayZoneLevelGroup(payZone, level))}
+          </div>
         </div>
       ))}
       

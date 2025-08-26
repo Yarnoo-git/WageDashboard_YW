@@ -221,7 +221,7 @@ export function useSimulationLogic() {
       const levels = Array.from(new Set(contextEmployeeData.map(emp => emp.level))).sort()
       const bands = Array.from(new Set(contextEmployeeData.map(emp => emp.band))).filter(Boolean).sort()
       const payZones = Array.from(new Set(contextEmployeeData.map(emp => emp.payZone))).filter(zone => zone !== undefined).sort((a, b) => Number(a) - Number(b))
-      const grades = Array.from(new Set(contextEmployeeData.map(emp => emp.performanceGrade))).filter(Boolean).sort()
+      const grades = Array.from(new Set(contextEmployeeData.map(emp => emp.performanceRating))).filter(Boolean).sort()
       
       setDynamicStructure({
         levels,
