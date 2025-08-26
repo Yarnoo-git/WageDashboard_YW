@@ -337,21 +337,12 @@ export function useSimulationLogic() {
       // 직군 필터 초기값: 전체 직군 선택
       setSelectedBands(bands)
       
-      console.log('[시뮬레이션] 동적 구조 설정:', {
-        levels: levels,
-        grades: grades,
-        gradeOrder: gradeOrder,
-        levelOrder: levelOrder,
-        payZones: payZones,
-        selectedBands: bands  // 전체 직군 선택
-      })
       
       // 평가등급별 상태 초기화 (AI 권장값 사용)
-      if (grades.length > 0) {
-        console.log('[시뮬레이션 초기화] aiSettings:', aiSettings)
+      // Applied 상태가 이미 있으면 초기화하지 않음
+      if (grades.length > 0 && Object.keys(appliedAllGradeRates.byGrade).length === 0) {
         const aiBaseUp = aiSettings?.baseUpPercentage || 0
         const aiMerit = aiSettings?.meritIncreasePercentage || 0
-        console.log('[시뮬레이션 초기화] AI 값 설정 - baseUp:', aiBaseUp, 'merit:', aiMerit)
         
         const initialGradeRates: GradeAdjustmentRates = {}
         grades.forEach(grade => {
@@ -406,11 +397,6 @@ export function useSimulationLogic() {
         setPayZoneLevelGradeRates(initialPayZoneRates)
         setAppliedPayZoneLevelGradeRates(JSON.parse(JSON.stringify(initialPayZoneRates)))  // 깊은 복사로 저장
         
-        console.log('[시뮬레이션 초기화] Applied 상태 저장 완료:', {
-          allGradeRates: initialAllRates,
-          levelGradeRates: Object.keys(initialLevelGradeRatesData).length,
-          payZoneRates: Object.keys(initialPayZoneRates).length
-        })
       }
       
       // 첫 번째 값으로 초기화

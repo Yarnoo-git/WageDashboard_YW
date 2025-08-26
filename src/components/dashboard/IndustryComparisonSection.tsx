@@ -127,18 +127,18 @@ function IndustryComparisonSectionComponent({
     }
   ]
   
-  // 인상률 비교 차트 데이터 (조정 인상률 마커용 데이터 추가)
+  // 인상률 비교 차트 데이터 (AI 권장값 마커용 데이터 추가)
   const increaseComparisonData = [
     {
       name: '우리 회사',
-      value: companyIncrease,
-      adjustedValue: Math.round(weightedAverageRate * 10) / 10,
+      value: Math.round(weightedAverageRate * 10) / 10,  // 조정값을 막대로
+      aiValue: companyIncrease,  // AI값을 점으로
       color: '#3B82F6'
     },
     {
       name: 'C사',
       value: cCompanyIncrease,
-      adjustedValue: null,
+      aiValue: null,
       color: '#10B981'
     }
   ]
@@ -213,32 +213,32 @@ function IndustryComparisonSectionComponent({
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Bar>
-              {/* 조정된 인상률 마커 표시 */}
+              {/* AI 권장값 마커 표시 */}
               <Scatter 
-                dataKey="adjustedValue" 
-                fill="#9333EA"
+                dataKey="aiValue" 
+                fill="#6B7280"
                 shape={(props: any) => {
                   const { cx, cy, payload } = props
-                  if (payload.adjustedValue === null) return <g />
+                  if (payload.aiValue === null) return <g />
                   return (
                     <g>
                       <circle 
                         cx={cx} 
                         cy={cy} 
                         r={8} 
-                        fill="#9333EA"
+                        fill="#6B7280"
                         stroke="#ffffff"
                         strokeWidth={2}
                       />
                       <text 
                         x={cx} 
                         y={cy - 16} 
-                        fill="#9333EA" 
+                        fill="#6B7280" 
                         fontSize={11} 
                         fontWeight="bold" 
                         textAnchor="middle"
                       >
-                        조정: {Math.round(payload.adjustedValue * 10) / 10}%
+                        AI: {Math.round(payload.aiValue * 10) / 10}%
                       </text>
                     </g>
                   )
