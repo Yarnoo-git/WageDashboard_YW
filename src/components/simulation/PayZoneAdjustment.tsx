@@ -9,24 +9,30 @@ interface PayZoneAdjustmentProps {
   levels: string[]
   payZones: number[]
   performanceGrades: string[]
-  pendingPayZoneRates: any
-  onRateChange: (payZone: number, level: string, grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
+  payZoneLevelGradeRates: any
+  onPayZoneGradeChange: (payZone: number, level: string, grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
   additionalType: 'percentage' | 'amount'
   selectedBands?: string[]
   employeeCounts?: { [key: string]: number }
   contextEmployeeData?: Employee[]
+  onApply?: () => void
+  onReset?: () => void
+  hasPendingChanges?: boolean
 }
 
 export function PayZoneAdjustment({
   levels,
   payZones,
   performanceGrades,
-  pendingPayZoneRates,
-  onRateChange,
+  payZoneLevelGradeRates,
+  onPayZoneGradeChange,
   additionalType,
   selectedBands = [],
   employeeCounts = {},
-  contextEmployeeData = []
+  contextEmployeeData = [],
+  onApply,
+  onReset,
+  hasPendingChanges = false
 }: PayZoneAdjustmentProps) {
   const { performanceWeights } = useWageContext()
   const [expandedGroups, setExpandedGroups] = useState<string[]>(() => {
@@ -101,7 +107,7 @@ export function PayZoneAdjustment({
     // 현재 인상률 계산 (평균)
     let avgBaseUp = 0, avgMerit = 0, avgAdditional = 0, gradeCount = 0
     performanceGrades.forEach(grade => {
-      const rates = pendingPayZoneRates[payZone]?.[level]?.[grade]
+      const rates = payZoneLevelGradeRates[payZone]?.[level]?.byGrade?.[grade]
       if (rates && groupCounts[grade] > 0) {
         avgBaseUp += rates.baseUp || 0
         avgMerit += rates.merit || 0
@@ -215,7 +221,7 @@ export function PayZoneAdjustment({
                       }`}>
                         <input
                           type="number"
-                          value={groupData?.byGrade?.[grade]?.baseUp || ''}
+                          value={payZoneLevelGradeRates[payZone]?.[level]?.byGrade?.[grade]?.baseUp || ''}
                           onChange={(e) => onPayZoneGradeChange(payZone, level, grade, 'baseUp', Number(e.target.value))}
                           step="0.1"
                           className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -238,7 +244,7 @@ export function PayZoneAdjustment({
                     </span>
                   </td>
                   {performanceGrades.map(grade => {
-                    const rates = pendingPayZoneRates[payZone]?.[level]?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
+                    const rates = payZoneLevelGradeRates[payZone]?.[level]?.byGrade?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
                     const weight = performanceWeights[grade] || 1.0
                     return (
                       <td key={grade} className={`px-2 py-2 text-center ${
@@ -247,7 +253,7 @@ export function PayZoneAdjustment({
                         <input
                           type="number"
                           value={rates.merit || ''}
-                          onChange={(e) => onRateChange(payZone, level, grade, 'merit', Number(e.target.value))}
+                          onChange={(e) => onPayZoneGradeChange(payZone, level, grade, 'merit', Number(e.target.value))}
                           step="0.1"
                           className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-all"
                           placeholder="0.0"
@@ -268,7 +274,7 @@ export function PayZoneAdjustment({
                     </span>
                   </td>
                   {performanceGrades.map(grade => {
-                    const rates = pendingPayZoneRates[payZone]?.[level]?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
+                    const rates = payZoneLevelGradeRates[payZone]?.[level]?.byGrade?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
                     return (
                       <td key={grade} className={`px-2 py-2 text-center ${
                         GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
@@ -276,7 +282,7 @@ export function PayZoneAdjustment({
                         <input
                           type="number"
                           value={rates.additional || ''}
-                          onChange={(e) => onRateChange(payZone, level, grade, 'additional', Number(e.target.value))}
+                          onChange={(e) => onPayZoneGradeChange(payZone, level, grade, 'additional', Number(e.target.value))}
                           step={additionalType === 'percentage' ? 0.1 : 10}
                           className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all"
                           placeholder="0"
@@ -300,7 +306,7 @@ export function PayZoneAdjustment({
                     )}
                   </td>
                   {performanceGrades.map(grade => {
-                    const rates = pendingPayZoneRates[payZone]?.[level]?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
+                    const rates = payZoneLevelGradeRates[payZone]?.[level]?.byGrade?.[grade] || { baseUp: 0, merit: 0, additional: 0 }
                     return (
                       <td key={grade} className={`px-2 py-2 text-center ${
                         GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
@@ -389,7 +395,7 @@ export function PayZoneAdjustment({
                 payZones.forEach(zone => {
                   levels.forEach(level => {
                     performanceGrades.forEach(grade => {
-                      onRateChange(zone, level, grade, 'baseUp', value)
+                      onPayZoneGradeChange(zone, level, grade, 'baseUp', value)
                     })
                   })
                 })
@@ -409,7 +415,7 @@ export function PayZoneAdjustment({
                 payZones.forEach(zone => {
                   levels.forEach(level => {
                     performanceGrades.forEach(grade => {
-                      onRateChange(zone, level, grade, 'merit', value)
+                      onPayZoneGradeChange(zone, level, grade, 'merit', value)
                     })
                   })
                 })
@@ -424,9 +430,9 @@ export function PayZoneAdjustment({
               payZones.forEach(zone => {
                 levels.forEach(level => {
                   performanceGrades.forEach(grade => {
-                    onRateChange(zone, level, grade, 'baseUp', 0)
-                    onRateChange(zone, level, grade, 'merit', 0)
-                    onRateChange(zone, level, grade, 'additional', 0)
+                    onPayZoneGradeChange(zone, level, grade, 'baseUp', 0)
+                    onPayZoneGradeChange(zone, level, grade, 'merit', 0)
+                    onPayZoneGradeChange(zone, level, grade, 'additional', 0)
                   })
                 })
               })
