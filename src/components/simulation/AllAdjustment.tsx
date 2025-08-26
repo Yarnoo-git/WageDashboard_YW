@@ -16,6 +16,7 @@ interface AllAdjustmentProps {
   contextEmployeeData?: Employee[]
   performanceGrades?: string[]
   hasPendingChanges?: boolean
+  aiSettings?: any
 }
 
 export function AllAdjustment({
@@ -27,7 +28,8 @@ export function AllAdjustment({
   onAdditionalTypeChange,
   contextEmployeeData = [],
   performanceGrades = ['ST', 'AT', 'OT', 'BT'],
-  hasPendingChanges = false
+  hasPendingChanges = false,
+  aiSettings
 }: AllAdjustmentProps) {
   const { performanceWeights } = useWageContext()
   
@@ -263,27 +265,17 @@ export function AllAdjustment({
         <div className="flex gap-2">
           <button
             onClick={() => {
+              const baseUp = aiSettings?.baseUpPercentage || 3.2
+              const merit = aiSettings?.meritIncreasePercentage || 2.5
               performanceGrades.forEach(grade => {
-                onGradeChange(grade, 'baseUp', 3.2)
-                onGradeChange(grade, 'merit', 2.5)
+                onGradeChange(grade, 'baseUp', baseUp)
+                onGradeChange(grade, 'merit', merit)
                 onGradeChange(grade, 'additional', 0)
               })
             }}
             className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors font-medium"
           >
             AI 권장값
-          </button>
-          <button
-            onClick={() => {
-              performanceGrades.forEach(grade => {
-                onGradeChange(grade, 'baseUp', 5.0)
-                onGradeChange(grade, 'merit', 2.0)
-                onGradeChange(grade, 'additional', 0)
-              })
-            }}
-            className="px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors font-medium"
-          >
-            업계 평균
           </button>
           {hasPendingChanges && (
             <>
@@ -297,7 +289,7 @@ export function AllAdjustment({
                 onClick={onReset}
                 className="px-3 py-1.5 text-xs bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors font-medium"
               >
-                초기화
+                취소
               </button>
             </>
           )}

@@ -16,6 +16,7 @@ interface LevelAdjustmentProps {
   contextEmployeeData?: Employee[]
   performanceGrades?: string[]
   hasPendingChanges?: boolean
+  aiSettings?: any
 }
 
 export function LevelAdjustment({
@@ -27,7 +28,8 @@ export function LevelAdjustment({
   additionalType,
   contextEmployeeData = [],
   performanceGrades = ['ST', 'AT', 'OT', 'BT'],
-  hasPendingChanges = false
+  hasPendingChanges = false,
+  aiSettings
 }: LevelAdjustmentProps) {
   const { performanceWeights } = useWageContext()
   const [expandedLevels, setExpandedLevels] = useState<string[]>(levels) // 모두 펼친 상태로 시작
@@ -317,10 +319,12 @@ export function LevelAdjustment({
         <div className="flex gap-2">
           <button
             onClick={() => {
+              const baseUp = aiSettings?.baseUpPercentage || 3.2
+              const merit = aiSettings?.meritIncreasePercentage || 2.5
               levels.forEach(level => {
                 performanceGrades.forEach(grade => {
-                  onLevelGradeChange(level, grade, 'baseUp', 3.2)
-                  onLevelGradeChange(level, grade, 'merit', 2.5)
+                  onLevelGradeChange(level, grade, 'baseUp', baseUp)
+                  onLevelGradeChange(level, grade, 'merit', merit)
                   onLevelGradeChange(level, grade, 'additional', 0)
                 })
               })
@@ -341,7 +345,7 @@ export function LevelAdjustment({
                 onClick={onReset}
                 className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors font-medium"
               >
-                초기화
+                취소
               </button>
             </>
           )}

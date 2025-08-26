@@ -91,7 +91,8 @@ export default function SimulationPage() {
     calculateBandAverage,
     
     // Total employees
-    totalEmployees
+    totalEmployees,
+    aiSettings
   } = useSimulationLogic()
   
   // 디버깅을 위한 로그
@@ -473,6 +474,7 @@ export default function SimulationPage() {
                         contextEmployeeData={contextEmployeeData}
                         performanceGrades={dynamicStructure.grades}
                         hasPendingChanges={hasPendingChanges}
+                        aiSettings={aiSettings}
                       />
                     )}
                     
@@ -487,6 +489,7 @@ export default function SimulationPage() {
                         contextEmployeeData={contextEmployeeData}
                         performanceGrades={dynamicStructure.grades}
                         hasPendingChanges={hasPendingChanges}
+                        aiSettings={aiSettings}
                       />
                     )}
                     

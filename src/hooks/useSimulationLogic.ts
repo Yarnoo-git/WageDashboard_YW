@@ -65,7 +65,10 @@ export function useSimulationLogic() {
     contextEmployeeData,
     
     // 성과 가중치
-    performanceWeights
+    performanceWeights,
+    
+    // AI 설정
+    aiSettings
   } = useWageContext()
   
   // 동적 구조 (Excel 데이터에서 추출)
@@ -249,15 +252,18 @@ export function useSimulationLogic() {
         grades: grades.length > 0 ? grades : []
       })
       
-      // 평가등급별 상태 초기화
+      // 평가등급별 상태 초기화 (AI 권장값 사용)
       if (grades.length > 0) {
+        const aiBaseUp = aiSettings?.baseUpPercentage || 3.2
+        const aiMerit = aiSettings?.meritIncreasePercentage || 2.5
+        
         const initialGradeRates: GradeAdjustmentRates = {}
         grades.forEach(grade => {
-          initialGradeRates[grade] = { baseUp: 0, merit: 0, additional: 0 }
+          initialGradeRates[grade] = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
         })
         
         setAllGradeRates({
-          average: { baseUp: 0, merit: 0, additional: 0 },
+          average: { baseUp: aiBaseUp, merit: aiMerit, additional: 0 },
           byGrade: initialGradeRates
         })
         
@@ -268,7 +274,7 @@ export function useSimulationLogic() {
           const gradeCounts = countEmployeesByGrade(levelEmployees)
           
           initialLevelGradeRates[level] = {
-            average: { baseUp: 0, merit: 0, additional: 0 },
+            average: { baseUp: aiBaseUp, merit: aiMerit, additional: 0 },
             byGrade: { ...initialGradeRates },
             employeeCount: {
               total: levelEmployees.length,
@@ -289,7 +295,7 @@ export function useSimulationLogic() {
             const gradeCounts = countEmployeesByGrade(zoneEmployees)
             
             initialPayZoneRates[zone.toString()][level] = {
-              average: { baseUp: 0, merit: 0, additional: 0 },
+              average: { baseUp: aiBaseUp, merit: aiMerit, additional: 0 },
               byGrade: { ...initialGradeRates },
               employeeCount: {
                 total: zoneEmployees.length,
@@ -787,6 +793,7 @@ export function useSimulationLogic() {
     adjustmentMode,
     setAdjustmentMode,
     performanceWeights,
+    aiSettings,
     
     // Grade-based states
     allGradeRates,
