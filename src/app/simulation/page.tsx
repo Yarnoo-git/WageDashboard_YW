@@ -328,21 +328,6 @@ export default function SimulationPage() {
           
           {/* 오른쪽 콘텐츠 영역 */}
           <div className="flex-1 pr-3">
-            {/* 헤더 섹션 */}
-            <div className="mb-3">
-              <h1 className="text-xl font-bold text-gray-900">
-                시뮬레이션 센터
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                {viewMode === 'adjustment' ? '인상률 조정 및 예산 시뮬레이션' :
-                 viewMode === 'all' ? '전체 직군 통합 집계 현황' :
-                 viewMode === 'band' ? `${selectedViewBand} 직군 상세 분석` :
-                 '직군별 경쟁력 분석'}
-                <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                  {totalEmployees.toLocaleString()}명
-                </span>
-              </p>
-            </div>
             
             {/* 인상률 조정 모드일 때만 C사 대비 섹션 표시 */}
             {viewMode === 'adjustment' && (

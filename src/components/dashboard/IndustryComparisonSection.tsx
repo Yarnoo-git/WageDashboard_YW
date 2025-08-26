@@ -166,13 +166,6 @@ function IndustryComparisonSectionComponent({
   const chartYMax = Math.ceil(chartMaxValue + chartPadding)
   
   
-  // 경쟁력 트렌드 데이터 (꺾은선 그래프용)
-  const trendData = [
-    { year: '2023', ourCompany: 91.2, cCompany: 100 },
-    { year: '2024', ourCompany: 92.8, cCompany: 100 },
-    { year: '2025(예상)', ourCompany: 93.5 + (companyIncrease - 5.7), cCompany: 100 }
-  ]
-  
   return (
     <div className="bg-white rounded-lg shadow p-4">
       <h2 className="text-xl font-bold mb-3">C사 대비 비교</h2>
