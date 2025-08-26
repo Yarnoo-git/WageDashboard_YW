@@ -31,8 +31,6 @@ import {
   countEmployeesByGrade,
   propagateAllToLevel,
   propagateLevelToPayZone,
-  aggregatePayZoneToLevel,
-  aggregateLevelToAll,
   calculateAverageFromGrades
 } from '@/utils/simulationHelpers'
 
@@ -132,6 +130,14 @@ export function useSimulationLogic() {
   const [levelGradeRates, setLevelGradeRates] = useState<LevelGradeRates>({})
   const [payZoneLevelGradeRates, setPayZoneLevelGradeRates] = useState<PayZoneLevelGradeRates>({})
   
+  // 적용된 상태 저장 (취소 시 복원용)
+  const [appliedAllGradeRates, setAppliedAllGradeRates] = useState<AllAdjustmentRates>({
+    average: { baseUp: 0, merit: 0, additional: 0 },
+    byGrade: {}
+  })
+  const [appliedLevelGradeRates, setAppliedLevelGradeRates] = useState<LevelGradeRates>({})
+  const [appliedPayZoneLevelGradeRates, setAppliedPayZoneLevelGradeRates] = useState<PayZoneLevelGradeRates>({})
+  
   // Pending rates 초기화
   useEffect(() => {
     // levelRates를 LevelRates 타입으로 변환 (additional 필드 추가)
@@ -162,52 +168,92 @@ export function useSimulationLogic() {
     setPendingPayZoneRates(payZoneRates)
   }, [levelRates, bandFinalRates, payZoneRates])
   
-  // Pending 변경사항 카운트
+  // Pending 변경사항 감지 (Grade 기반)
   useEffect(() => {
-    let count = 0
-    // Level rates 변경 확인 (additional 필드 고려)
-    Object.keys(pendingLevelRates).forEach(level => {
-      const pending = pendingLevelRates[level]
-      const current = levelRates[level]
-      if (current) {
-        // additional 필드는 current에 없을 수 있으므로 별도 처리
-        if (pending.baseUp !== current.baseUp || 
-            pending.merit !== current.merit || 
-            pending.additional !== (current.additional || 0)) {
-          count++
-        }
-      }
-    })
-    // Band rates 변경 확인
-    Object.keys(pendingBandFinalRates).forEach(band => {
-      Object.keys(pendingBandFinalRates[band] || {}).forEach(level => {
-        const pending = pendingBandFinalRates[band][level]
-        const current = bandFinalRates[band]?.[level]
-        if (current) {
-          if (pending.baseUp !== current.baseUp || 
-              pending.merit !== current.merit || 
-              pending.additional !== (current.additional || 0)) {
-            count++
+    let hasChanges = false
+    let changeCount = 0
+    
+    // 전체 평가등급 변경 확인
+    if (appliedAllGradeRates.byGrade && allGradeRates.byGrade && Object.keys(appliedAllGradeRates.byGrade).length > 0) {
+      Object.keys(allGradeRates.byGrade).forEach(grade => {
+        const applied = appliedAllGradeRates.byGrade[grade]
+        const current = allGradeRates.byGrade[grade]
+        if (applied && current) {
+          if (applied.baseUp !== current.baseUp || 
+              applied.merit !== current.merit ||
+              applied.additional !== current.additional) {
+            hasChanges = true
+            changeCount++
+            console.log(`[변경감지] 전체 ${grade} 등급 변경 감지:`, {
+              applied: applied,
+              current: current
+            })
           }
         }
       })
-    })
-    setPendingChangeCount(count)
-    setHasPendingChanges(count > 0)
-  }, [pendingLevelRates, pendingBandFinalRates, pendingPayZoneRates, levelRates, bandFinalRates, payZoneRates])
+    }
+    
+    // 레벨별 평가등급 변경 확인
+    if (appliedLevelGradeRates && levelGradeRates && Object.keys(appliedLevelGradeRates).length > 0) {
+      Object.keys(levelGradeRates).forEach(level => {
+        const appliedLevel = appliedLevelGradeRates[level]
+        const currentLevel = levelGradeRates[level]
+        if (appliedLevel && currentLevel && appliedLevel.byGrade && currentLevel.byGrade) {
+          Object.keys(currentLevel.byGrade).forEach(grade => {
+            const applied = appliedLevel.byGrade[grade]
+            const current = currentLevel.byGrade[grade]
+            if (applied && current) {
+              if (applied.baseUp !== current.baseUp || 
+                  applied.merit !== current.merit ||
+                  applied.additional !== current.additional) {
+                // 이미 전체에서 변경된 경우 중복 카운트하지 않음
+                if (!hasChanges) {
+                  hasChanges = true
+                  changeCount++
+                  console.log(`[변경감지] ${level} - ${grade} 변경 감지`)
+                }
+              }
+            }
+          })
+        }
+      })
+    }
+    
+    console.log(`[변경감지] 총 변경사항: ${changeCount}개, hasChanges: ${hasChanges}`)
+    setHasPendingChanges(hasChanges)
+    setPendingChangeCount(changeCount)
+  }, [allGradeRates, levelGradeRates, payZoneLevelGradeRates, appliedAllGradeRates, appliedLevelGradeRates, appliedPayZoneLevelGradeRates])
   
   // Pending 변경사항 적용
   const applyPendingChanges = () => {
+    // 현재 grade 상태를 적용된 상태로 저장
+    setAppliedAllGradeRates(JSON.parse(JSON.stringify(allGradeRates)))
+    setAppliedLevelGradeRates(JSON.parse(JSON.stringify(levelGradeRates)))
+    setAppliedPayZoneLevelGradeRates(JSON.parse(JSON.stringify(payZoneLevelGradeRates)))
+    
+    // 기존 레거시 state도 업데이트
     setLevelRates(pendingLevelRates)
     setBandFinalRates(pendingBandFinalRates)
     setPayZoneRates(pendingPayZoneRates)
+    
     setHasPendingChanges(false)
     setPendingChangeCount(0)
   }
   
-  // Pending 변경사항 취소 (원래 값으로 복원)
+  // Pending 변경사항 취소 (적용된 값으로 복원)
   const resetPendingChanges = () => {
-    // levelRates로 복원
+    // grade 관련 state를 적용된 상태로 복원
+    if (Object.keys(appliedAllGradeRates.byGrade).length > 0) {
+      setAllGradeRates(JSON.parse(JSON.stringify(appliedAllGradeRates)))
+    }
+    if (Object.keys(appliedLevelGradeRates).length > 0) {
+      setLevelGradeRates(JSON.parse(JSON.stringify(appliedLevelGradeRates)))
+    }
+    if (Object.keys(appliedPayZoneLevelGradeRates).length > 0) {
+      setPayZoneLevelGradeRates(JSON.parse(JSON.stringify(appliedPayZoneLevelGradeRates)))
+    }
+    
+    // 레거시 state도 복원
     const convertedLevelRates: LevelRates = {}
     Object.keys(levelRates).forEach(level => {
       convertedLevelRates[level] = {
@@ -217,7 +263,6 @@ export function useSimulationLogic() {
       }
     })
     
-    // bandFinalRates로 복원
     const convertedBandFinalRates: BandFinalRates = {}
     Object.keys(bandFinalRates).forEach(band => {
       convertedBandFinalRates[band] = {}
@@ -228,46 +273,6 @@ export function useSimulationLogic() {
           additional: bandFinalRates[band][level].additional || 0
         }
       })
-    })
-    
-    // allGradeRates도 원래 값으로 복원 (AI 권장값으로)
-    const aiBaseUp = aiSettings?.baseUpPercentage || 0
-    const aiMerit = aiSettings?.meritIncreasePercentage || 0
-    
-    const resetGradeRates: GradeAdjustmentRates = {}
-    Object.keys(allGradeRates.byGrade).forEach(grade => {
-      resetGradeRates[grade] = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
-    })
-    
-    setAllGradeRates({
-      average: { baseUp: aiBaseUp, merit: aiMerit, additional: 0 },
-      byGrade: resetGradeRates
-    })
-    
-    // 레벨별 평가등급도 복원
-    setLevelGradeRates(prev => {
-      const newRates = { ...prev }
-      Object.keys(newRates).forEach(level => {
-        Object.keys(newRates[level].byGrade).forEach(grade => {
-          newRates[level].byGrade[grade] = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
-        })
-        newRates[level].average = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
-      })
-      return newRates
-    })
-    
-    // PayZone별 평가등급도 복원
-    setPayZoneLevelGradeRates(prev => {
-      const newRates = { ...prev }
-      Object.keys(newRates).forEach(zone => {
-        Object.keys(newRates[zone]).forEach(level => {
-          Object.keys(newRates[zone][level].byGrade).forEach(grade => {
-            newRates[zone][level].byGrade[grade] = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
-          })
-          newRates[zone][level].average = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
-        })
-      })
-      return newRates
     })
     
     setPendingLevelRates(convertedLevelRates)
@@ -349,18 +354,20 @@ export function useSimulationLogic() {
           initialGradeRates[grade] = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
         })
         
-        setAllGradeRates({
+        const initialAllRates = {
           average: { baseUp: aiBaseUp, merit: aiMerit, additional: 0 },
           byGrade: initialGradeRates
-        })
+        }
+        setAllGradeRates(initialAllRates)
+        setAppliedAllGradeRates(JSON.parse(JSON.stringify(initialAllRates)))  // 깊은 복사로 저장
         
         // 레벨별 평가등급 초기화
-        const initialLevelGradeRates: LevelGradeRates = {}
+        const initialLevelGradeRatesData: LevelGradeRates = {}
         levels.forEach(level => {
           const levelEmployees = contextEmployeeData.filter(emp => emp.level === level)
           const gradeCounts = countEmployeesByGrade(levelEmployees)
           
-          initialLevelGradeRates[level] = {
+          initialLevelGradeRatesData[level] = {
             average: { baseUp: aiBaseUp, merit: aiMerit, additional: 0 },
             byGrade: { ...initialGradeRates },
             employeeCount: {
@@ -369,7 +376,8 @@ export function useSimulationLogic() {
             }
           }
         })
-        setLevelGradeRates(initialLevelGradeRates)
+        setLevelGradeRates(initialLevelGradeRatesData)
+        setAppliedLevelGradeRates(JSON.parse(JSON.stringify(initialLevelGradeRatesData)))  // 깊은 복사로 저장
         
         // PayZone별 평가등급 초기화
         const initialPayZoneRates: PayZoneLevelGradeRates = {}
@@ -392,6 +400,13 @@ export function useSimulationLogic() {
           })
         })
         setPayZoneLevelGradeRates(initialPayZoneRates)
+        setAppliedPayZoneLevelGradeRates(JSON.parse(JSON.stringify(initialPayZoneRates)))  // 깊은 복사로 저장
+        
+        console.log('[시뮬레이션 초기화] Applied 상태 저장 완료:', {
+          allGradeRates: initialAllRates,
+          levelGradeRates: Object.keys(initialLevelGradeRatesData).length,
+          payZoneRates: Object.keys(initialPayZoneRates).length
+        })
       }
       
       // 첫 번째 값으로 초기화
@@ -587,6 +602,8 @@ export function useSimulationLogic() {
   // 양방향 동기화 핸들러
   // 전체 평가등급 변경 → 하위 전파
   const handleAllGradeChange = (grade: string, field: keyof AdjustmentRates, value: number) => {
+    console.log(`[전체→하위] 평가등급 ${grade} ${field} 값을 ${value}로 변경`)
+    
     // 전체 업데이트
     setAllGradeRates(prev => ({
       ...prev,
@@ -603,7 +620,9 @@ export function useSimulationLogic() {
     setLevelGradeRates(prev => {
       const newRates = { ...prev }
       Object.keys(newRates).forEach(level => {
-        newRates[level].byGrade[grade][field] = value
+        if (newRates[level].byGrade[grade]) {
+          newRates[level].byGrade[grade][field] = value
+        }
       })
       return newRates
     })
@@ -613,7 +632,9 @@ export function useSimulationLogic() {
       const newRates = { ...prev }
       Object.keys(newRates).forEach(zone => {
         Object.keys(newRates[zone]).forEach(level => {
-          newRates[zone][level].byGrade[grade][field] = value
+          if (newRates[zone][level].byGrade[grade]) {
+            newRates[zone][level].byGrade[grade][field] = value
+          }
         })
       })
       return newRates
@@ -624,6 +645,8 @@ export function useSimulationLogic() {
   
   // 레벨별 평가등급 변경 → 상위/하위 동기화
   const handleLevelGradeChange = (level: string, grade: string, field: keyof AdjustmentRates, value: number) => {
+    console.log(`[레벨별] ${level} - ${grade} ${field} 값을 ${value}로 변경`)
+    
     // 레벨 업데이트
     setLevelGradeRates(prev => ({
       ...prev,
@@ -643,35 +666,67 @@ export function useSimulationLogic() {
     setPayZoneLevelGradeRates(prev => {
       const newRates = { ...prev }
       Object.keys(newRates).forEach(zone => {
-        if (newRates[zone][level]) {
+        if (newRates[zone][level] && newRates[zone][level].byGrade[grade]) {
           newRates[zone][level].byGrade[grade][field] = value
         }
       })
       return newRates
     })
     
-    // 전체로 역전파 (가중평균)
-    const updatedLevelRates = {
-      ...levelGradeRates,
-      [level]: {
-        ...levelGradeRates[level],
-        byGrade: {
-          ...levelGradeRates[level].byGrade,
-          [grade]: {
-            ...levelGradeRates[level].byGrade[grade],
-            [field]: value
+    // 전체로 역전파 (가중평균 계산)
+    setTimeout(() => {
+      setAllGradeRates(prev => {
+        // 최신 levelGradeRates를 사용하여 가중평균 계산
+        let totalCount = 0
+        let weightedSum = 0
+        
+        // 현재 변경사항을 반영한 상태로 계산
+        const updatedLevelRates = {
+          ...levelGradeRates,
+          [level]: {
+            ...levelGradeRates[level],
+            byGrade: {
+              ...levelGradeRates[level].byGrade,
+              [grade]: {
+                ...levelGradeRates[level].byGrade[grade],
+                [field]: value
+              }
+            }
           }
         }
-      }
-    }
-    const newAllRates = aggregateLevelToAll(updatedLevelRates, contextEmployeeData, dynamicStructure.grades)
-    setAllGradeRates(newAllRates)
+        
+        Object.keys(updatedLevelRates).forEach(lvl => {
+          const levelData = updatedLevelRates[lvl]
+          const count = levelData.employeeCount?.byGrade[grade] || 0
+          if (count > 0 && levelData.byGrade[grade]) {
+            totalCount += count
+            weightedSum += levelData.byGrade[grade][field] * count
+          }
+        })
+        
+        const avgValue = totalCount > 0 ? weightedSum / totalCount : value
+        console.log(`[레벨→전체] ${grade} ${field} 가중평균: ${avgValue} (총 ${totalCount}명)`)
+        
+        return {
+          ...prev,
+          byGrade: {
+            ...prev.byGrade,
+            [grade]: {
+              ...prev.byGrade[grade],
+              [field]: avgValue
+            }
+          }
+        }
+      })
+    }, 0)
     
     setHasPendingChanges(true)
   }
   
   // PayZone별 평가등급 변경 → 상위 역전파
   const handlePayZoneGradeChange = (payZone: number, level: string, grade: string, field: keyof AdjustmentRates, value: number) => {
+    console.log(`[PayZone별] PayZone ${payZone} - ${level} - ${grade} ${field} 값을 ${value}로 변경`)
+    
     // PayZone 업데이트
     setPayZoneLevelGradeRates(prev => ({
       ...prev,
@@ -690,29 +745,107 @@ export function useSimulationLogic() {
       }
     }))
     
-    // 레벨로 역전파 (가중평균)
-    const updatedPayZoneRates = {
-      ...payZoneLevelGradeRates,
-      [payZone.toString()]: {
-        ...payZoneLevelGradeRates[payZone.toString()],
-        [level]: {
-          ...payZoneLevelGradeRates[payZone.toString()][level],
-          byGrade: {
-            ...payZoneLevelGradeRates[payZone.toString()][level].byGrade,
-            [grade]: {
-              ...payZoneLevelGradeRates[payZone.toString()][level].byGrade[grade],
-              [field]: value
+    // 레벨로 역전파 (가중평균 계산)
+    setTimeout(() => {
+      setLevelGradeRates(prev => {
+        // 해당 레벨의 모든 PayZone 데이터를 수집하여 가중평균 계산
+        let totalCount = 0
+        let weightedSum = 0
+        
+        // 현재 변경사항을 반영한 상태로 계산
+        const updatedPayZoneRates = {
+          ...payZoneLevelGradeRates,
+          [payZone.toString()]: {
+            ...payZoneLevelGradeRates[payZone.toString()],
+            [level]: {
+              ...payZoneLevelGradeRates[payZone.toString()][level],
+              byGrade: {
+                ...payZoneLevelGradeRates[payZone.toString()][level].byGrade,
+                [grade]: {
+                  ...payZoneLevelGradeRates[payZone.toString()][level].byGrade[grade],
+                  [field]: value
+                }
+              }
             }
           }
         }
-      }
-    }
-    const newLevelRates = aggregatePayZoneToLevel(updatedPayZoneRates, contextEmployeeData, dynamicStructure.levels, dynamicStructure.grades)
-    setLevelGradeRates(newLevelRates)
+        
+        Object.keys(updatedPayZoneRates).forEach(zone => {
+          const zoneLevel = updatedPayZoneRates[zone][level]
+          if (zoneLevel) {
+            const count = zoneLevel.employeeCount?.byGrade[grade] || 0
+            if (count > 0 && zoneLevel.byGrade[grade]) {
+              totalCount += count
+              weightedSum += zoneLevel.byGrade[grade][field] * count
+            }
+          }
+        })
+        
+        const avgValue = totalCount > 0 ? weightedSum / totalCount : value
+        console.log(`[PayZone→레벨] ${level} - ${grade} ${field} 가중평균: ${avgValue} (총 ${totalCount}명)`)
+        
+        return {
+          ...prev,
+          [level]: {
+            ...prev[level],
+            byGrade: {
+              ...prev[level].byGrade,
+              [grade]: {
+                ...prev[level].byGrade[grade],
+                [field]: avgValue
+              }
+            }
+          }
+        }
+      })
+    }, 0)
     
-    // 전체로 역전파 (가중평균)
-    const newAllRates = aggregateLevelToAll(newLevelRates, contextEmployeeData, dynamicStructure.grades)
-    setAllGradeRates(newAllRates)
+    // 전체로 역전파 (가중평균 계산)
+    setTimeout(() => {
+      setAllGradeRates(prev => {
+        // 모든 PayZone-레벨의 해당 등급 데이터를 수집하여 가중평균 계산
+        let totalCount = 0
+        let weightedSum = 0
+        
+        // 모든 PayZone 데이터에서 가중평균 계산
+        Object.keys(payZoneLevelGradeRates).forEach(zone => {
+          if (payZoneLevelGradeRates[zone][level]) {
+            const zoneLevel = zone === payZone.toString() 
+              ? {
+                  ...payZoneLevelGradeRates[zone][level],
+                  byGrade: {
+                    ...payZoneLevelGradeRates[zone][level].byGrade,
+                    [grade]: {
+                      ...payZoneLevelGradeRates[zone][level].byGrade[grade],
+                      [field]: value
+                    }
+                  }
+                }
+              : payZoneLevelGradeRates[zone][level]
+            
+            const count = zoneLevel.employeeCount?.byGrade[grade] || 0
+            if (count > 0 && zoneLevel.byGrade[grade]) {
+              totalCount += count
+              weightedSum += zoneLevel.byGrade[grade][field] * count
+            }
+          }
+        })
+        
+        const avgValue = totalCount > 0 ? weightedSum / totalCount : value
+        console.log(`[PayZone→전체] ${grade} ${field} 가중평균: ${avgValue} (총 ${totalCount}명)`)
+        
+        return {
+          ...prev,
+          byGrade: {
+            ...prev.byGrade,
+            [grade]: {
+              ...prev.byGrade[grade],
+              [field]: avgValue
+            }
+          }
+        }
+      })
+    }, 50)  // 레벨 업데이트 후 실행
     
     setHasPendingChanges(true)
   }

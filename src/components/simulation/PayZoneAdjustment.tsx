@@ -4,13 +4,14 @@ import React, { useState, useMemo } from 'react'
 import { GRADE_COLORS } from '@/types/simulation'
 import { Employee } from '@/types/employee'
 import { useWageContext } from '@/context/WageContext'
+import { calculateWeightedAverage } from '@/utils/simulationHelpers'
 
 interface PayZoneAdjustmentProps {
   levels: string[]
-  payZones: number[]
+  payZones: (string | number)[]  // 'Lv.1', 'Lv.2' 또는 숫자
   performanceGrades: string[]
   payZoneLevelGradeRates: any
-  onPayZoneGradeChange: (payZone: number, level: string, grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
+  onPayZoneGradeChange: (payZone: string | number, level: string, grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
   additionalType: 'percentage' | 'amount'
   selectedBands?: string[]
   employeeCounts?: { [key: string]: number }
@@ -46,7 +47,7 @@ export function PayZoneAdjustment({
   // Pay Zone × Level × Grade별 인원수 계산
   const detailedCounts = useMemo(() => {
     const counts: { 
-      [payZone: number]: {
+      [payZone: string | number]: {
         [level: string]: {
           [grade: string]: number
           total: number
@@ -56,24 +57,36 @@ export function PayZoneAdjustment({
     
     // 초기화
     payZones.forEach(zone => {
-      counts[zone] = {}
+      const zoneKey = String(zone)  // 문자열 키로 사용
+      counts[zoneKey] = {}
       levels.forEach(level => {
-        counts[zone][level] = { total: 0 }
+        counts[zoneKey][level] = { total: 0 }
         performanceGrades.forEach(grade => {
-          counts[zone][level][grade] = 0
+          counts[zoneKey][level][grade] = 0
         })
       })
     })
     
     // 카운트
     contextEmployeeData.forEach(emp => {
-      if (emp.level && emp.payZone !== undefined && emp.performanceRating && 
+      // PayZone 타입 확인 및 변환
+      const empPayZone = emp.payZone
+      const isPayZoneValid = payZones.some(zone => String(zone) === String(empPayZone))
+      
+      if (emp.level && empPayZone !== undefined && emp.performanceRating && 
           levels.includes(emp.level) && 
-          payZones.includes(emp.payZone) &&
+          isPayZoneValid &&
           performanceGrades.includes(emp.performanceRating) &&
           (selectedBands.length === 0 || (emp.band && selectedBands.includes(emp.band)))) {
-        counts[emp.payZone][emp.level][emp.performanceRating]++
-        counts[emp.payZone][emp.level].total++
+        
+        // PayZone 키로 사용
+        const zoneKey = String(empPayZone)
+        if (!counts[zoneKey]) counts[zoneKey] = {}
+        if (!counts[zoneKey][emp.level]) counts[zoneKey][emp.level] = { total: 0 }
+        if (!counts[zoneKey][emp.level][emp.performanceRating]) counts[zoneKey][emp.level][emp.performanceRating] = 0
+        
+        counts[zoneKey][emp.level][emp.performanceRating]++
+        counts[zoneKey][emp.level].total++
       }
     })
     return counts
@@ -93,10 +106,34 @@ export function PayZoneAdjustment({
   const calculateTotalRate = (baseUp: number, merit: number, additional: number) => {
     return (baseUp + merit + (additionalType === 'percentage' ? additional : 0)).toFixed(1)
   }
+  
+  // 전체 PayZone 가중평균 계산
+  const calculateOverallAverage = (field: 'baseUp' | 'merit' | 'additional') => {
+    const items: { value: number; count: number }[] = []
+    
+    payZones.forEach(payZone => {
+      levels.forEach(level => {
+        const payZoneData = payZoneLevelGradeRates[payZone]?.[level]
+        if (payZoneData) {
+          performanceGrades.forEach(grade => {
+            const gradeCount = payZoneData.employeeCount?.byGrade[grade] || 0
+            if (gradeCount > 0 && payZoneData.byGrade[grade]) {
+              items.push({
+                value: payZoneData.byGrade[grade][field] || 0,
+                count: gradeCount
+              })
+            }
+          })
+        }
+      })
+    })
+    
+    return items.length > 0 ? calculateWeightedAverage(items).toFixed(1) : '0.0'
+  }
 
   
   // PayZone-Level 조합별 렌더링
-  const renderPayZoneLevelGroup = (payZone: number, level: string) => {
+  const renderPayZoneLevelGroup = (payZone: string | number, level: string) => {
     const groupKey = `PZ${payZone}-${level}`
     const isExpanded = expandedGroups.includes(groupKey)
     const groupCounts = detailedCounts[payZone]?.[level] || { total: 0 }
@@ -338,6 +375,36 @@ export function PayZoneAdjustment({
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold text-gray-900">Pay Zone별 조정</h3>
           <span className="text-xs text-gray-500">PayZone-레벨-평가등급별 세분화 조정</span>
+          {/* Live 인상률 표시 */}
+          <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-gray-600">Base-up:</span>
+              <span className="text-xs font-bold text-blue-600">{calculateOverallAverage('baseUp')}%</span>
+            </div>
+            <div className="text-xs text-gray-400">|</div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-gray-600">성과:</span>
+              <span className="text-xs font-bold text-green-600">{calculateOverallAverage('merit')}%</span>
+            </div>
+            <div className="text-xs text-gray-400">|</div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-gray-600">추가:</span>
+              <span className="text-xs font-bold text-purple-600">
+                {calculateOverallAverage('additional')}{additionalType === 'percentage' ? '%' : '만원'}
+              </span>
+            </div>
+            <div className="text-xs text-gray-400">|</div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-gray-600">총:</span>
+              <span className="text-xs font-bold text-red-600">
+                {calculateTotalRate(
+                  Number(calculateOverallAverage('baseUp')),
+                  Number(calculateOverallAverage('merit')),
+                  Number(calculateOverallAverage('additional'))
+                )}%
+              </span>
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
