@@ -320,18 +320,11 @@ export function LevelAdjustment({
         <div className="flex gap-2">
           <button
             onClick={() => {
-              console.log('[레벨별 AI 권장값 버튼] aiSettings:', aiSettings)
               const baseUp = aiSettings?.baseUpPercentage || 0
               const merit = aiSettings?.meritIncreasePercentage || 0
-              console.log('[레벨별 AI 권장값 버튼] baseUp:', baseUp, 'merit:', merit)
-              
-              if (baseUp === 0 && merit === 0) {
-                console.warn('[레벨별 AI 권장값 버튼] AI 설정값이 0이거나 없습니다')
-              }
               
               levels.forEach(level => {
                 performanceGrades.forEach(grade => {
-                  console.log(`[레벨별 AI 권장값 버튼] ${level} - ${grade} 설정:`, baseUp, merit)
                   onLevelGradeChange(level, grade, 'baseUp', baseUp)
                   onLevelGradeChange(level, grade, 'merit', merit)
                   onLevelGradeChange(level, grade, 'additional', 0)

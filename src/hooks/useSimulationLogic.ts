@@ -94,7 +94,7 @@ export function useSimulationLogic() {
   // 추가인상률 타입 (비율/정액)
   const [additionalType, setAdditionalType] = useState<'percentage' | 'amount'>('percentage')
   
-  // 직군 필터
+  // 직군 필터 (기본값: 전체 선택)
   const [selectedBands, setSelectedBands] = useState<string[]>([])
   
   // PayZone 뷰 모드
@@ -334,12 +334,16 @@ export function useSimulationLogic() {
         grades: grades.length > 0 ? grades : []
       })
       
+      // 직군 필터 초기값: 전체 직군 선택
+      setSelectedBands(bands)
+      
       console.log('[시뮬레이션] 동적 구조 설정:', {
         levels: levels,
         grades: grades,
         gradeOrder: gradeOrder,
         levelOrder: levelOrder,
-        payZones: payZones
+        payZones: payZones,
+        selectedBands: bands  // 전체 직군 선택
       })
       
       // 평가등급별 상태 초기화 (AI 권장값 사용)

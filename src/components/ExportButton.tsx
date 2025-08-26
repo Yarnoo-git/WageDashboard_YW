@@ -51,7 +51,6 @@ export function ExportButton({ exportData, scenarioName, className = '', isNavig
       // 성공 알림
       alert('Excel 파일이 다운로드되었습니다.')
     } catch (error) {
-      console.error('Export failed:', error)
       alert(`내보내기에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
     } finally {
       setExporting(false)

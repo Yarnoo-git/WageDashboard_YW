@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
 import { useWageContext } from '@/context/WageContext'
+import { useSimulationLogic } from '@/hooks/useSimulationLogic'
 import { useEmployeesData, type Employee } from '@/hooks/useEmployeesData'
 
 interface PersonTableProps {
@@ -12,9 +13,40 @@ interface PersonTableProps {
 }
 
 export function PersonTable({ level, department, performanceRating }: PersonTableProps) {
-  const { calculateToBeSalary, baseUpRate, meritRate, performanceWeights, levelRates, bandFinalRates } = useWageContext()
+  const { performanceWeights } = useWageContext()
+  const {
+    allGradeRates,
+    levelGradeRates,
+    payZoneLevelGradeRates,
+    adjustmentScope,
+    additionalType
+  } = useSimulationLogic()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  
+  // Grade 기반 개인별 인상률 계산
+  const getEmployeeRates = (employee: Employee) => {
+    const grade = employee.performanceRating
+    if (!grade) return { baseUp: 0, merit: 0, additional: 0 }
+    
+    if (adjustmentScope === 'all') {
+      return allGradeRates.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }
+    } else if (adjustmentScope === 'level' && employee.level) {
+      return levelGradeRates[employee.level]?.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }
+    } else if (adjustmentScope === 'payzone' && employee.payZone !== undefined && employee.level) {
+      return payZoneLevelGradeRates[employee.payZone]?.[employee.level]?.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }
+    }
+    return { baseUp: 0, merit: 0, additional: 0 }
+  }
+  
+  // Grade 기반 To-Be 급여 계산
+  const calculateToBeSalary = (employee: Employee) => {
+    const rates = getEmployeeRates(employee)
+    const totalPercentage = rates.baseUp + rates.merit + (additionalType === 'percentage' ? rates.additional : 0)
+    const percentageIncrease = employee.currentSalary * (totalPercentage / 100)
+    const additionalAmount = additionalType === 'amount' ? rates.additional * 10000 : 0
+    return employee.currentSalary + percentageIncrease + additionalAmount
+  }
   
   const { data, loading } = useEmployeesData({
     page,
@@ -120,7 +152,7 @@ export function PersonTable({ level, department, performanceRating }: PersonTabl
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {employees.map((employee) => (
-                  <tr key={`${employee.id}-${baseUpRate}-${meritRate}`} className="hover:bg-gray-50">
+                  <tr key={employee.id} className="hover:bg-gray-50">
                     <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900">
                       {employee.employeeNumber || employee.employeeId || '-'}
                     </td>
@@ -167,25 +199,17 @@ export function PersonTable({ level, department, performanceRating }: PersonTabl
                     </td>
                     <td className="hidden md:table-cell px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm">
                       {(() => {
-                        // 직군별 최종 인상률이 있으면 우선 사용, 없으면 대시보드 기준 사용
-                        let levelRate
-                        if (employee.band && bandFinalRates[employee.band] && bandFinalRates[employee.band][employee.level]) {
-                          levelRate = bandFinalRates[employee.band][employee.level]
-                        } else {
-                          levelRate = levelRates[employee.level as keyof typeof levelRates] || { baseUp: baseUpRate, merit: meritRate }
-                        }
+                        // Grade 기반 인상률 가져오기
+                        const rates = getEmployeeRates(employee)
+                        const totalRate = rates.baseUp + rates.merit + (additionalType === 'percentage' ? rates.additional : 0)
                         
-                        const effectiveMeritRate = employee.performanceRating && performanceWeights[employee.performanceRating as keyof typeof performanceWeights]
-                          ? levelRate.merit * performanceWeights[employee.performanceRating as keyof typeof performanceWeights]
-                          : levelRate.merit
-                        const totalRate = levelRate.baseUp + effectiveMeritRate
                         return (
                           <div className="flex flex-col">
                             <span className="font-semibold text-purple-600">
                               {totalRate.toFixed(1)}%
                             </span>
                             <span className="text-xs text-gray-500">
-                              (B: {levelRate.baseUp}% + M: {effectiveMeritRate.toFixed(1)}%)
+                              (B: {rates.baseUp.toFixed(1)}% + M: {rates.merit.toFixed(1)}%{rates.additional > 0 ? ` + A: ${rates.additional.toFixed(1)}${additionalType === 'percentage' ? '%' : '만'}` : ''})
                             </span>
                           </div>
                         )
@@ -193,12 +217,7 @@ export function PersonTable({ level, department, performanceRating }: PersonTabl
                     </td>
                     <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 font-tabular">
                       {(() => {
-                        const toBeSalary = calculateToBeSalary(
-                          employee.currentSalary,
-                          employee.level,
-                          employee.performanceRating || undefined,
-                          employee.band || undefined
-                        )
+                        const toBeSalary = calculateToBeSalary(employee)
                         return (
                           <span className="font-semibold text-primary-600">
                             {formatKoreanCurrency(toBeSalary, '만원')}
@@ -208,12 +227,7 @@ export function PersonTable({ level, department, performanceRating }: PersonTabl
                     </td>
                     <td className="hidden lg:table-cell px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 font-tabular">
                       {(() => {
-                        const toBeSalary = calculateToBeSalary(
-                          employee.currentSalary,
-                          employee.level,
-                          employee.performanceRating || undefined,
-                          employee.band || undefined
-                        )
+                        const toBeSalary = calculateToBeSalary(employee)
                         const difference = toBeSalary - employee.currentSalary
                         const isPositive = difference > 0
                         return (

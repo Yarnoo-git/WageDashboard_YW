@@ -243,21 +243,19 @@ export default function SimulationPage() {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Fixed Summary Bar - 인상률 조정 모드일 때만 표시 */}
-      {viewMode === 'adjustment' && (
-        <FixedSummaryBar
-          totalEmployees={totalEmployees}
-          currentBaseUp={weightedAverageRates.baseUp}
-          currentMerit={weightedAverageRates.merit}
-          currentAdditional={weightedAverageRates.additional}
-          additionalType={additionalType}
-          aiBaseUp={contextBaseUpRate}
-          aiMerit={contextMeritRate}
-          totalBudget={availableBudget - welfareBudget}
-          usedBudget={budgetUsage.total}
-          budgetPercentage={budgetUsage.percentage}
-        />
-      )}
+      {/* Fixed Summary Bar - 모든 뷰 모드에서 표시 (스크롤 시 상단 고정) */}
+      <FixedSummaryBar
+        totalEmployees={totalEmployees}
+        currentBaseUp={weightedAverageRates.baseUp}
+        currentMerit={weightedAverageRates.merit}
+        currentAdditional={weightedAverageRates.additional}
+        additionalType={additionalType}
+        aiBaseUp={contextBaseUpRate}
+        aiMerit={contextMeritRate}
+        totalBudget={availableBudget - welfareBudget}
+        usedBudget={budgetUsage.total}
+        budgetPercentage={budgetUsage.percentage}
+      />
       
       <main className="pt-20 pb-8">
         <div className="flex gap-3">
@@ -352,6 +350,58 @@ export default function SimulationPage() {
                 <IndustryComparisonSection 
                   baseUpRate={contextBaseUpRate}
                   meritRate={contextMeritRate}
+                  levelTotalRates={(() => {
+                    // 직급별 평균 인상률 계산 (Grade 기반)
+                    const levelRates: {[key: string]: number} = {}
+                    const filteredEmployees = selectedBands.length > 0 && selectedBands.length < dynamicStructure.bands.length
+                      ? contextEmployeeData.filter(emp => emp.band && selectedBands.includes(emp.band))
+                      : contextEmployeeData
+                    
+                    // 각 직급별로 인상률 계산
+                    dynamicStructure.levels.forEach(level => {
+                      const levelEmployees = filteredEmployees.filter(emp => emp.level === level)
+                      if (levelEmployees.length === 0) {
+                        levelRates[level] = 0
+                        return
+                      }
+                      
+                      let totalRate = 0
+                      let count = 0
+                      
+                      levelEmployees.forEach(emp => {
+                        const grade = emp.performanceRating
+                        if (!grade) return
+                        
+                        let baseUp = 0, merit = 0, additional = 0
+                        
+                        if (adjustmentScope === 'all' && allGradeRates.byGrade[grade]) {
+                          baseUp = allGradeRates.byGrade[grade].baseUp || 0
+                          merit = allGradeRates.byGrade[grade].merit || 0
+                          additional = allGradeRates.byGrade[grade].additional || 0
+                        } else if (adjustmentScope === 'level' && levelGradeRates[level]?.byGrade[grade]) {
+                          baseUp = levelGradeRates[level].byGrade[grade].baseUp || 0
+                          merit = levelGradeRates[level].byGrade[grade].merit || 0
+                          additional = levelGradeRates[level].byGrade[grade].additional || 0
+                        } else if (adjustmentScope === 'payzone' && emp.payZone !== undefined) {
+                          const payZoneData = payZoneLevelGradeRates[emp.payZone]?.[level]?.byGrade[grade]
+                          if (payZoneData) {
+                            baseUp = payZoneData.baseUp || 0
+                            merit = payZoneData.merit || 0
+                            additional = payZoneData.additional || 0
+                          }
+                        }
+                        
+                        const rate = baseUp + merit + (additionalType === 'percentage' ? additional : 0)
+                        totalRate += rate
+                        count++
+                      })
+                      
+                      levelRates[level] = count > 0 ? totalRate / count : 0
+                    })
+                    
+                    return levelRates
+                  })()}
+                  weightedAverageRate={weightedAverageRates.baseUp + weightedAverageRates.merit + (additionalType === 'percentage' ? weightedAverageRates.additional : 0)}
                   competitorIncreaseRate={dashboardData?.competitorIncreaseRate}
                   competitorData={dashboardData?.competitorData}
                   levelStatistics={dashboardData?.levelStatistics}

@@ -49,13 +49,6 @@ function IndustryComparisonSectionComponent({
   // C사 데이터 (엑셀에서 가져온 데이터 사용)
   const companyIncrease = Math.round((baseUpRate + meritRate) * 10) / 10 // 우리 회사 (소수점 1자리)
   
-  // 디버그: C사 데이터 확인
-  console.log('IndustryComparisonSection - C사 데이터 디버그:', {
-    competitorData,
-    competitorIncreaseRate,
-    isArray: Array.isArray(competitorData),
-    dataLength: Array.isArray(competitorData) ? competitorData.length : 0
-  })
   
   // C사 평균 인상률 (엑셀에서 읽어온 값 우선 사용)
   let cCompanyIncrease = competitorIncreaseRate // 엑셀에서 읽어온 C사 인상률
@@ -172,12 +165,6 @@ function IndustryComparisonSectionComponent({
   const chartYMin = Math.max(0, Math.floor(chartMinValue - chartPadding))
   const chartYMax = Math.ceil(chartMaxValue + chartPadding)
   
-  // 디버그용 로그
-  console.log('Debug - 인상률:', companyIncrease)
-  console.log('Debug - 샘플 계산:')
-  competitivenessData.forEach(row => {
-    console.log(`${row.level}: 현재 ${row.ourCompany}천원 → 인상후 ${row.ourCompanyToBe}천원 (실제표시: ${Math.round(row.ourCompanyToBe * 1000).toLocaleString()}원)`)
-  })
   
   // 경쟁력 트렌드 데이터 (꺾은선 그래프용)
   const trendData = [
@@ -189,25 +176,6 @@ function IndustryComparisonSectionComponent({
   return (
     <div className="bg-white rounded-lg shadow p-4">
       <h2 className="text-xl font-bold mb-3">C사 대비 비교</h2>
-      
-      {/* 상단: 인상률 비교 요약 */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <div className="bg-blue-50 rounded-lg p-3 text-center">
-          <p className="text-base text-gray-700 font-medium">우리 회사(AI제안)</p>
-          <p className="text-3xl font-bold text-blue-600">{formatPercentage(companyIncrease)}</p>
-          <p className="text-sm text-gray-600">Base-up {formatPercentage(baseUpRate)} + 성과 인상률 {formatPercentage(meritRate)}</p>
-        </div>
-        <div className="bg-purple-50 rounded-lg p-3 text-center">
-          <p className="text-base text-gray-700 font-medium">우리 회사(조정)</p>
-          <p className="text-3xl font-bold text-purple-600">{formatPercentage(weightedAverageRate)}</p>
-          <p className="text-sm text-gray-600">직급별 가중평균</p>
-        </div>
-        <div className="bg-green-50 rounded-lg p-3 text-center">
-          <p className="text-base text-gray-700 font-medium">C사</p>
-          <p className="text-3xl font-bold text-green-600">{formatPercentage(cCompanyIncrease)}</p>
-          <p className="text-sm text-gray-600">경쟁사 인상률</p>
-        </div>
-      </div>
       
       {/* 3열 구조: 막대차트(좁음) | 테이블(넓음) | 꺾은선 그래프 */}
       <div className="grid grid-cols-7 gap-3">

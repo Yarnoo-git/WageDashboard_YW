@@ -265,17 +265,10 @@ export function AllAdjustment({
         <div className="flex gap-2">
           <button
             onClick={() => {
-              console.log('[AI 권장값 버튼] aiSettings:', aiSettings)
               const baseUp = aiSettings?.baseUpPercentage || 0
               const merit = aiSettings?.meritIncreasePercentage || 0
-              console.log('[AI 권장값 버튼] baseUp:', baseUp, 'merit:', merit)
-              
-              if (baseUp === 0 && merit === 0) {
-                console.warn('[AI 권장값 버튼] AI 설정값이 0이거나 없습니다')
-              }
               
               performanceGrades.forEach(grade => {
-                console.log(`[AI 권장값 버튼] ${grade} 등급 설정:`, baseUp, merit)
                 onGradeChange(grade, 'baseUp', baseUp)
                 onGradeChange(grade, 'merit', merit)
                 onGradeChange(grade, 'additional', 0)
