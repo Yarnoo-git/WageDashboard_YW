@@ -20,6 +20,13 @@ interface WageContextType {
   // 엑셀에서 로드된 직급/평가등급 설정
   gradeSettings: GradeSettings | null
   
+  // 평가등급 및 직급 순서 (엑셀에서 정의된 순서)
+  gradeOrder?: string[]  // ['ST', 'AT', 'OT', 'BT']
+  levelOrder?: string[]  // ['Lv.5', 'Lv.4', 'Lv.3', 'Lv.2', 'Lv.1']
+  
+  // AI 설정 (엑셀에서 로드된 값)
+  aiSettings: { baseUpPercentage?: number, meritIncreasePercentage?: number } | null
+  
   // 대시보드에서 설정한 기본 인상률
   baseUpRate: number
   meritRate: number
@@ -175,6 +182,10 @@ export function WageProvider({ children }: { children: ReactNode }) {
   // 엑셀에서 로드된 설정 저장
   const [gradeSettings, setGradeSettings] = useState<GradeSettings | null>(null)
   
+  // 엑셀에서 정의된 순서
+  const [gradeOrder, setGradeOrder] = useState<string[] | undefined>(undefined)
+  const [levelOrder, setLevelOrder] = useState<string[] | undefined>(undefined)
+  
   // 동적으로 로드된 가중치와 인상률
   const [performanceWeights, setPerformanceWeights] = useState<PerformanceWeights>({})
   const [levelRates, setLevelRates] = useState<{ [level: string]: { baseUp: number; merit: number } }>({})
@@ -281,6 +292,16 @@ export function WageProvider({ children }: { children: ReactNode }) {
             console.log('[WageContext] 직원 데이터 없음 또는 잘못된 형식')
           }
           
+          // 순서 설정 로드
+          if (clientData?.gradeOrder) {
+            setGradeOrder(clientData.gradeOrder)
+            console.log('[평가등급 순서]', clientData.gradeOrder)
+          }
+          if (clientData?.levelOrder) {
+            setLevelOrder(clientData.levelOrder)
+            console.log('[직급 순서]', clientData.levelOrder)
+          }
+          
           // AI 설정도 함께 로드
           if (clientData?.aiSettings) {
             const newAiSettings = {
@@ -327,6 +348,16 @@ export function WageProvider({ children }: { children: ReactNode }) {
         if (clientData?.employees && Array.isArray(clientData.employees)) {
           setContextEmployeeData(clientData.employees)
           console.log('[WageContext] 직원 데이터 재로드:', clientData.employees.length, '명')
+        }
+        
+        // 순서 설정 재로드
+        if (clientData?.gradeOrder) {
+          setGradeOrder(clientData.gradeOrder)
+          console.log('[평가등급 순서 재로드]', clientData.gradeOrder)
+        }
+        if (clientData?.levelOrder) {
+          setLevelOrder(clientData.levelOrder)
+          console.log('[직급 순서 재로드]', clientData.levelOrder)
         }
         
         if (clientData?.aiSettings) {
@@ -641,6 +672,9 @@ export function WageProvider({ children }: { children: ReactNode }) {
   
   const value: WageContextType = {
     gradeSettings,
+    gradeOrder,
+    levelOrder,
+    aiSettings,
     baseUpRate,
     meritRate,
     availableBudget,

@@ -41,7 +41,7 @@ export interface IncreaseInfo {
 export interface GradeInfo {
   level: string  // 직급 (Lv.1, Lv.2, ...)
   band: string   // 직군 (생산, 영업, ...)
-  payZone?: number  // Pay Zone (1-8)
+  payZone?: string | number  // Pay Zone ('Lv.1', 'Lv.2' 또는 1-8)
   performanceRating: string  // 평가등급 (ST, AT, OT, BT, ...)
   performanceWeight?: number  // 평가 가중치
 }
@@ -74,7 +74,7 @@ export interface EmployeeFilter {
   department?: string
   band?: string
   level?: string
-  payZone?: number
+  payZone?: string | number
   performanceRating?: string
   salaryRange?: {
     min?: number
@@ -96,7 +96,7 @@ export interface RawEmployeeData {
   부서?: string
   직급?: string
   직군?: string
-  'Pay Zone'?: number
+  'Pay Zone'?: string | number  // 'Lv.1', 'Lv.2' 또는 숫자
   평가등급?: string
   기본급?: number
   현재급여?: number

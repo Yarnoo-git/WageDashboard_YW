@@ -17,6 +17,8 @@ export interface ClientExcelData {
     minRange: number
     maxRange: number
   }
+  gradeOrder?: string[]  // 평가등급 순서 (높은순)
+  levelOrder?: string[]  // 직급 순서 (높은순)
   fileName: string
   uploadedAt: string
   fileId?: string  // 파일 ID 추가
@@ -24,13 +26,13 @@ export interface ClientExcelData {
 
 export function useClientExcelData() {
   const [data, setData] = useState<ClientExcelData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 컴포넌트 마운트 시 저장된 데이터 로드
-  useEffect(() => {
-    loadStoredData()
-  }, [])
+  // 컴포넌트 마운트 시 자동 로드 제거 - 수동 로드만 가능
+  // useEffect(() => {
+  //   loadStoredData()
+  // }, [])
 
   const loadStoredData = async () => {
     try {
@@ -42,6 +44,8 @@ export function useClientExcelData() {
           competitorData: storedData.competitorData,
           competitorIncreaseRate: storedData.competitorIncreaseRate || 0,
           aiSettings: storedData.aiSettings,
+          gradeOrder: storedData.gradeOrder,
+          levelOrder: storedData.levelOrder,
           fileName: storedData.fileName,
           uploadedAt: storedData.uploadedAt,
           fileId: storedData.fileId
@@ -63,6 +67,40 @@ export function useClientExcelData() {
       // 파일 읽기
       const arrayBuffer = await file.arrayBuffer()
       const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+      
+      // 평가등급순서 시트 읽기
+      let gradeOrder: string[] = []
+      if (workbook.SheetNames.includes('평가등급순서')) {
+        const gradeOrderSheet = workbook.Sheets['평가등급순서']
+        const gradeOrderData = XLSX.utils.sheet_to_json(gradeOrderSheet, { header: 1 })
+        console.log('[클라이언트] 평가등급순서 시트 데이터:', gradeOrderData)
+        
+        // 첫 번째 행은 헤더, 두 번째 행부터 실제 데이터
+        gradeOrder = gradeOrderData.slice(1)
+          .filter((row: any) => row[0])  // 첫 번째 열에 값이 있는 행만
+          .map((row: any) => String(row[0]).trim())
+        console.log('[클라이언트] 평가등급 순서 (높은순):', gradeOrder)
+      } else {
+        console.log('[클라이언트] 평가등급순서 시트가 없음, 기본값 사용')
+        gradeOrder = ['ST', 'AT', 'OT', 'BT']  // 기본값
+      }
+      
+      // 직급순서 시트 읽기
+      let levelOrder: string[] = []
+      if (workbook.SheetNames.includes('직급순서')) {
+        const levelOrderSheet = workbook.Sheets['직급순서']
+        const levelOrderData = XLSX.utils.sheet_to_json(levelOrderSheet, { header: 1 })
+        console.log('[클라이언트] 직급순서 시트 데이터:', levelOrderData)
+        
+        // 첫 번째 행은 헤더, 두 번째 행부터 실제 데이터
+        levelOrder = levelOrderData.slice(1)
+          .filter((row: any) => row[0])  // 첫 번째 열에 값이 있는 행만
+          .map((row: any) => String(row[0]).trim())
+        console.log('[클라이언트] 직급 순서 (높은순):', levelOrder)
+      } else {
+        console.log('[클라이언트] 직급순서 시트가 없음, 기본값 사용')
+        levelOrder = ['Lv.5', 'Lv.4', 'Lv.3', 'Lv.2', 'Lv.1']  // 기본값
+      }
       
       // AI설정 시트 읽기
       let aiSettings = {
@@ -156,8 +194,10 @@ export function useClientExcelData() {
       const worksheet = workbook.Sheets[employeeSheetName]
       const employees = XLSX.utils.sheet_to_json(worksheet)
       
-      // 데이터 변환 (필요한 경우)
-      const processedEmployees = employees.map((emp: any, index: number) => {
+      // 데이터 변환 (필요한 경우) - Lv0 제외
+      const processedEmployees = employees
+        .filter((emp: any) => emp['직급'] !== 'Lv0')  // Lv0 (외주인력) 제외
+        .map((emp: any, index: number) => {
         // 평가등급 필드 찾기 - 여러 가능한 컬럼명 확인
         const rating = emp['평가등급'] || emp['평가'] || emp['성과등급'] || emp['성과'] || 
                       emp['performanceRating'] || emp['Performance'] || emp['Rating'] || 
@@ -186,7 +226,7 @@ export function useClientExcelData() {
           department: emp['부서'] || emp['department'] || '',
           currentSalary: emp['현재연봉'] || emp['currentSalary'] || 0,
           performanceRating: rating || null,
-          payZone: payZone !== undefined ? Number(payZone) : undefined,
+          payZone: payZone,
           hireDate: emp['입사일'] || emp['hireDate'] || '',
           position: emp['직책'] || emp['position'] || ''
         }
@@ -200,6 +240,8 @@ export function useClientExcelData() {
         competitorData,
         competitorIncreaseRate,
         aiSettings,
+        gradeOrder: gradeOrder.length > 0 ? gradeOrder : undefined,
+        levelOrder: levelOrder.length > 0 ? levelOrder : undefined,
         fileName: file.name,
         uploadedAt: new Date().toISOString(),
         fileId
@@ -237,6 +279,7 @@ export function useClientExcelData() {
     error,
     uploadExcel,
     clearData,
+    loadStoredData,
     hasData: hasStoredData()
   }
 }

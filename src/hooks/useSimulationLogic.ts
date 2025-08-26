@@ -68,7 +68,11 @@ export function useSimulationLogic() {
     performanceWeights,
     
     // AI 설정
-    aiSettings
+    aiSettings,
+    
+    // 엑셀에서 정의된 순서
+    gradeOrder,
+    levelOrder
   } = useWageContext()
   
   // 동적 구조 (Excel 데이터에서 추출)
@@ -161,17 +165,30 @@ export function useSimulationLogic() {
   // Pending 변경사항 카운트
   useEffect(() => {
     let count = 0
-    // Level rates 변경 확인
+    // Level rates 변경 확인 (additional 필드 고려)
     Object.keys(pendingLevelRates).forEach(level => {
-      if (JSON.stringify(pendingLevelRates[level]) !== JSON.stringify(levelRates[level])) {
-        count++
+      const pending = pendingLevelRates[level]
+      const current = levelRates[level]
+      if (current) {
+        // additional 필드는 current에 없을 수 있으므로 별도 처리
+        if (pending.baseUp !== current.baseUp || 
+            pending.merit !== current.merit || 
+            pending.additional !== (current.additional || 0)) {
+          count++
+        }
       }
     })
     // Band rates 변경 확인
     Object.keys(pendingBandFinalRates).forEach(band => {
       Object.keys(pendingBandFinalRates[band] || {}).forEach(level => {
-        if (JSON.stringify(pendingBandFinalRates[band][level]) !== JSON.stringify(bandFinalRates[band]?.[level])) {
-          count++
+        const pending = pendingBandFinalRates[band][level]
+        const current = bandFinalRates[band]?.[level]
+        if (current) {
+          if (pending.baseUp !== current.baseUp || 
+              pending.merit !== current.merit || 
+              pending.additional !== (current.additional || 0)) {
+            count++
+          }
         }
       })
     })
@@ -188,19 +205,19 @@ export function useSimulationLogic() {
     setPendingChangeCount(0)
   }
   
-  // Pending 변경사항 초기화
+  // Pending 변경사항 취소 (원래 값으로 복원)
   const resetPendingChanges = () => {
-    // levelRates 변환
+    // levelRates로 복원
     const convertedLevelRates: LevelRates = {}
     Object.keys(levelRates).forEach(level => {
       convertedLevelRates[level] = {
         baseUp: levelRates[level].baseUp,
         merit: levelRates[level].merit,
-        additional: 0
+        additional: levelRates[level].additional || 0
       }
     })
     
-    // bandFinalRates 변환
+    // bandFinalRates로 복원
     const convertedBandFinalRates: BandFinalRates = {}
     Object.keys(bandFinalRates).forEach(band => {
       convertedBandFinalRates[band] = {}
@@ -208,9 +225,49 @@ export function useSimulationLogic() {
         convertedBandFinalRates[band][level] = {
           baseUp: bandFinalRates[band][level].baseUp,
           merit: bandFinalRates[band][level].merit,
-          additional: 0
+          additional: bandFinalRates[band][level].additional || 0
         }
       })
+    })
+    
+    // allGradeRates도 원래 값으로 복원 (AI 권장값으로)
+    const aiBaseUp = aiSettings?.baseUpPercentage || 0
+    const aiMerit = aiSettings?.meritIncreasePercentage || 0
+    
+    const resetGradeRates: GradeAdjustmentRates = {}
+    Object.keys(allGradeRates.byGrade).forEach(grade => {
+      resetGradeRates[grade] = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
+    })
+    
+    setAllGradeRates({
+      average: { baseUp: aiBaseUp, merit: aiMerit, additional: 0 },
+      byGrade: resetGradeRates
+    })
+    
+    // 레벨별 평가등급도 복원
+    setLevelGradeRates(prev => {
+      const newRates = { ...prev }
+      Object.keys(newRates).forEach(level => {
+        Object.keys(newRates[level].byGrade).forEach(grade => {
+          newRates[level].byGrade[grade] = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
+        })
+        newRates[level].average = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
+      })
+      return newRates
+    })
+    
+    // PayZone별 평가등급도 복원
+    setPayZoneLevelGradeRates(prev => {
+      const newRates = { ...prev }
+      Object.keys(newRates).forEach(zone => {
+        Object.keys(newRates[zone]).forEach(level => {
+          Object.keys(newRates[zone][level].byGrade).forEach(grade => {
+            newRates[zone][level].byGrade[grade] = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
+          })
+          newRates[zone][level].average = { baseUp: aiBaseUp, merit: aiMerit, additional: 0 }
+        })
+      })
+      return newRates
     })
     
     setPendingLevelRates(convertedLevelRates)
@@ -237,25 +294,55 @@ export function useSimulationLogic() {
     setSelectedBands([])
   }
   
+  // 엑셀 순서를 유지하면서 중복 제거하는 헬퍼 함수
+  const getUniqueInOrder = (arr: any[]) => {
+    const seen = new Set()
+    return arr.filter(item => {
+      if (item && !seen.has(item)) {
+        seen.add(item)
+        return true
+      }
+      return false
+    })
+  }
+
   // Excel 데이터에서 동적 구조 추출
   useEffect(() => {
     if (contextEmployeeData && contextEmployeeData.length > 0) {
-      const levels = Array.from(new Set(contextEmployeeData.map(emp => emp.level))).sort()
-      const bands = Array.from(new Set(contextEmployeeData.map(emp => emp.band))).filter(Boolean).sort()
-      const payZones = Array.from(new Set(contextEmployeeData.map(emp => emp.payZone))).filter(zone => zone !== undefined).sort((a, b) => Number(a) - Number(b))
-      const grades = Array.from(new Set(contextEmployeeData.map(emp => emp.performanceRating))).filter(Boolean).sort()
+      // 엑셀에서 정의된 순서가 있으면 사용, 없으면 데이터에서 추출
+      const levels = levelOrder && levelOrder.length > 0 
+        ? levelOrder.filter(level => level !== 'Lv0')
+        : getUniqueInOrder(contextEmployeeData.map(emp => emp.level)).filter(level => level !== 'Lv0')
+      
+      const grades = gradeOrder && gradeOrder.length > 0
+        ? gradeOrder
+        : getUniqueInOrder(contextEmployeeData.map(emp => emp.performanceRating))
+      
+      const bands = getUniqueInOrder(contextEmployeeData.map(emp => emp.band))
+      // PayZone은 이제 문자열이므로 정렬 방식 수정
+      const payZones = Array.from(new Set(contextEmployeeData.map(emp => emp.payZone))).filter(zone => zone !== undefined)
       
       setDynamicStructure({
         levels,
         bands,
-        payZones: payZones.map(Number),
+        payZones: payZones,  // 문자열 그대로 사용
         grades: grades.length > 0 ? grades : []
+      })
+      
+      console.log('[시뮬레이션] 동적 구조 설정:', {
+        levels: levels,
+        grades: grades,
+        gradeOrder: gradeOrder,
+        levelOrder: levelOrder,
+        payZones: payZones
       })
       
       // 평가등급별 상태 초기화 (AI 권장값 사용)
       if (grades.length > 0) {
-        const aiBaseUp = aiSettings?.baseUpPercentage || 3.2
-        const aiMerit = aiSettings?.meritIncreasePercentage || 2.5
+        console.log('[시뮬레이션 초기화] aiSettings:', aiSettings)
+        const aiBaseUp = aiSettings?.baseUpPercentage || 0
+        const aiMerit = aiSettings?.meritIncreasePercentage || 0
+        console.log('[시뮬레이션 초기화] AI 값 설정 - baseUp:', aiBaseUp, 'merit:', aiMerit)
         
         const initialGradeRates: GradeAdjustmentRates = {}
         grades.forEach(grade => {
@@ -323,7 +410,7 @@ export function useSimulationLogic() {
       
       // 동적 구조 감지 완료
     }
-  }, [contextEmployeeData, selectedBand, selectedViewBand, selectedBandExpert, selectedPayZone])
+  }, [contextEmployeeData, aiSettings, gradeOrder, levelOrder])
   
   // Level별 조정 (Pending)
   const handleLevelRateChange = (level: string, field: keyof AdjustmentRates, value: number) => {

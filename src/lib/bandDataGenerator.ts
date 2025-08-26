@@ -311,33 +311,35 @@ export function convertFromExcelFormat(excelData: any[]): EmployeeRecord[] {
     console.log('Excel 데이터 샘플:', excelData[0])
   }
   
-  return excelData.map((row, index) => {
-    // 평가등급 데이터 체크 - 여러 가능한 컬럼명 확인
-    const rating = row['평가등급'] || row['평가'] || row['성과등급'] || row['성과'] || row['Performance'] || row['Rating']
-    
-    // Pay Zone 데이터 체크 - 여러 가능한 컬럼명 확인
-    const payZone = row['Pay Zone'] || row['PayZone'] || row['pay zone'] || row['payzone'] || row['페이존'] || row['페이 존']
-    
-    if (index < 5) {
-      console.log(`직원 ${index + 1} 데이터 매핑:`, {
-        '평가등급': rating,
-        'Pay Zone': payZone,
-        '직군': row['직군'],
-        '직급': row['직급']
-      })
-    }
-    
-    return {
-      employeeId: row['사번'] || '',
-      name: row['이름'] || '',
-      department: row['부서'] || '',
-      band: row['직군'] || '',
-      level: row['직급'] || '',
-      performanceRating: rating as 'ST' | 'AT' | 'OT' | 'BT' | undefined,
-      position: row['직책'] || undefined,
-      hireDate: row['입사일'] || '',
-      currentSalary: Number(row['현재연봉']) || 0,
-      payZone: payZone !== undefined ? Number(payZone) : undefined
-    }
-  })
+  return excelData
+    .filter(row => row['직급'] !== 'Lv0')  // Lv0 (외주인력) 제외
+    .map((row, index) => {
+      // 평가등급 데이터 체크 - 여러 가능한 컬럼명 확인
+      const rating = row['평가등급'] || row['평가'] || row['성과등급'] || row['성과'] || row['Performance'] || row['Rating']
+      
+      // Pay Zone 데이터 체크 - 여러 가능한 컬럼명 확인 (문자열 그대로 사용)
+      const payZone = row['Pay Zone'] || row['PayZone'] || row['pay zone'] || row['payzone'] || row['페이존'] || row['페이 존']
+      
+      if (index < 5) {
+        console.log(`직원 ${index + 1} 데이터 매핑:`, {
+          '평가등급': rating,
+          'Pay Zone': payZone,
+          '직군': row['직군'],
+          '직급': row['직급']
+        })
+      }
+      
+      return {
+        employeeId: row['사번'] || '',
+        name: row['이름'] || '',
+        department: row['부서'] || '',
+        band: row['직군'] || '',
+        level: row['직급'] || '',
+        performanceRating: rating as 'ST' | 'AT' | 'OT' | 'BT' | undefined,
+        position: row['직책'] || undefined,
+        hireDate: row['입사일'] || '',
+        currentSalary: Number(row['현재연봉']) || 0,
+        payZone: payZone  // 문자열 그대로 사용
+      }
+    })
 }

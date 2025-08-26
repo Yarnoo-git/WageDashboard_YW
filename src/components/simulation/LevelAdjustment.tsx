@@ -27,7 +27,7 @@ export function LevelAdjustment({
   onReset,
   additionalType,
   contextEmployeeData = [],
-  performanceGrades = ['ST', 'AT', 'OT', 'BT'],
+  performanceGrades = [],
   hasPendingChanges = false,
   aiSettings
 }: LevelAdjustmentProps) {
@@ -319,10 +319,18 @@ export function LevelAdjustment({
         <div className="flex gap-2">
           <button
             onClick={() => {
-              const baseUp = aiSettings?.baseUpPercentage || 3.2
-              const merit = aiSettings?.meritIncreasePercentage || 2.5
+              console.log('[레벨별 AI 권장값 버튼] aiSettings:', aiSettings)
+              const baseUp = aiSettings?.baseUpPercentage || 0
+              const merit = aiSettings?.meritIncreasePercentage || 0
+              console.log('[레벨별 AI 권장값 버튼] baseUp:', baseUp, 'merit:', merit)
+              
+              if (baseUp === 0 && merit === 0) {
+                console.warn('[레벨별 AI 권장값 버튼] AI 설정값이 0이거나 없습니다')
+              }
+              
               levels.forEach(level => {
                 performanceGrades.forEach(grade => {
+                  console.log(`[레벨별 AI 권장값 버튼] ${level} - ${grade} 설정:`, baseUp, merit)
                   onLevelGradeChange(level, grade, 'baseUp', baseUp)
                   onLevelGradeChange(level, grade, 'merit', merit)
                   onLevelGradeChange(level, grade, 'additional', 0)
@@ -331,24 +339,8 @@ export function LevelAdjustment({
             }}
             className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors font-medium"
           >
-            AI 권장값
+            AI 권장값으로 설정
           </button>
-          {hasPendingChanges && (
-            <>
-              <button
-                onClick={onApply}
-                className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors font-medium"
-              >
-                적용
-              </button>
-              <button
-                onClick={onReset}
-                className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors font-medium"
-              >
-                취소
-              </button>
-            </>
-          )}
         </div>
       </div>
     </div>

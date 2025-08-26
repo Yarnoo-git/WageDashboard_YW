@@ -9,7 +9,7 @@ export interface AdjustmentRates {
 export interface DynamicStructure {
   levels: string[]
   bands: string[]
-  payZones: number[]
+  payZones: (string | number)[]  // 'Lv.1', 'Lv.2' 또는 숫자
   grades: string[]
 }
 
@@ -44,7 +44,7 @@ export type BandFinalRates = {
 }
 
 export type PayZoneRates = {
-  [zone: number]: {
+  [zone: string | number]: {
     [band: string]: {
       [level: string]: AdjustmentRates
     }

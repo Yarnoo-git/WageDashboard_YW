@@ -27,7 +27,7 @@ export function AllAdjustment({
   additionalType,
   onAdditionalTypeChange,
   contextEmployeeData = [],
-  performanceGrades = ['ST', 'AT', 'OT', 'BT'],
+  performanceGrades = [],
   hasPendingChanges = false,
   aiSettings
 }: AllAdjustmentProps) {
@@ -265,9 +265,17 @@ export function AllAdjustment({
         <div className="flex gap-2">
           <button
             onClick={() => {
-              const baseUp = aiSettings?.baseUpPercentage || 3.2
-              const merit = aiSettings?.meritIncreasePercentage || 2.5
+              console.log('[AI 권장값 버튼] aiSettings:', aiSettings)
+              const baseUp = aiSettings?.baseUpPercentage || 0
+              const merit = aiSettings?.meritIncreasePercentage || 0
+              console.log('[AI 권장값 버튼] baseUp:', baseUp, 'merit:', merit)
+              
+              if (baseUp === 0 && merit === 0) {
+                console.warn('[AI 권장값 버튼] AI 설정값이 0이거나 없습니다')
+              }
+              
               performanceGrades.forEach(grade => {
+                console.log(`[AI 권장값 버튼] ${grade} 등급 설정:`, baseUp, merit)
                 onGradeChange(grade, 'baseUp', baseUp)
                 onGradeChange(grade, 'merit', merit)
                 onGradeChange(grade, 'additional', 0)
@@ -275,24 +283,8 @@ export function AllAdjustment({
             }}
             className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors font-medium"
           >
-            AI 권장값
+            AI 권장값으로 설정
           </button>
-          {hasPendingChanges && (
-            <>
-              <button
-                onClick={onApply}
-                className="px-3 py-1.5 text-xs bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors font-medium"
-              >
-                적용
-              </button>
-              <button
-                onClick={onReset}
-                className="px-3 py-1.5 text-xs bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors font-medium"
-              >
-                취소
-              </button>
-            </>
-          )}
         </div>
       </div>
     </div>

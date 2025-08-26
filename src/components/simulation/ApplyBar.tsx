@@ -44,7 +44,7 @@ export function ApplyBar({
                   : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
               }`}
             >
-              초기화
+              취소
             </button>
             <button
               onClick={onApply}

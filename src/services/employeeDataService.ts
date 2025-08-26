@@ -477,11 +477,11 @@ export async function getEmployeeData(): Promise<EmployeeRecord[]> {
  */
 export function getAISettings() {
   return cachedAISettings || {
-    baseUpPercentage: 3.2,
-    meritIncreasePercentage: 2.5,
-    totalPercentage: 5.7,
-    minRange: 5.7,
-    maxRange: 5.9
+    baseUpPercentage: 0,
+    meritIncreasePercentage: 0,
+    totalPercentage: 0,
+    minRange: 0,
+    maxRange: 0
   }
 }
 

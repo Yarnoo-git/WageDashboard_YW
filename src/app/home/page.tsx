@@ -7,9 +7,10 @@ import { getStoredFileInfo } from '@/lib/clientStorage'
 
 export default function HomePage() {
   const router = useRouter()
-  const { data, loading, uploadExcel, clearData, hasData } = useClientExcelData()
+  const { data, loading, uploadExcel, clearData, loadStoredData, hasData } = useClientExcelData()
   const [uploading, setUploading] = useState(false)
   const [fileInfo, setFileInfo] = useState<{ fileName: string; uploadedAt: string } | null>(null)
+  const [loadingStoredData, setLoadingStoredData] = useState(false)
 
   useEffect(() => {
     const info = getStoredFileInfo()
@@ -37,6 +38,13 @@ export default function HomePage() {
       await clearData()
       setFileInfo(null)
     }
+  }
+
+  const handleLoadStoredData = async () => {
+    setLoadingStoredData(true)
+    await loadStoredData()
+    setLoadingStoredData(false)
+    router.push('/dashboard')
   }
 
   if (loading) {
@@ -69,60 +77,53 @@ export default function HomePage() {
             </ol>
           </div>
 
-          {hasData && fileInfo ? (
-            <div className="mb-8">
-              <div className="bg-green-50 rounded-lg p-4 mb-4">
-                <p className="text-sm text-green-800 font-medium mb-1">
-                  저장된 데이터가 있습니다
+          {/* 메인 업로드 영역 */}
+          <div className="mb-8">
+            <p className="text-gray-600 mb-6">
+              엑셀 파일을 업로드하여 시작하세요
+            </p>
+            <label className="inline-block px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors cursor-pointer">
+              {uploading ? '업로드 중...' : '새 엑셀 파일 선택'}
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+            </label>
+          </div>
+
+          {/* 저장된 데이터 섹션 */}
+          {hasData && fileInfo && (
+            <div className="border-t pt-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                이전 데이터
+              </h3>
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <p className="text-xs text-gray-600 mb-1">
+                  <span className="font-medium">파일명:</span> {fileInfo.fileName}
                 </p>
-                <p className="text-xs text-green-600">
-                  파일명: {fileInfo.fileName}
-                </p>
-                <p className="text-xs text-green-600">
-                  업로드: {new Date(fileInfo.uploadedAt).toLocaleString('ko-KR')}
+                <p className="text-xs text-gray-600">
+                  <span className="font-medium">업로드 시간:</span> {new Date(fileInfo.uploadedAt).toLocaleString('ko-KR')}
                 </p>
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
                 <button
-                  onClick={() => router.push('/dashboard')}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                  onClick={handleLoadStoredData}
+                  disabled={loadingStoredData}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors"
                 >
-                  대시보드 보기
+                  {loadingStoredData ? '불러오는 중...' : '이전 데이터 불러오기'}
                 </button>
-                <label className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors cursor-pointer">
-                  새 파일 업로드
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                </label>
                 <button
                   onClick={handleClearData}
-                  className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+                  className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium rounded-lg transition-colors"
                 >
-                  데이터 삭제
+                  저장된 데이터 삭제
                 </button>
               </div>
-            </div>
-          ) : (
-            <div className="mb-8">
-              <p className="text-gray-600 mb-6">
-                엑셀 파일을 업로드하여 시작하세요
-              </p>
-              <label className="inline-block px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors cursor-pointer">
-                {uploading ? '업로드 중...' : '엑셀 파일 선택'}
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </label>
             </div>
           )}
 
