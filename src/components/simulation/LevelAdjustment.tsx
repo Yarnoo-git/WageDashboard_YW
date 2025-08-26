@@ -27,6 +27,30 @@ export function LevelAdjustment({
   const { performanceWeights } = useWageContext()
   const [expandedLevels, setExpandedLevels] = useState<string[]>(levels) // 모두 펼친 상태로 시작
   
+  // 레벨-평가등급별 상태 관리
+  const [levelGradeRates, setLevelGradeRates] = useState<{
+    [level: string]: {
+      [grade: string]: {
+        baseUp: number
+        merit: number
+        additional: number
+      }
+    }
+  }>(() => {
+    const initial: any = {}
+    levels.forEach(level => {
+      initial[level] = {}
+      performanceGrades.forEach(grade => {
+        initial[level][grade] = {
+          baseUp: 0,
+          merit: 0,
+          additional: 0
+        }
+      })
+    })
+    return initial
+  })
+  
   // 레벨별, 평가등급별 인원수 계산
   const employeeCountByLevelAndGrade = useMemo(() => {
     const counts: { 
@@ -35,10 +59,6 @@ export function LevelAdjustment({
         total: number 
       }
     } = {}
-    
-    // 디버깅 로그
-    console.log('[LevelAdjustment] performanceGrades:', performanceGrades)
-    console.log('[LevelAdjustment] Sample employee:', contextEmployeeData[0])
     
     levels.forEach(level => {
       counts[level] = { total: 0 }
@@ -55,8 +75,6 @@ export function LevelAdjustment({
         counts[emp.level].total++
       }
     })
-    
-    console.log('[LevelAdjustment] Final counts:', counts)
     return counts
   }, [contextEmployeeData, levels, performanceGrades])
   
@@ -69,16 +87,37 @@ export function LevelAdjustment({
     )
   }
   
-  // 평가등급별 Merit 계산
-  const calculateMeritByGrade = (baseMerit: number, grade: string) => {
-    const weight = performanceWeights[grade] || 1.0
-    return (baseMerit * weight).toFixed(2)
+  // 레벨-평가등급별 값 변경 핸들러
+  const handleGradeRateChange = (level: string, grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => {
+    setLevelGradeRates(prev => ({
+      ...prev,
+      [level]: {
+        ...prev[level],
+        [grade]: {
+          ...prev[level][grade],
+          [field]: value
+        }
+      }
+    }))
   }
   
-  // 총 인상률 계산
-  const calculateTotalRate = (baseUp: number, merit: number, additional: number, grade?: string) => {
-    const effectiveMerit = grade ? Number(calculateMeritByGrade(merit, grade)) : merit
-    return (baseUp + effectiveMerit + (additionalType === 'percentage' ? additional : 0)).toFixed(1)
+  // 레벨별 평균 계산
+  const calculateLevelAverage = (level: string, field: 'baseUp' | 'merit' | 'additional') => {
+    let sum = 0
+    let count = 0
+    performanceGrades.forEach(grade => {
+      const gradeCount = employeeCountByLevelAndGrade[level]?.[grade] || 0
+      if (gradeCount > 0) {
+        sum += (levelGradeRates[level]?.[grade]?.[field] || 0) * gradeCount
+        count += gradeCount
+      }
+    })
+    return count > 0 ? (sum / count).toFixed(1) : '0.0'
+  }
+  
+  // 총 인상률 계산 (가중치 없이)
+  const calculateTotalRate = (baseUp: number, merit: number, additional: number) => {
+    return (baseUp + merit + (additionalType === 'percentage' ? additional : 0)).toFixed(1)
   }
   
   return (
@@ -199,21 +238,23 @@ export function LevelAdjustment({
                       <td className="px-3 py-2 text-xs font-medium text-gray-700">
                         Base-up (%)
                       </td>
-                      <td className="px-2 py-2 text-center">
-                        <input
-                          type="number"
-                          value={rates.baseUp}
-                          onChange={(e) => onRateChange(level, 'baseUp', Number(e.target.value))}
-                          step="0.1"
-                          className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                          placeholder="0.0"
-                        />
+                      <td className="px-2 py-2 text-center bg-gray-100">
+                        <span className="text-xs font-semibold text-gray-600">
+                          {calculateLevelAverage(level, 'baseUp')}
+                        </span>
                       </td>
                       {performanceGrades.map(grade => (
                         <td key={grade} className={`px-2 py-2 text-center ${
                           GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
                         }`}>
-                          <span className="text-xs text-gray-500">-</span>
+                          <input
+                            type="number"
+                            value={levelGradeRates[level]?.[grade]?.baseUp || ''}
+                            onChange={(e) => handleGradeRateChange(level, grade, 'baseUp', Number(e.target.value))}
+                            step="0.1"
+                            className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            placeholder="0.0"
+                          />
                         </td>
                       ))}
                     </tr>
@@ -222,33 +263,26 @@ export function LevelAdjustment({
                     <tr className="border-b hover:bg-gray-50 transition-colors">
                       <td className="px-3 py-2 text-xs font-medium text-gray-700">
                         Merit (%)
-                        <div className="text-xs text-gray-500 mt-0.5">기본값</div>
                       </td>
-                      <td className="px-2 py-2 text-center">
-                        <input
-                          type="number"
-                          value={rates.merit}
-                          onChange={(e) => onRateChange(level, 'merit', Number(e.target.value))}
-                          step="0.1"
-                          className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                          placeholder="0.0"
-                        />
+                      <td className="px-2 py-2 text-center bg-gray-100">
+                        <span className="text-xs font-semibold text-gray-600">
+                          {calculateLevelAverage(level, 'merit')}
+                        </span>
                       </td>
-                      {performanceGrades.map(grade => {
-                        const weight = performanceWeights[grade] || 1.0
-                        return (
-                          <td key={grade} className={`px-2 py-2 text-center ${
-                            GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
-                          }`}>
-                            <div className="flex flex-col items-center">
-                              <span className="text-xs font-semibold text-gray-700">
-                                {calculateMeritByGrade(rates.merit, grade)}
-                              </span>
-                              <span className="text-xs text-gray-500">×{weight}</span>
-                            </div>
-                          </td>
-                        )
-                      })}
+                      {performanceGrades.map(grade => (
+                        <td key={grade} className={`px-2 py-2 text-center ${
+                          GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
+                        }`}>
+                          <input
+                            type="number"
+                            value={levelGradeRates[level]?.[grade]?.merit || ''}
+                            onChange={(e) => handleGradeRateChange(level, grade, 'merit', Number(e.target.value))}
+                            step="0.1"
+                            className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-all"
+                            placeholder="0.0"
+                          />
+                        </td>
+                      ))}
                     </tr>
                     
                     {/* 추가 행 */}
@@ -256,21 +290,23 @@ export function LevelAdjustment({
                       <td className="px-3 py-2 text-xs font-medium text-gray-700">
                         추가 ({additionalType === 'percentage' ? '%' : '만원'})
                       </td>
-                      <td className="px-2 py-2 text-center">
-                        <input
-                          type="number"
-                          value={rates.additional}
-                          onChange={(e) => onRateChange(level, 'additional', Number(e.target.value))}
-                          step={additionalType === 'percentage' ? 0.1 : 10}
-                          className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                          placeholder="0"
-                        />
+                      <td className="px-2 py-2 text-center bg-gray-100">
+                        <span className="text-xs font-semibold text-gray-600">
+                          {calculateLevelAverage(level, 'additional')}
+                        </span>
                       </td>
                       {performanceGrades.map(grade => (
                         <td key={grade} className={`px-2 py-2 text-center ${
                           GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''
                         }`}>
-                          <span className="text-xs text-gray-500">-</span>
+                          <input
+                            type="number"
+                            value={levelGradeRates[level]?.[grade]?.additional || ''}
+                            onChange={(e) => handleGradeRateChange(level, grade, 'additional', Number(e.target.value))}
+                            step={additionalType === 'percentage' ? 0.1 : 10}
+                            className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            placeholder="0"
+                          />
                         </td>
                       ))}
                     </tr>
@@ -282,10 +318,14 @@ export function LevelAdjustment({
                       </td>
                       <td className="px-2 py-2 text-center">
                         <span className="text-sm font-bold text-blue-600">
-                          {calculateTotalRate(rates.baseUp, rates.merit, rates.additional)}
+                          {calculateTotalRate(
+                            Number(calculateLevelAverage(level, 'baseUp')),
+                            Number(calculateLevelAverage(level, 'merit')),
+                            Number(calculateLevelAverage(level, 'additional'))
+                          )}
                         </span>
-                        {additionalType === 'amount' && rates.additional > 0 && (
-                          <div className="text-xs text-gray-600 mt-0.5">+{rates.additional}만</div>
+                        {additionalType === 'amount' && Number(calculateLevelAverage(level, 'additional')) > 0 && (
+                          <div className="text-xs text-gray-600 mt-0.5">+{calculateLevelAverage(level, 'additional')}만</div>
                         )}
                       </td>
                       {performanceGrades.map(grade => (
@@ -295,10 +335,14 @@ export function LevelAdjustment({
                           <span className={`text-sm font-bold ${
                             GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.text || 'text-gray-700'
                           }`}>
-                            {calculateTotalRate(rates.baseUp, rates.merit, rates.additional, grade)}
+                            {calculateTotalRate(
+                              levelGradeRates[level]?.[grade]?.baseUp || 0,
+                              levelGradeRates[level]?.[grade]?.merit || 0,
+                              levelGradeRates[level]?.[grade]?.additional || 0
+                            )}
                           </span>
-                          {additionalType === 'amount' && rates.additional > 0 && (
-                            <div className="text-xs text-gray-600 mt-0.5">+{rates.additional}만</div>
+                          {additionalType === 'amount' && (levelGradeRates[level]?.[grade]?.additional || 0) > 0 && (
+                            <div className="text-xs text-gray-600 mt-0.5">+{levelGradeRates[level]?.[grade]?.additional}만</div>
                         )}
                         </td>
                       ))}

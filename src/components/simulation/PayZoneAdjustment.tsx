@@ -48,12 +48,6 @@ export function PayZoneAdjustment({
       }
     } = {}
     
-    // 디버깅 로그
-    console.log('[PayZoneAdjustment] performanceGrades:', performanceGrades)
-    console.log('[PayZoneAdjustment] payZones:', payZones)
-    console.log('[PayZoneAdjustment] levels:', levels)
-    console.log('[PayZoneAdjustment] Sample employee:', contextEmployeeData[0])
-    
     // 초기화
     payZones.forEach(zone => {
       counts[zone] = {}
@@ -76,8 +70,6 @@ export function PayZoneAdjustment({
         counts[emp.payZone][emp.level].total++
       }
     })
-    
-    console.log('[PayZoneAdjustment] Final counts:', counts)
     return counts
   }, [contextEmployeeData, levels, payZones, performanceGrades, selectedBands])
   
@@ -90,16 +82,10 @@ export function PayZoneAdjustment({
     )
   }
   
-  // 평가등급별 Merit 계산
-  const calculateMeritByGrade = (baseMerit: number, grade: string) => {
-    const weight = performanceWeights[grade] || 1.0
-    return (baseMerit * weight).toFixed(2)
-  }
   
-  // 총 인상률 계산
-  const calculateTotalRate = (baseUp: number, merit: number, additional: number, grade?: string) => {
-    const effectiveMerit = grade ? Number(calculateMeritByGrade(merit, grade)) : merit
-    return (baseUp + effectiveMerit + (additionalType === 'percentage' ? additional : 0)).toFixed(1)
+  // 총 인상률 계산 (가중치 없이)
+  const calculateTotalRate = (baseUp: number, merit: number, additional: number) => {
+    return (baseUp + merit + (additionalType === 'percentage' ? additional : 0)).toFixed(1)
   }
 
   
@@ -267,9 +253,6 @@ export function PayZoneAdjustment({
                           className="w-16 px-1 py-1 text-xs text-center border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-all"
                           placeholder="0.0"
                         />
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          ×{weight} = {calculateMeritByGrade(rates.merit, grade)}
-                        </div>
                       </td>
                     )
                   })}
@@ -326,7 +309,7 @@ export function PayZoneAdjustment({
                         <span className={`text-sm font-bold ${
                           GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.text || 'text-gray-700'
                         }`}>
-                          {calculateTotalRate(rates.baseUp, rates.merit, rates.additional, grade)}
+                          {calculateTotalRate(rates.baseUp, rates.merit, rates.additional)}
                         </span>
                         {additionalType === 'amount' && rates.additional > 0 && (
                           <div className="text-xs text-gray-600 mt-0.5">+{rates.additional}만</div>
