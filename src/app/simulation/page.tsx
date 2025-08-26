@@ -257,7 +257,7 @@ export default function SimulationPage() {
         budgetPercentage={budgetUsage.percentage}
       />
       
-      <main className="pt-20 pb-8">
+      <main className="pt-14 pb-8">
         <div className="flex gap-3">
           {/* 좌측 메뉴 */}
           <div className="w-60 bg-white rounded-lg shadow-sm h-fit p-2 ml-3">

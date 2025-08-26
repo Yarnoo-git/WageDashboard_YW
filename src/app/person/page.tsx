@@ -189,7 +189,7 @@ export default function PersonPage() {
         budgetPercentage={budgetUsage.percentage}
       />
       
-      <main className="pt-20 px-6 pb-8">
+      <main className="pt-14 px-6 pb-8">
         <div className="max-w-7xl mx-auto">
 
         <div className="mb-6 bg-white rounded-lg shadow p-6">
