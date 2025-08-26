@@ -15,6 +15,7 @@ import {
   GradeAdjustmentRates,
   AllAdjustmentRates,
   LevelGradeRates,
+  BandGradeRates,
   PayZoneLevelGradeRates
 } from '@/types/simulation'
 import {
@@ -88,8 +89,8 @@ export function useSimulationLogic() {
   const [hasPendingChanges, setHasPendingChanges] = useState(false)
   const [pendingChangeCount, setPendingChangeCount] = useState(0)
   
-  // 조정 범위 (전체/레벨별/PayZone별)
-  const [adjustmentScope, setAdjustmentScope] = useState<'all' | 'level' | 'payzone'>('all')
+  // 조정 범위 (전체/직군별/레벨별/PayZone별)
+  const [adjustmentScope, setAdjustmentScope] = useState<'all' | 'band' | 'level' | 'payzone'>('all')
   
   // 추가인상률 타입 (비율/정액)
   const [additionalType, setAdditionalType] = useState<'percentage' | 'amount'>('percentage')
@@ -128,6 +129,7 @@ export function useSimulationLogic() {
     byGrade: {}
   })
   const [levelGradeRates, setLevelGradeRates] = useState<LevelGradeRates>({})
+  const [bandGradeRates, setBandGradeRates] = useState<BandGradeRates>({})
   const [payZoneLevelGradeRates, setPayZoneLevelGradeRates] = useState<PayZoneLevelGradeRates>({})
   
   // 적용된 상태 저장 (취소 시 복원용)
@@ -136,6 +138,7 @@ export function useSimulationLogic() {
     byGrade: {}
   })
   const [appliedLevelGradeRates, setAppliedLevelGradeRates] = useState<LevelGradeRates>({})
+  const [appliedBandGradeRates, setAppliedBandGradeRates] = useState<BandGradeRates>({})
   const [appliedPayZoneLevelGradeRates, setAppliedPayZoneLevelGradeRates] = useState<PayZoneLevelGradeRates>({})
   
   // Pending rates 초기화
@@ -373,6 +376,24 @@ export function useSimulationLogic() {
         })
         setLevelGradeRates(initialLevelGradeRatesData)
         setAppliedLevelGradeRates(JSON.parse(JSON.stringify(initialLevelGradeRatesData)))  // 깊은 복사로 저장
+        
+        // 직군별 평가등급 초기화
+        const initialBandGradeRatesData: BandGradeRates = {}
+        bands.forEach(band => {
+          const bandEmployees = contextEmployeeData.filter(emp => emp.band === band)
+          const gradeCounts = countEmployeesByGrade(bandEmployees)
+          
+          initialBandGradeRatesData[band] = {
+            average: { baseUp: aiBaseUp, merit: aiMerit, additional: 0 },
+            byGrade: { ...initialGradeRates },
+            employeeCount: {
+              total: bandEmployees.length,
+              byGrade: gradeCounts
+            }
+          }
+        })
+        setBandGradeRates(initialBandGradeRatesData)
+        setAppliedBandGradeRates(JSON.parse(JSON.stringify(initialBandGradeRatesData)))  // 깊은 복사로 저장
         
         // PayZone별 평가등급 초기화
         const initialPayZoneRates: PayZoneLevelGradeRates = {}
@@ -629,6 +650,29 @@ export function useSimulationLogic() {
       })
       return newRates
     })
+    
+    setHasPendingChanges(true)
+  }
+
+  // 직군별 평가등급 변경 핸들러
+  const handleBandGradeChange = (band: string, grade: string, field: keyof AdjustmentRates, value: number) => {
+    console.log(`[직군별] ${band} - ${grade} ${field} 값을 ${value}로 변경`)
+    
+    setBandGradeRates(prev => ({
+      ...prev,
+      [band]: {
+        ...prev[band],
+        byGrade: {
+          ...prev[band]?.byGrade || {},
+          [grade]: {
+            ...(prev[band]?.byGrade?.[grade] || { baseUp: 0, merit: 0, additional: 0 }),
+            [field]: value
+          }
+        },
+        average: prev[band]?.average || { baseUp: 0, merit: 0, additional: 0 },
+        employeeCount: prev[band]?.employeeCount || { total: 0, byGrade: {} }
+      }
+    }))
     
     setHasPendingChanges(true)
   }
@@ -1010,6 +1054,8 @@ export function useSimulationLogic() {
     setAllGradeRates,
     levelGradeRates,
     setLevelGradeRates,
+    bandGradeRates,
+    setBandGradeRates,
     payZoneLevelGradeRates,
     setPayZoneLevelGradeRates,
     
@@ -1067,6 +1113,7 @@ export function useSimulationLogic() {
     handlePayZoneLevelGradeChange,
     handleExpertChange,
     handleAllGradeChange,
+    handleBandGradeChange,
     handleLevelGradeChange,
     handlePayZoneGradeChange,
     

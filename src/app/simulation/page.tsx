@@ -18,6 +18,7 @@ import { AdjustmentScope } from '@/components/simulation/AdjustmentScope'
 import { BandFilter } from '@/components/simulation/BandFilter'
 import { ApplyBar } from '@/components/simulation/ApplyBar'
 import { AllAdjustment } from '@/components/simulation/AllAdjustment'
+import { BandAdjustment } from '@/components/simulation/BandAdjustment'
 import { LevelAdjustment } from '@/components/simulation/LevelAdjustment'
 import { PayZoneAdjustment } from '@/components/simulation/PayZoneAdjustment'
 
@@ -46,6 +47,7 @@ export default function SimulationPage() {
     // Grade-based states
     allGradeRates,
     levelGradeRates,
+    bandGradeRates,
     payZoneLevelGradeRates,
     
     // Pending states
@@ -84,8 +86,13 @@ export default function SimulationPage() {
     handleGlobalAdjustment,
     handlePayZoneLevelGradeChange,
     handleAllGradeChange,
+    handleBandGradeChange,
     handleLevelGradeChange,
     handlePayZoneGradeChange,
+    
+    // Selection states
+    selectedBand,
+    setSelectedBand,
     
     // Helper functions
     calculateBandAverage,
@@ -402,7 +409,7 @@ export default function SimulationPage() {
                   <div className="flex items-center justify-between">
                     {/* 조정 범위 탭 */}
                     <div className="flex gap-1">
-                      {(['all', 'level', 'payzone'] as const).map((s) => (
+                      {(['all', 'band', 'level', 'payzone'] as const).map((s) => (
                         <button
                           key={s}
                           onClick={() => setAdjustmentScope(s)}
@@ -412,7 +419,10 @@ export default function SimulationPage() {
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                           }`}
                         >
-                          {s === 'all' ? '전체 조정' : s === 'level' ? '레벨별' : 'Pay Zone별'}
+                          {s === 'all' ? '전체 조정' : 
+                           s === 'band' ? '직군별' :
+                           s === 'level' ? '레벨별' : 
+                           'Pay Zone별'}
                         </button>
                       ))}
                     </div>
@@ -461,13 +471,52 @@ export default function SimulationPage() {
                         onGradeChange={handleAllGradeChange}
                         onApply={applyPendingChanges}
                         onReset={resetPendingChanges}
-                        additionalType={additionalType}
-                        onAdditionalTypeChange={setAdditionalType}
                         contextEmployeeData={contextEmployeeData}
                         performanceGrades={dynamicStructure.grades}
                         hasPendingChanges={hasPendingChanges}
                         aiSettings={aiSettings}
                       />
+                    )}
+                    
+                    {adjustmentScope === 'band' && (
+                      <div>
+                        {/* 직군 선택 탭 */}
+                        <div className="bg-white rounded-lg shadow-sm px-3 py-2 mb-2">
+                          <div className="flex gap-1">
+                            {dynamicStructure.bands.map((band) => (
+                              <button
+                                key={band}
+                                onClick={() => setSelectedBand(band)}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                                  (selectedBand === band) || (!selectedBand && band === dynamicStructure.bands[0])
+                                    ? 'bg-purple-500 text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                              >
+                                {band}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* 선택된 직군 조정 테이블 */}
+                        {(selectedBand || dynamicStructure.bands[0]) && (
+                          <BandAdjustment
+                            band={selectedBand || dynamicStructure.bands[0]}
+                            bandGradeRates={bandGradeRates[selectedBand || dynamicStructure.bands[0]] || {
+                              average: { baseUp: 0, merit: 0, additional: 0 },
+                              byGrade: {},
+                              employeeCount: { total: 0, byGrade: {} }
+                            }}
+                            onGradeChange={(grade, field, value) => 
+                              handleBandGradeChange(selectedBand || dynamicStructure.bands[0], grade, field, value)
+                            }
+                            contextEmployeeData={contextEmployeeData}
+                            performanceGrades={dynamicStructure.grades}
+                            aiSettings={aiSettings}
+                          />
+                        )}
+                      </div>
                     )}
                     
                     {adjustmentScope === 'level' && (

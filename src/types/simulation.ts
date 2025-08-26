@@ -79,6 +79,17 @@ export interface LevelGradeRates {
 }
 
 // Pay Zone별 조정 모드용 (PayZone-레벨-평가등급별)
+export interface BandGradeRates {
+  [band: string]: {
+    average: AdjustmentRates
+    byGrade: GradeAdjustmentRates
+    employeeCount: {
+      total: number
+      byGrade: { [grade: string]: number }
+    }
+  }
+}
+
 export interface PayZoneLevelGradeRates {
   [zone: string]: {
     [level: string]: {
