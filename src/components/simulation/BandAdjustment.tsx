@@ -1,34 +1,35 @@
 'use client'
 
-import React, { useMemo } from 'react'
-import { GRADE_COLORS, AllAdjustmentRates } from '@/types/simulation'
+import React, { useMemo, useState } from 'react'
+import { GRADE_COLORS, BandGradeRates } from '@/types/simulation'
 import { Employee } from '@/types/employee'
 import { useWageContext } from '@/context/WageContext'
 import { calculateWeightedAverage } from '@/utils/simulationHelpers'
 
 interface BandAdjustmentProps {
-  band: string
-  bandGradeRates: AllAdjustmentRates
-  onGradeChange: (grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
+  bands: string[]
+  bandGradeRates: BandGradeRates
+  onBandGradeChange: (band: string, grade: string, field: 'baseUp' | 'merit' | 'additional', value: number) => void
   contextEmployeeData?: Employee[]
   performanceGrades?: string[]
   aiSettings?: any
 }
 
 export function BandAdjustment({
-  band,
+  bands,
   bandGradeRates,
-  onGradeChange,
+  onBandGradeChange,
   contextEmployeeData = [],
   performanceGrades = [],
   aiSettings
 }: BandAdjustmentProps) {
+  const [selectedBand, setSelectedBand] = useState<string>(bands[0] || '')
   const { performanceWeights } = useWageContext()
   
-  // 해당 직군의 직원 데이터만 필터링
+  // 선택된 직군의 직원 데이터만 필터링
   const bandEmployees = useMemo(() => {
-    return contextEmployeeData.filter(emp => emp.band === band)
-  }, [contextEmployeeData, band])
+    return contextEmployeeData.filter(emp => emp.band === selectedBand)
+  }, [contextEmployeeData, selectedBand])
   
   // 평가등급별 인원수 계산 (직군 내)
   const employeeCountByGrade = useMemo(() => {
@@ -52,12 +53,15 @@ export function BandAdjustment({
   // 가중평균 계산
   const calculateAverage = (field: 'baseUp' | 'merit' | 'additional') => {
     const items: { value: number; count: number }[] = []
+    const currentBandRates = bandGradeRates[selectedBand]
+    
+    if (!currentBandRates) return '0.0'
     
     performanceGrades.forEach(grade => {
       const gradeCount = employeeCountByGrade[grade] || 0
       if (gradeCount > 0) {
         items.push({
-          value: bandGradeRates.byGrade[grade]?.[field] || 0,
+          value: currentBandRates.byGrade?.[grade]?.[field] || 0,
           count: gradeCount
         })
       }
@@ -73,13 +77,37 @@ export function BandAdjustment({
   
   return (
     <div className="bg-white rounded-lg shadow-lg">
+      {/* 직군 선택 탭 */}
+      <div className="border-b border-gray-200">
+        <div className="flex overflow-x-auto">
+          {bands.map(band => (
+            <button
+              key={band}
+              onClick={() => setSelectedBand(band)}
+              className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-all border-b-2 ${
+                selectedBand === band
+                  ? 'border-purple-500 text-purple-600 bg-purple-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span>{band}</span>
+                <span className="text-xs px-1.5 py-0.5 bg-gray-100 rounded-full">
+                  {contextEmployeeData.filter(emp => emp.band === band).length}명
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+      
       {/* 헤더 */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3 rounded-t-lg border-b">
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h3 className="text-base font-bold text-gray-900">{band} 직군 조정</h3>
+            <h3 className="text-base font-bold text-gray-900">{selectedBand} 직군 인상률 조정</h3>
             <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-              {employeeCountByGrade.total.toLocaleString()}명
+              총 {employeeCountByGrade.total.toLocaleString()}명
             </span>
           </div>
         </div>
@@ -128,8 +156,8 @@ export function BandAdjustment({
                 <td key={grade} className={`px-3 py-3 text-center ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''}`}>
                   <input
                     type="number"
-                    value={bandGradeRates.byGrade[grade]?.baseUp || ''}
-                    onChange={(e) => onGradeChange(grade, 'baseUp', Number(e.target.value))}
+                    value={bandGradeRates[selectedBand]?.byGrade?.[grade]?.baseUp || ''}
+                    onChange={(e) => onBandGradeChange(selectedBand, grade, 'baseUp', Number(e.target.value))}
                     step="0.1"
                     className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     placeholder="0.0"
@@ -153,8 +181,8 @@ export function BandAdjustment({
                 <td key={grade} className={`px-3 py-3 text-center ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''}`}>
                   <input
                     type="number"
-                    value={bandGradeRates.byGrade[grade]?.merit || ''}
-                    onChange={(e) => onGradeChange(grade, 'merit', Number(e.target.value))}
+                    value={bandGradeRates[selectedBand]?.byGrade?.[grade]?.merit || ''}
+                    onChange={(e) => onBandGradeChange(selectedBand, grade, 'merit', Number(e.target.value))}
                     step="0.1"
                     className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                     placeholder="0.0"
@@ -178,8 +206,8 @@ export function BandAdjustment({
                 <td key={grade} className={`px-3 py-3 text-center ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''}`}>
                   <input
                     type="number"
-                    value={bandGradeRates.byGrade[grade]?.additional || ''}
-                    onChange={(e) => onGradeChange(grade, 'additional', Number(e.target.value))}
+                    value={bandGradeRates[selectedBand]?.byGrade?.[grade]?.additional || ''}
+                    onChange={(e) => onBandGradeChange(selectedBand, grade, 'additional', Number(e.target.value))}
                     step={10}
                     className="w-20 px-2 py-1.5 text-sm text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                     placeholder="0"
@@ -209,12 +237,12 @@ export function BandAdjustment({
                 <td key={grade} className={`px-3 py-3 text-center ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.bg || ''}`}>
                   <span className={`text-base font-bold ${GRADE_COLORS[grade as keyof typeof GRADE_COLORS]?.text || 'text-gray-700'}`}>
                     {calculateTotalRate(
-                      bandGradeRates.byGrade[grade]?.baseUp || 0,
-                      bandGradeRates.byGrade[grade]?.merit || 0
+                      bandGradeRates[selectedBand]?.byGrade?.[grade]?.baseUp || 0,
+                      bandGradeRates[selectedBand]?.byGrade?.[grade]?.merit || 0
                     )}
                   </span>
-                  {(bandGradeRates.byGrade[grade]?.additional || 0) > 0 && (
-                    <div className="text-xs text-gray-600 mt-0.5">+{bandGradeRates.byGrade[grade]?.additional}만</div>
+                  {(bandGradeRates[selectedBand]?.byGrade?.[grade]?.additional || 0) > 0 && (
+                    <div className="text-xs text-gray-600 mt-0.5">+{bandGradeRates[selectedBand]?.byGrade?.[grade]?.additional}만</div>
                   )}
                 </td>
               ))}

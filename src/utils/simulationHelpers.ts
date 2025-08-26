@@ -10,6 +10,7 @@ import {
   GradeAdjustmentRates,
   AllAdjustmentRates,
   LevelGradeRates,
+  BandGradeRates,
   PayZoneLevelGradeRates
 } from '@/types/simulation'
 
@@ -402,6 +403,62 @@ export const propagateLevelToPayZone = (
   })
   
   return payZoneRates
+}
+
+// 우선순위 기반 직원별 Rate 계산 (payzone > level > band > all)
+export const getEffectiveRatesForEmployee = (
+  employee: Employee,
+  adjustmentScope: 'all' | 'band' | 'level' | 'payzone',
+  allGradeRates: AllAdjustmentRates,
+  bandGradeRates: BandGradeRates,
+  levelGradeRates: LevelGradeRates,
+  payZoneLevelGradeRates: PayZoneLevelGradeRates
+): AdjustmentRates => {
+  const grade = employee.performanceRating
+  if (!grade) return { baseUp: 0, merit: 0, additional: 0 }
+  
+  // 우선순위에 따른 rate 결정
+  if (adjustmentScope === 'payzone') {
+    // PayZone 우선
+    const payZoneRate = payZoneLevelGradeRates[employee.payZone || '']?.[employee.level]?.byGrade[grade]
+    if (payZoneRate) return payZoneRate
+    
+    // PayZone 없으면 Level로 fallback
+    const levelRate = levelGradeRates[employee.level]?.byGrade[grade]
+    if (levelRate) return levelRate
+    
+    // Level도 없으면 Band로 fallback
+    const bandRate = bandGradeRates[employee.band]?.byGrade[grade]
+    if (bandRate) return bandRate
+    
+    // 모두 없으면 All로 fallback
+    return allGradeRates.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }
+  }
+  
+  if (adjustmentScope === 'level') {
+    // Level 우선
+    const levelRate = levelGradeRates[employee.level]?.byGrade[grade]
+    if (levelRate) return levelRate
+    
+    // Level 없으면 Band로 fallback
+    const bandRate = bandGradeRates[employee.band]?.byGrade[grade]
+    if (bandRate) return bandRate
+    
+    // Band도 없으면 All로 fallback
+    return allGradeRates.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }
+  }
+  
+  if (adjustmentScope === 'band') {
+    // Band 우선
+    const bandRate = bandGradeRates[employee.band]?.byGrade[grade]
+    if (bandRate) return bandRate
+    
+    // Band 없으면 All로 fallback
+    return allGradeRates.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }
+  }
+  
+  // All scope
+  return allGradeRates.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }
 }
 
 // PayZone별 → 레벨별 역전파 (가중평균)

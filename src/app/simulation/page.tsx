@@ -191,6 +191,18 @@ export default function SimulationPage() {
           totalCount++
         }
       })
+    } else if (adjustmentScope === 'band') {
+      // 직군별 조정: bandGradeRates 사용
+      contextEmployeeData.forEach(emp => {
+        const band = emp.band
+        const grade = emp.performanceRating || emp.performanceGrade
+        if (band && grade && bandGradeRates[band]?.byGrade[grade]) {
+          totalBaseUp += bandGradeRates[band].byGrade[grade].baseUp || 0
+          totalMerit += bandGradeRates[band].byGrade[grade].merit || 0
+          totalAdditional += bandGradeRates[band].byGrade[grade].additional || 0
+          totalCount++
+        }
+      })
     } else if (adjustmentScope === 'level') {
       // 레벨별 조정: levelGradeRates 사용
       contextEmployeeData.forEach(emp => {
@@ -427,38 +439,29 @@ export default function SimulationPage() {
                       ))}
                     </div>
                     
-                    {/* 직군 필터 */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-600">직군:</span>
-                      <div className="flex gap-1">
-                        {dynamicStructure.bands.map((band) => (
-                          <button
-                            key={band}
-                            onClick={() => handleBandToggle(band)}
-                            className={`px-3 py-1 text-xs rounded-full transition-all ${
-                              selectedBands.includes(band)
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                            }`}
-                          >
-                            {band}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex gap-1 border-l pl-3">
-                        <button
-                          onClick={handleSelectAllBands}
-                          className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
-                        >
-                          전체
-                        </button>
-                        <button
-                          onClick={handleClearAllBands}
-                          className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 rounded"
-                        >
-                          해제
-                        </button>
-                      </div>
+                    {/* 추가인상률 타입 선택 */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">추가인상:</span>
+                      <button
+                        onClick={() => setAdditionalType('percentage')}
+                        className={`px-3 py-1 text-xs rounded-full transition-all ${
+                          additionalType === 'percentage'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        }`}
+                      >
+                        비율(%)
+                      </button>
+                      <button
+                        onClick={() => setAdditionalType('amount')}
+                        className={`px-3 py-1 text-xs rounded-full transition-all ${
+                          additionalType === 'amount'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        }`}
+                      >
+                        정액(만원)
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -479,44 +482,14 @@ export default function SimulationPage() {
                     )}
                     
                     {adjustmentScope === 'band' && (
-                      <div>
-                        {/* 직군 선택 탭 */}
-                        <div className="bg-white rounded-lg shadow-sm px-3 py-2 mb-2">
-                          <div className="flex gap-1">
-                            {dynamicStructure.bands.map((band) => (
-                              <button
-                                key={band}
-                                onClick={() => setSelectedBand(band)}
-                                className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                                  (selectedBand === band) || (!selectedBand && band === dynamicStructure.bands[0])
-                                    ? 'bg-purple-500 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                              >
-                                {band}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* 선택된 직군 조정 테이블 */}
-                        {(selectedBand || dynamicStructure.bands[0]) && (
-                          <BandAdjustment
-                            band={selectedBand || dynamicStructure.bands[0]}
-                            bandGradeRates={bandGradeRates[selectedBand || dynamicStructure.bands[0]] || {
-                              average: { baseUp: 0, merit: 0, additional: 0 },
-                              byGrade: {},
-                              employeeCount: { total: 0, byGrade: {} }
-                            }}
-                            onGradeChange={(grade, field, value) => 
-                              handleBandGradeChange(selectedBand || dynamicStructure.bands[0], grade, field, value)
-                            }
-                            contextEmployeeData={contextEmployeeData}
-                            performanceGrades={dynamicStructure.grades}
-                            aiSettings={aiSettings}
-                          />
-                        )}
-                      </div>
+                      <BandAdjustment
+                        bands={dynamicStructure.bands}
+                        bandGradeRates={bandGradeRates}
+                        onBandGradeChange={handleBandGradeChange}
+                        contextEmployeeData={contextEmployeeData}
+                        performanceGrades={dynamicStructure.grades}
+                        aiSettings={aiSettings}
+                      />
                     )}
                     
                     {adjustmentScope === 'level' && (

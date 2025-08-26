@@ -21,6 +21,8 @@ export interface BudgetUsage {
   percentage: number
 }
 
+export type AdjustmentScope = 'all' | 'band' | 'level' | 'payzone'
+
 export type ViewMode = 'adjustment' | 'all' | 'band' | 'payzone' | 'competitiveness'
 
 export type AdjustmentMode = 'simple' | 'advanced' | 'expert'
