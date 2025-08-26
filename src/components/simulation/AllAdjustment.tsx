@@ -84,39 +84,6 @@ export function AllAdjustment({
             <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
               {employeeCountByGrade.total.toLocaleString()}명
             </span>
-            {/* Live 인상률 표시 */}
-            <div className="flex items-center gap-2 ml-2">
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-600">Base-up:</span>
-                <span className="text-xs font-bold text-blue-600">{calculateAverage('baseUp')}%</span>
-              </div>
-              <div className="text-xs text-gray-400">|</div>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-600">성과:</span>
-                <span className="text-xs font-bold text-green-600">{calculateAverage('merit')}%</span>
-              </div>
-              <div className="text-xs text-gray-400">|</div>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-600">추가:</span>
-                <span className="text-xs font-bold text-purple-600">
-                  {calculateAverage('additional')}{additionalType === 'percentage' ? '%' : '만원'}
-                </span>
-              </div>
-              <div className="text-xs text-gray-400">|</div>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-600">총:</span>
-                <span className="text-xs font-bold text-red-600">
-                  {calculateTotalRate(
-                    Number(calculateAverage('baseUp')),
-                    Number(calculateAverage('merit')),
-                    Number(calculateAverage('additional'))
-                  )}%
-                </span>
-                {additionalType === 'amount' && Number(calculateAverage('additional')) > 0 && (
-                  <span className="text-xs text-gray-600">+{calculateAverage('additional')}만</span>
-                )}
-              </div>
-            </div>
           </div>
           <div className="flex items-center gap-2">
             {/* 추가 타입 선택 */}

@@ -107,29 +107,6 @@ export function PayZoneAdjustment({
     return (baseUp + merit + (additionalType === 'percentage' ? additional : 0)).toFixed(1)
   }
   
-  // 전체 PayZone 가중평균 계산
-  const calculateOverallAverage = (field: 'baseUp' | 'merit' | 'additional') => {
-    const items: { value: number; count: number }[] = []
-    
-    payZones.forEach(payZone => {
-      levels.forEach(level => {
-        const payZoneData = payZoneLevelGradeRates[payZone]?.[level]
-        if (payZoneData) {
-          performanceGrades.forEach(grade => {
-            const gradeCount = payZoneData.employeeCount?.byGrade[grade] || 0
-            if (gradeCount > 0 && payZoneData.byGrade[grade]) {
-              items.push({
-                value: payZoneData.byGrade[grade][field] || 0,
-                count: gradeCount
-              })
-            }
-          })
-        }
-      })
-    })
-    
-    return items.length > 0 ? calculateWeightedAverage(items).toFixed(1) : '0.0'
-  }
 
   
   // PayZone-Level 조합별 렌더링
@@ -375,36 +352,6 @@ export function PayZoneAdjustment({
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold text-gray-900">Pay Zone별 조정</h3>
           <span className="text-xs text-gray-500">PayZone-레벨-평가등급별 세분화 조정</span>
-          {/* Live 인상률 표시 */}
-          <div className="flex items-center gap-2 ml-2">
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-600">Base-up:</span>
-              <span className="text-xs font-bold text-blue-600">{calculateOverallAverage('baseUp')}%</span>
-            </div>
-            <div className="text-xs text-gray-400">|</div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-600">성과:</span>
-              <span className="text-xs font-bold text-green-600">{calculateOverallAverage('merit')}%</span>
-            </div>
-            <div className="text-xs text-gray-400">|</div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-600">추가:</span>
-              <span className="text-xs font-bold text-purple-600">
-                {calculateOverallAverage('additional')}{additionalType === 'percentage' ? '%' : '만원'}
-              </span>
-            </div>
-            <div className="text-xs text-gray-400">|</div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-600">총:</span>
-              <span className="text-xs font-bold text-red-600">
-                {calculateTotalRate(
-                  Number(calculateOverallAverage('baseUp')),
-                  Number(calculateOverallAverage('merit')),
-                  Number(calculateOverallAverage('additional'))
-                )}%
-              </span>
-            </div>
-          </div>
         </div>
         <div className="flex gap-2">
           <button

@@ -172,44 +172,44 @@ export default function SimulationPage() {
     let totalAdditional = 0
     let totalCount = 0
     
-    // 조정 모드에 따라 다른 인상률 적용
-    contextEmployeeData.forEach(emp => {
-      const level = emp.level
-      const band = emp.bandName
-      const payZone = emp.payZone
-      
-      let baseUp = 0
-      let merit = 0
-      let additional = 0
-      
-      if (adjustmentScope === 'payzone' && payZone && emp.performanceGrade) {
-        // PayZone별 조정: PayZone-Level-Grade별 인상률 (pending rates 사용)
-        const grade = emp.performanceGrade
-        if (pendingPayZoneRates[payZone]?.[level]?.[grade]) {
-          baseUp = pendingPayZoneRates[payZone][level][grade].baseUp || 0
-          merit = pendingPayZoneRates[payZone][level][grade].merit || 0
-          additional = pendingPayZoneRates[payZone][level][grade].additional || 0
+    // 조정 모드에 따라 Grade 기반 rates 사용
+    if (adjustmentScope === 'all') {
+      // 전체 조정: allGradeRates 사용
+      contextEmployeeData.forEach(emp => {
+        const grade = emp.performanceRating || emp.performanceGrade
+        if (grade && allGradeRates.byGrade[grade]) {
+          totalBaseUp += allGradeRates.byGrade[grade].baseUp || 0
+          totalMerit += allGradeRates.byGrade[grade].merit || 0
+          totalAdditional += allGradeRates.byGrade[grade].additional || 0
+          totalCount++
         }
-      } else if (adjustmentScope === 'level') {
-        // 레벨별 조정: 레벨별 인상률 (pending rates 사용)
-        baseUp = pendingLevelRates[level]?.baseUp || 0
-        merit = pendingLevelRates[level]?.merit || 0
-        additional = pendingLevelRates[level]?.additional || 0
-      } else {
-        // 전체 조정: 모든 직원 동일 (pending rates의 평균)
-        const levels = Object.keys(pendingLevelRates)
-        if (levels.length > 0) {
-          baseUp = levels.reduce((sum, l) => sum + (pendingLevelRates[l]?.baseUp || 0), 0) / levels.length
-          merit = levels.reduce((sum, l) => sum + (pendingLevelRates[l]?.merit || 0), 0) / levels.length
-          additional = levels.reduce((sum, l) => sum + (pendingLevelRates[l]?.additional || 0), 0) / levels.length
+      })
+    } else if (adjustmentScope === 'level') {
+      // 레벨별 조정: levelGradeRates 사용
+      contextEmployeeData.forEach(emp => {
+        const level = emp.level
+        const grade = emp.performanceRating || emp.performanceGrade
+        if (level && grade && levelGradeRates[level]?.byGrade[grade]) {
+          totalBaseUp += levelGradeRates[level].byGrade[grade].baseUp || 0
+          totalMerit += levelGradeRates[level].byGrade[grade].merit || 0
+          totalAdditional += levelGradeRates[level].byGrade[grade].additional || 0
+          totalCount++
         }
-      }
-      
-      totalBaseUp += baseUp
-      totalMerit += merit
-      totalAdditional += additional
-      totalCount++
-    })
+      })
+    } else if (adjustmentScope === 'payzone') {
+      // PayZone별 조정: payZoneLevelGradeRates 사용
+      contextEmployeeData.forEach(emp => {
+        const payZone = emp.payZone
+        const level = emp.level
+        const grade = emp.performanceRating || emp.performanceGrade
+        if (payZone && level && grade && payZoneLevelGradeRates[payZone]?.[level]?.byGrade[grade]) {
+          totalBaseUp += payZoneLevelGradeRates[payZone][level].byGrade[grade].baseUp || 0
+          totalMerit += payZoneLevelGradeRates[payZone][level].byGrade[grade].merit || 0
+          totalAdditional += payZoneLevelGradeRates[payZone][level].byGrade[grade].additional || 0
+          totalCount++
+        }
+      })
+    }
     
     return {
       baseUp: totalCount > 0 ? totalBaseUp / totalCount : 0,
@@ -362,49 +362,6 @@ export default function SimulationPage() {
             {/* 인상률 조정 뷰 */}
             {viewMode === 'adjustment' && (
               <>
-                
-                {/* 컴팩트한 예산 현황 - 우측 상단에 작게 표시 */}
-                <div className="bg-white rounded-lg shadow-sm p-2 mb-2 border border-gray-200">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-xs font-medium text-gray-700">예산 상세</h3>
-                    <button 
-                      onClick={() => router.push('/dashboard')}
-                      className="text-xs text-blue-600 hover:text-blue-700"
-                    >
-                      설정 →
-                    </button>
-                  </div>
-                  
-                </div>
-                
-                {/* 예산 요약 한 줄 */}
-                <div className="bg-white rounded-lg shadow-sm px-3 py-1.5 mb-2 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-6">
-                    <span className="text-gray-600">
-                      예산: <span className="font-semibold text-gray-900">{formatKoreanCurrency(availableBudget, '억원')}</span>
-                    </span>
-                    <span className="text-gray-600">
-                      사용: <span className="font-semibold text-gray-900">{formatKoreanCurrency(budgetUsage.total, '억원')}</span>
-                      <span className={`ml-1 font-semibold ${
-                        budgetUsage.percentage > 90 ? 'text-red-600' : 
-                        budgetUsage.percentage > 70 ? 'text-yellow-600' : 'text-blue-600'
-                      }`}>
-                        ({budgetUsage.percentage.toFixed(1)}%)
-                      </span>
-                    </span>
-                    <span className="text-gray-600">
-                      잔여: <span className="font-semibold text-green-600">{formatKoreanCurrency((availableBudget - welfareBudget - budgetUsage.total), '억원', 100000000)}</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {pendingChangeCount > 0 && (
-                      <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium">
-                        {pendingChangeCount}개 변경사항
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
                 {/* 상단 컨트롤 */}
                 <div className="bg-white rounded-lg shadow-sm px-3 py-2 mb-2">
                   <div className="flex items-center justify-between">
