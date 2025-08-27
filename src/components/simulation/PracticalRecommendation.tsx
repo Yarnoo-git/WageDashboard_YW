@@ -13,6 +13,8 @@ import {
   initializePracticalData,
   updateBandValueAndRecalculateTotal,
   distributeTotalToBands,
+  distributeAllToPayZones,
+  calculateAllFromPayZones,
   applyPracticalToMatrix
 } from '@/utils/practicalCalculation'
 
@@ -96,7 +98,7 @@ export function PracticalRecommendation() {
     })
   }
   
-  // 직군 값 변경 핸들러
+  // 직군 값 변경 핸들러 (전체 재계산 + PayZone 처리)
   const handleBandCellChange = (
     level: string,
     payZone: string,
@@ -108,13 +110,31 @@ export function PracticalRecommendation() {
     if (!practicalData) return
     
     const newData = { ...practicalData }
-    updateBandValueAndRecalculateTotal(newData, level, payZone, band, grade, field, value)
-    setPracticalData(newData)
     
-    // Context에 변경사항 적용 (전체 PayZone만)
-    if (payZone === 'all') {
-      context.actions.updateCellGradeRate(band, level, grade, field, value)
+    // 1. 직군 값 업데이트
+    const cell = newData.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
+    if (cell) {
+      cell[field] = value
     }
+    
+    // 2. 가로 방향: 직군 → 전체 (가중평균 재계산)
+    updateBandValueAndRecalculateTotal(newData, level, payZone, band, grade, field, value)
+    
+    // 3. 세로 방향 처리
+    if (payZone === 'all') {
+      // all PayZone 수정 시 → 개별 PayZone들에 동일값 설정
+      distributeAllToPayZones(newData, level, band, grade, field, value)
+      
+      // Context에 변경사항 적용
+      context.actions.updateCellGradeRate(band, level, grade, field, value)
+    } else {
+      // 개별 PayZone 수정 시 → all PayZone 재계산 (가중평균)
+      calculateAllFromPayZones(newData, level, band, grade)
+      // 전체 컬럼의 all PayZone도 재계산
+      calculateAllFromPayZones(newData, level, 'total', grade)
+    }
+    
+    setPracticalData(newData)
   }
   
   // 선택된 직군 또는 전체 직군 가져오기
@@ -122,7 +142,7 @@ export function PracticalRecommendation() {
     return selectedBands.length === 0 ? practicalData?.metadata.bands || [] : selectedBands
   }
   
-  // 전체 값 변경 핸들러 (직군에 비례 분배)
+  // 전체 값 변경 핸들러 (직군에 동일값 설정 + PayZone 처리)
   const handleTotalCellChange = (
     level: string,
     payZone: string,
@@ -133,20 +153,34 @@ export function PracticalRecommendation() {
     if (!practicalData) return
     
     const newData = { ...practicalData }
-    // 선택된 직군이 없으면 전체 직군에 분배, 있으면 선택된 직군에만 분배
-    const bandsToDistribute = getEffectiveBands()
-    distributeTotalToBands(newData, level, payZone, grade, field, value, bandsToDistribute)
-    setPracticalData(newData)
+    const bandsToApply = getEffectiveBands()
     
-    // Context에 변경사항 적용 (전체 PayZone만)
+    // 1. 가로 방향: 전체 → 직군들 (동일값 설정)
+    distributeTotalToBands(newData, level, payZone, grade, field, value, bandsToApply)
+    
+    // 2. 세로 방향: all PayZone이면 → 개별 PayZone들에도 동일값 설정
     if (payZone === 'all') {
-      for (const band of bandsToDistribute) {
-        const bandCell = newData.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
-        if (bandCell) {
-          context.actions.updateCellGradeRate(band, level, grade, field, bandCell[field])
-        }
+      // 전체 컬럼을 모든 PayZone에 적용
+      distributeAllToPayZones(newData, level, 'total', grade, field, value)
+      
+      // 각 직군 컬럼도 모든 PayZone에 적용
+      for (const band of bandsToApply) {
+        distributeAllToPayZones(newData, level, band, grade, field, value)
+      }
+      
+      // Context에 변경사항 적용
+      for (const band of bandsToApply) {
+        context.actions.updateCellGradeRate(band, level, grade, field, value)
+      }
+    } else {
+      // 3. 개별 PayZone 수정 시 → all PayZone 재계산 (가중평균)
+      calculateAllFromPayZones(newData, level, 'total', grade)
+      for (const band of bandsToApply) {
+        calculateAllFromPayZones(newData, level, band, grade)
       }
     }
+    
+    setPracticalData(newData)
   }
   
   if (!practicalData) {

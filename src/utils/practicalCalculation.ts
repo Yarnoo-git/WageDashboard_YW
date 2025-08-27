@@ -181,7 +181,7 @@ export function calculateTotalFromBands(
 }
 
 /**
- * 전체 컬럼 값 변경 시 직군별 비례 분배
+ * 전체 컬럼 값 변경 시 직군에 동일값 설정 (Top-down)
  */
 export function distributeTotalToBands(
   data: PracticalRecommendationData,
@@ -190,39 +190,24 @@ export function distributeTotalToBands(
   grade: string,
   field: 'baseUp' | 'merit' | 'additional',
   newValue: number,
-  targetBands?: string[]  // 분배 대상 직군들 (없으면 전체)
+  targetBands?: string[]  // 적용 대상 직군들 (없으면 전체)
 ): void {
-  const currentTotal = data.hierarchy[level]?.[payZone]?.total[grade]
-  if (!currentTotal) return
+  // 적용 대상 직군 결정
+  const bandsToApply = targetBands || data.metadata.bands
   
-  const currentValue = currentTotal[field]
-  const delta = newValue - currentValue
-  
-  // 분배 대상 직군 결정
-  const bandsToDistribute = targetBands || data.metadata.bands
-  
-  // 전체 가중치 계산
-  let totalWeight = 0
-  for (const band of bandsToDistribute) {
+  // 모든 직군에 동일한 값 설정 (Top-down)
+  for (const band of bandsToApply) {
     const cell = data.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
-    if (cell && cell.employeeCount > 0) {
-      totalWeight += cell.totalSalary
+    if (cell) {
+      cell[field] = newValue  // 동일한 값으로 설정
     }
   }
   
-  if (totalWeight === 0) return
-  
-  // 비례 분배
-  for (const band of bandsToDistribute) {
-    const cell = data.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
-    if (cell && cell.employeeCount > 0) {
-      const ratio = cell.totalSalary / totalWeight
-      cell[field] += delta * ratio
-    }
+  // 전체 컬럼도 업데이트
+  const totalCell = data.hierarchy[level]?.[payZone]?.total[grade]
+  if (totalCell) {
+    totalCell[field] = newValue
   }
-  
-  // 전체 컬럼 업데이트
-  data.hierarchy[level][payZone].total[grade][field] = newValue
 }
 
 /**
@@ -252,6 +237,97 @@ export function updateBandValueAndRecalculateTotal(
     data.metadata.bands
   )
   data.hierarchy[level][payZone].total[grade] = totalCell
+}
+
+/**
+ * all PayZone 값을 개별 PayZone에 동일값 설정 (Top-down)
+ */
+export function distributeAllToPayZones(
+  data: PracticalRecommendationData,
+  level: string,
+  band: string | 'total',  // 'total'이면 전체 컬럼, 아니면 특정 직군
+  grade: string,
+  field: 'baseUp' | 'merit' | 'additional',
+  newValue: number
+): void {
+  // 모든 개별 PayZone에 동일한 값 설정
+  for (const payZone of data.metadata.payZones) {
+    if (payZone === 'all') continue  // all은 제외
+    
+    if (band === 'total') {
+      // 전체 컬럼 업데이트
+      const cell = data.hierarchy[level]?.[payZone]?.total[grade]
+      if (cell) {
+        cell[field] = newValue
+      }
+    } else {
+      // 특정 직군 컬럼 업데이트
+      const cell = data.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
+      if (cell) {
+        cell[field] = newValue
+      }
+    }
+  }
+}
+
+/**
+ * 개별 PayZone들의 가중평균으로 all PayZone 계산 (Bottom-up)
+ */
+export function calculateAllFromPayZones(
+  data: PracticalRecommendationData,
+  level: string,
+  band: string | 'total',  // 'total'이면 전체 컬럼, 아니면 특정 직군
+  grade: string
+): void {
+  let weightedBaseUp = 0
+  let weightedMerit = 0
+  let weightedAdditional = 0
+  let totalWeight = 0
+  let totalEmployeeCount = 0
+  let totalSalarySum = 0
+  
+  // 개별 PayZone들의 가중평균 계산
+  for (const payZone of data.metadata.payZones) {
+    if (payZone === 'all') continue  // all은 제외
+    
+    let cell: PracticalCell | undefined
+    if (band === 'total') {
+      cell = data.hierarchy[level]?.[payZone]?.total[grade]
+    } else {
+      cell = data.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
+    }
+    
+    if (cell && cell.employeeCount > 0) {
+      const weight = cell.totalSalary
+      weightedBaseUp += cell.baseUp * weight
+      weightedMerit += cell.merit * weight
+      weightedAdditional += cell.additional * weight
+      totalWeight += weight
+      totalEmployeeCount += cell.employeeCount
+      totalSalarySum += cell.totalSalary
+    }
+  }
+  
+  // all PayZone 업데이트
+  if (totalWeight > 0) {
+    if (band === 'total') {
+      const allCell = data.hierarchy[level]?.['all']?.total[grade]
+      if (allCell) {
+        allCell.baseUp = weightedBaseUp / totalWeight
+        allCell.merit = weightedMerit / totalWeight
+        allCell.additional = weightedAdditional / totalWeight
+        // 인원수와 급여 합계는 그대로 유지 (이미 계산되어 있음)
+      }
+    } else {
+      const allCell = data.hierarchy[level]?.['all']?.byBand[band]?.[grade]
+      if (allCell) {
+        allCell.baseUp = weightedBaseUp / totalWeight
+        allCell.merit = weightedMerit / totalWeight
+        allCell.additional = weightedAdditional / totalWeight
+        // 인원수와 급여 합계는 그대로 유지
+      }
+    }
+  }
 }
 
 /**
