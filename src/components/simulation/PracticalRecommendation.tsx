@@ -5,7 +5,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useWageContextNew } from '@/context/WageContextNew'
 import { PracticalRecommendationCell } from './PracticalRecommendationCell'
 import {
@@ -23,6 +23,16 @@ export function PracticalRecommendation() {
   const [expandedLevels, setExpandedLevels] = useState<Set<string>>(new Set())
   const [showAllZones, setShowAllZones] = useState(false) // 기본적으로 전체 Zone만 표시
   const [isCompactMode, setIsCompactMode] = useState(true) // 기본값 컴팩트 모드
+  const [showDropdown, setShowDropdown] = useState(false) // 드롭다운 표시 여부
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  // 동적 컴팩트 모드 - 직군 수에 따라 자동 조정
+  const getAutoCompactMode = () => {
+    if (selectedBands.length >= 3) return true  // 3개 이상은 무조건 컴팩트
+    return isCompactMode  // 2개 이하는 사용자 설정 따름
+  }
+  
+  const effectiveCompactMode = getAutoCompactMode()
   
   // 실무 추천안 데이터 초기화
   useEffect(() => {
@@ -51,6 +61,20 @@ export function PracticalRecommendation() {
       }
     })
   }
+  
+  // 드롭다운 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showDropdown])
   
   // 모든 직군 선택/해제
   const toggleAllBands = () => {
@@ -138,27 +162,65 @@ export function PracticalRecommendation() {
   const displayedPayZones = showAllZones ? practicalData.metadata.payZones : ['all']
   
   return (
-    <div className="bg-white rounded-lg shadow-lg">
+    <div className="bg-white rounded-lg shadow-lg p-4">
       {/* 직군 선택 바 */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="pb-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">표시할 직군 선택</h3>
+          <h3 className="text-sm font-semibold text-gray-700">실무 추천안 설정</h3>
           <div className="flex gap-2">
-            <button
-              onClick={toggleAllBands}
-              className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              {selectedBands.length === practicalData.metadata.bands.length ? '모두 해제' : '모두 선택'}
-            </button>
+            {/* 직군 선택 드롭다운 */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="px-3 py-1 text-xs bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1"
+              >
+                <span>직군 선택 ({selectedBands.length}개)</span>
+                <span className="text-gray-400">{showDropdown ? '▲' : '▼'}</span>
+              </button>
+              
+              {showDropdown && (
+                <div className="absolute top-full mt-1 left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-[180px] z-30">
+                  <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-200">
+                    <span className="text-xs font-semibold text-gray-700">직군 선택</span>
+                    <button
+                      onClick={toggleAllBands}
+                      className="text-xs text-blue-600 hover:text-blue-700"
+                    >
+                      {selectedBands.length === practicalData.metadata.bands.length ? '모두 해제' : '모두 선택'}
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-60 overflow-y-auto">
+                    {practicalData.metadata.bands.map(band => (
+                      <label
+                        key={band}
+                        className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedBands.includes(band)}
+                          onChange={() => toggleBandSelection(band)}
+                          className="w-3 h-3"
+                        />
+                        <span className="text-sm text-gray-700">{band}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
             <button
               onClick={() => setIsCompactMode(!isCompactMode)}
               className={`px-3 py-1 text-xs rounded-lg transition-colors ${
-                isCompactMode 
+                effectiveCompactMode 
                   ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              } ${selectedBands.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={selectedBands.length >= 3}
+              title={selectedBands.length >= 3 ? '3개 이상 직군 선택 시 자동 컴팩트 모드' : ''}
             >
-              {isCompactMode ? '📦 컴팩트' : '📊 상세'}
+              {effectiveCompactMode ? '📦 컴팩트' : '📊 상세'}
+              {selectedBands.length >= 3 && ' (자동)'}
             </button>
             <button
               onClick={() => setShowAllZones(!showAllZones)}
@@ -169,30 +231,14 @@ export function PracticalRecommendation() {
           </div>
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          {practicalData.metadata.bands.map(band => (
-            <button
-              key={band}
-              onClick={() => toggleBandSelection(band)}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
-                selectedBands.includes(band)
-                  ? 'bg-blue-500 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {band}
-            </button>
-          ))}
-        </div>
-        
         {selectedBands.length === 0 && (
-          <p className="text-xs text-gray-500 mt-2">최소 1개 이상의 직군을 선택해주세요</p>
+          <p className="text-xs text-gray-500 mt-2">직군을 선택하여 상세 비교 및 편집이 가능합니다</p>
         )}
       </div>
       
       {/* 테이블 */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+      <div className={`overflow-x-auto mt-4 ${selectedBands.length === 0 ? 'flex justify-center' : ''}`}>
+        <table className={`${selectedBands.length === 0 ? 'w-auto' : 'w-full'} border-collapse`}>
           <thead>
             {/* 첫 번째 헤더 행 - 직군별 그룹 */}
             <tr className="border-b-2 border-gray-300">
@@ -202,8 +248,8 @@ export function PracticalRecommendation() {
               
               {/* 전체 컬럼 */}
               <th className="bg-blue-100 border border-gray-300 text-center" colSpan={practicalData.metadata.grades.length}>
-                <div className="text-xs font-bold text-blue-700 py-0.5">【전체】</div>
-                {isCompactMode && <div className="text-[10px] text-blue-600">클릭 편집</div>}
+                <div className={`${selectedBands.length === 0 ? 'text-sm' : 'text-xs'} font-bold text-blue-700 py-0.5`}>【전체】</div>
+                {effectiveCompactMode && selectedBands.length > 0 && <div className="text-[10px] text-blue-600">클릭 편집</div>}
               </th>
               
               {/* 선택된 직군별 컬럼들 */}
@@ -218,15 +264,18 @@ export function PracticalRecommendation() {
             <tr>
               {/* 전체 컬럼의 평가등급들 */}
               {practicalData.metadata.grades.map(grade => (
-                <th key={`total-${grade}`} className={`bg-blue-50 border border-gray-300 px-0.5 py-0.5 ${isCompactMode ? 'min-w-[45px]' : 'min-w-[80px]'}`}>
-                  <div className="text-[10px] font-semibold text-blue-700">{grade}</div>
+                <th key={`total-${grade}`} className={`bg-blue-50 border border-gray-300 px-0.5 py-0.5 ${
+                  selectedBands.length === 0 ? 'min-w-[100px]' : 
+                  effectiveCompactMode ? 'min-w-[45px]' : 'min-w-[80px]'
+                }`}>
+                  <div className={`${selectedBands.length === 0 ? 'text-xs' : 'text-[10px]'} font-semibold text-blue-700`}>{grade}</div>
                 </th>
               ))}
               
               {/* 각 선택된 직군의 평가등급들 */}
               {selectedBands.map(band => 
                 practicalData.metadata.grades.map(grade => (
-                  <th key={`${band}-${grade}`} className={`bg-gray-50 border border-gray-300 px-0.5 py-0.5 ${isCompactMode ? 'min-w-[45px]' : 'min-w-[80px]'}`}>
+                  <th key={`${band}-${grade}`} className={`bg-gray-50 border border-gray-300 px-0.5 py-0.5 ${effectiveCompactMode ? 'min-w-[45px]' : 'min-w-[80px]'}`}>
                     <div className="text-[10px] font-semibold text-gray-700">{grade}</div>
                   </th>
                 ))
@@ -311,7 +360,7 @@ export function PracticalRecommendation() {
                                   employeeCount={totalCell.employeeCount}
                                   isEditable={true}
                                   isTotal={true}
-                                  isCompact={isCompactMode}
+                                  isCompact={selectedBands.length === 0 ? false : effectiveCompactMode}
                                   onChange={(field, value) => handleTotalCellChange(level, payZone, grade, field, value)}
                                 />
                               )}
@@ -334,7 +383,7 @@ export function PracticalRecommendation() {
                                     employeeCount={bandCell.employeeCount}
                                     isEditable={true}
                                     isTotal={false}
-                                    isCompact={isCompactMode}
+                                    isCompact={effectiveCompactMode}
                                     onChange={(field, value) => handleBandCellChange(level, payZone, band, grade, field, value)}
                                     band={band}
                                     level={level}
@@ -357,7 +406,7 @@ export function PracticalRecommendation() {
       </div>
       
       {/* 하단 안내 */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="pt-4 border-t border-gray-200 mt-4">
         <div className="grid grid-cols-2 gap-4 text-xs">
           <div>
             <p className="font-semibold text-gray-700 mb-1">💡 사용 방법</p>
