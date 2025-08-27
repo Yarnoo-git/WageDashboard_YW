@@ -43,10 +43,8 @@ export function PracticalRecommendation() {
       )
       setPracticalData(data)
       
-      // 기본적으로 첫 2개 직군 선택, 모든 레벨 펼치기
-      if (data.metadata.bands.length > 0) {
-        setSelectedBands(data.metadata.bands.slice(0, Math.min(2, data.metadata.bands.length)))
-      }
+      // 기본적으로 직군 선택 안 함 (전체 모드)
+      setSelectedBands([])
       setExpandedLevels(new Set(data.metadata.levels))
     }
   }, [context.originalData.employees, context.adjustment.matrix])
@@ -119,6 +117,11 @@ export function PracticalRecommendation() {
     }
   }
   
+  // 선택된 직군 또는 전체 직군 가져오기
+  const getEffectiveBands = () => {
+    return selectedBands.length === 0 ? practicalData?.metadata.bands || [] : selectedBands
+  }
+  
   // 전체 값 변경 핸들러 (직군에 비례 분배)
   const handleTotalCellChange = (
     level: string,
@@ -130,12 +133,14 @@ export function PracticalRecommendation() {
     if (!practicalData) return
     
     const newData = { ...practicalData }
-    distributeTotalToBands(newData, level, payZone, grade, field, value)
+    // 선택된 직군이 없으면 전체 직군에 분배, 있으면 선택된 직군에만 분배
+    const bandsToDistribute = getEffectiveBands()
+    distributeTotalToBands(newData, level, payZone, grade, field, value, bandsToDistribute)
     setPracticalData(newData)
     
     // Context에 변경사항 적용 (전체 PayZone만)
     if (payZone === 'all') {
-      for (const band of newData.metadata.bands) {
+      for (const band of bandsToDistribute) {
         const bandCell = newData.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
         if (bandCell) {
           context.actions.updateCellGradeRate(band, level, grade, field, bandCell[field])
@@ -248,7 +253,9 @@ export function PracticalRecommendation() {
               
               {/* 전체 컬럼 */}
               <th className="bg-blue-100 border border-gray-300 text-center" colSpan={practicalData.metadata.grades.length}>
-                <div className={`${selectedBands.length === 0 ? 'text-sm' : 'text-xs'} font-bold text-blue-700 py-0.5`}>【전체】</div>
+                <div className={`${selectedBands.length === 0 ? 'text-sm' : 'text-xs'} font-bold text-blue-700 py-0.5`}>
+                  {selectedBands.length === 0 ? '【전체 직군】' : '【가중평균】'}
+                </div>
                 {effectiveCompactMode && selectedBands.length > 0 && <div className="text-[10px] text-blue-600">클릭 편집</div>}
               </th>
               
@@ -409,11 +416,21 @@ export function PracticalRecommendation() {
       <div className="pt-4 border-t border-gray-200 mt-4">
         <div className="grid grid-cols-2 gap-4 text-xs">
           <div>
-            <p className="font-semibold text-gray-700 mb-1">💡 사용 방법</p>
+            <p className="font-semibold text-gray-700 mb-1">💡 현재 모드</p>
             <ul className="space-y-0.5 text-gray-600">
-              <li>• 상단에서 보고 싶은 직군을 선택하세요</li>
-              <li>• 전체 컬럼도 직접 수정 가능합니다</li>
-              <li>• 전체 수정 시 선택된 직군에 비례 분배됩니다</li>
+              {selectedBands.length === 0 ? (
+                <>
+                  <li>• <strong>전체 통합 모드:</strong> 모든 직군 일괄 조정</li>
+                  <li>• 전체 직군 수정 시 모든 직군에 비례 분배</li>
+                  <li>• 개별 직군 편집이 필요하면 상단에서 선택</li>
+                </>
+              ) : (
+                <>
+                  <li>• <strong>상세 편집 모드:</strong> {selectedBands.length}개 직군 개별 조정</li>
+                  <li>• 가중평균 컬럼과 선택 직군 동시 편집 가능</li>
+                  <li>• 양방향 자동 계산 (가중평균 ↔ 개별 직군)</li>
+                </>
+              )}
             </ul>
           </div>
           <div>

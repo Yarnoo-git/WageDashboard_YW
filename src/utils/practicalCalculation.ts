@@ -189,7 +189,8 @@ export function distributeTotalToBands(
   payZone: string,
   grade: string,
   field: 'baseUp' | 'merit' | 'additional',
-  newValue: number
+  newValue: number,
+  targetBands?: string[]  // 분배 대상 직군들 (없으면 전체)
 ): void {
   const currentTotal = data.hierarchy[level]?.[payZone]?.total[grade]
   if (!currentTotal) return
@@ -197,9 +198,12 @@ export function distributeTotalToBands(
   const currentValue = currentTotal[field]
   const delta = newValue - currentValue
   
+  // 분배 대상 직군 결정
+  const bandsToDistribute = targetBands || data.metadata.bands
+  
   // 전체 가중치 계산
   let totalWeight = 0
-  for (const band of data.metadata.bands) {
+  for (const band of bandsToDistribute) {
     const cell = data.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
     if (cell && cell.employeeCount > 0) {
       totalWeight += cell.totalSalary
@@ -209,7 +213,7 @@ export function distributeTotalToBands(
   if (totalWeight === 0) return
   
   // 비례 분배
-  for (const band of data.metadata.bands) {
+  for (const band of bandsToDistribute) {
     const cell = data.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
     if (cell && cell.employeeCount > 0) {
       const ratio = cell.totalSalary / totalWeight
