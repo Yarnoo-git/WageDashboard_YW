@@ -22,6 +22,7 @@ export function PracticalRecommendation() {
   const [selectedBands, setSelectedBands] = useState<string[]>([])
   const [expandedLevels, setExpandedLevels] = useState<Set<string>>(new Set())
   const [showAllZones, setShowAllZones] = useState(false) // 기본적으로 전체 Zone만 표시
+  const [isCompactMode, setIsCompactMode] = useState(true) // 기본값 컴팩트 모드
   
   // 실무 추천안 데이터 초기화
   useEffect(() => {
@@ -150,6 +151,16 @@ export function PracticalRecommendation() {
               {selectedBands.length === practicalData.metadata.bands.length ? '모두 해제' : '모두 선택'}
             </button>
             <button
+              onClick={() => setIsCompactMode(!isCompactMode)}
+              className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+                isCompactMode 
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {isCompactMode ? '📦 컴팩트' : '📊 상세'}
+            </button>
+            <button
               onClick={() => setShowAllZones(!showAllZones)}
               className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
@@ -191,14 +202,14 @@ export function PracticalRecommendation() {
               
               {/* 전체 컬럼 */}
               <th className="bg-blue-100 border border-gray-300 text-center" colSpan={practicalData.metadata.grades.length}>
-                <div className="text-sm font-bold text-blue-700 py-1">【전체】</div>
-                <div className="text-xs text-blue-600">클릭하여 편집 가능</div>
+                <div className="text-xs font-bold text-blue-700 py-0.5">【전체】</div>
+                {isCompactMode && <div className="text-[10px] text-blue-600">클릭 편집</div>}
               </th>
               
               {/* 선택된 직군별 컬럼들 */}
               {selectedBands.map(band => (
                 <th key={band} className="bg-gray-100 border border-gray-300 text-center" colSpan={practicalData.metadata.grades.length}>
-                  <div className="text-sm font-bold text-gray-700 py-1">【{band}】</div>
+                  <div className="text-xs font-bold text-gray-700 py-0.5">【{band}】</div>
                 </th>
               ))}
             </tr>
@@ -207,16 +218,16 @@ export function PracticalRecommendation() {
             <tr>
               {/* 전체 컬럼의 평가등급들 */}
               {practicalData.metadata.grades.map(grade => (
-                <th key={`total-${grade}`} className="bg-blue-50 border border-gray-300 px-1 py-1 min-w-[80px]">
-                  <div className="text-xs font-semibold text-blue-700">{grade}</div>
+                <th key={`total-${grade}`} className={`bg-blue-50 border border-gray-300 px-0.5 py-0.5 ${isCompactMode ? 'min-w-[45px]' : 'min-w-[80px]'}`}>
+                  <div className="text-[10px] font-semibold text-blue-700">{grade}</div>
                 </th>
               ))}
               
               {/* 각 선택된 직군의 평가등급들 */}
               {selectedBands.map(band => 
                 practicalData.metadata.grades.map(grade => (
-                  <th key={`${band}-${grade}`} className="bg-gray-50 border border-gray-300 px-1 py-1 min-w-[80px]">
-                    <div className="text-xs font-semibold text-gray-700">{grade}</div>
+                  <th key={`${band}-${grade}`} className={`bg-gray-50 border border-gray-300 px-0.5 py-0.5 ${isCompactMode ? 'min-w-[45px]' : 'min-w-[80px]'}`}>
+                    <div className="text-[10px] font-semibold text-gray-700">{grade}</div>
                   </th>
                 ))
               )}
@@ -299,7 +310,8 @@ export function PracticalRecommendation() {
                                   additional={totalCell.additional}
                                   employeeCount={totalCell.employeeCount}
                                   isEditable={true}
-                                  isTotal={false} // 전체 컬럼도 편집 가능
+                                  isTotal={true}
+                                  isCompact={isCompactMode}
                                   onChange={(field, value) => handleTotalCellChange(level, payZone, grade, field, value)}
                                 />
                               )}
@@ -322,6 +334,7 @@ export function PracticalRecommendation() {
                                     employeeCount={bandCell.employeeCount}
                                     isEditable={true}
                                     isTotal={false}
+                                    isCompact={isCompactMode}
                                     onChange={(field, value) => handleBandCellChange(level, payZone, band, grade, field, value)}
                                     band={band}
                                     level={level}
