@@ -150,11 +150,11 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
       const fileId = getCurrentFileId()
       if (!fileId) return
       
-      const excelData = await loadExcelData(fileId)
-      if (!excelData?.data?.employees) return
+      const excelData = await loadExcelData()
+      if (!excelData?.employees) return
       
-      setEmployees(excelData.data.employees || [])
-      setFilteredEmployees(excelData.data.employees || [])
+      setEmployees(excelData.employees || [])
+      setFilteredEmployees(excelData.employees || [])
     } catch (error) {
       console.error('[EmployeeContext] 직원 데이터 로드 실패:', error)
     }

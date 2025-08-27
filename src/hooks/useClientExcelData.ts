@@ -44,8 +44,8 @@ export function useClientExcelData() {
           competitorData: storedData.competitorData,
           competitorIncreaseRate: storedData.competitorIncreaseRate || 0,
           aiSettings: storedData.aiSettings,
-          gradeOrder: storedData.gradeOrder,
-          levelOrder: storedData.levelOrder,
+          gradeOrder: undefined,
+          levelOrder: undefined,
           fileName: storedData.fileName,
           uploadedAt: storedData.uploadedAt,
           fileId: storedData.fileId

@@ -90,7 +90,6 @@ export interface EmployeeSort {
 
 // 엑셀에서 읽은 원본 직원 데이터
 export interface RawEmployeeData {
-  [key: string]: string | number | undefined
   이름?: string
   사번?: string
   부서?: string
@@ -100,7 +99,7 @@ export interface RawEmployeeData {
   평가등급?: string
   기본급?: number
   현재급여?: number
-  [x: string]: any  // 엑셀의 다양한 컬럼 허용
+  [key: string]: string | number | undefined  // 엑셀의 다양한 컬럼 허용
 }
 
 // 직원 통계 타입

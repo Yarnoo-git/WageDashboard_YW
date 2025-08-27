@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/Footer'
-import { WageProvider } from '@/context/WageContext'
+import { WageContextNewProvider } from '@/context/WageContextNew'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="font-sans antialiased">
-        <WageProvider>
+        <WageContextNewProvider>
           <div className="flex flex-col min-h-screen">
             <Navigation />
             <main className="flex-grow">
@@ -33,7 +33,7 @@ export default function RootLayout({
             </main>
             <Footer />
           </div>
-        </WageProvider>
+        </WageContextNewProvider>
       </body>
     </html>
   )

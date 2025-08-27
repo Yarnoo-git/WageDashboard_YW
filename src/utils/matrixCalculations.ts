@@ -55,25 +55,22 @@ export class WeightedAverageCalculator {
           
           if (gradeEmployees.length === 0) continue
           
-          // 평균 연봉 및 가중치 계산
-          const totalSalary = gradeEmployees.reduce(
-            (sum, e) => sum + e.currentSalary, 0
-          )
-          const avgSalary = totalSalary / gradeEmployees.length
-          const weight = totalSalary // 총 연봉액을 가중치로 사용
-          
-          const rates = cell.gradeRates[grade] || { baseUp: 0, merit: 0, additional: 0 }
-          
           // Pay Zone별 세부 처리 (있을 경우)
           if (cell.payZoneOverrides?.[grade]) {
             this.processPayZoneDetails(
               gradeEmployees,
               cell.payZoneOverrides[grade],
-              rates,
+              cell.gradeRates[grade] || { baseUp: 0, merit: 0, additional: 0 },
               { band, level, grade }
             )
           } else {
-            // 일반 처리
+            // 일반 처리 (Pay Zone 구분 없음)
+            const totalSalary = gradeEmployees.reduce(
+              (sum, e) => sum + e.currentSalary, 0
+            )
+            const avgSalary = totalSalary / gradeEmployees.length
+            const rates = cell.gradeRates[grade] || { baseUp: 0, merit: 0, additional: 0 }
+            
             this.addDetail({
               path: `${band} × ${level} × ${grade}`,
               band,
@@ -83,7 +80,7 @@ export class WeightedAverageCalculator {
               averageSalary: avgSalary,
               totalSalary,
               rates,
-              weight,
+              weight: totalSalary,
               contribution: 0 // 나중에 계산
             })
           }
@@ -245,13 +242,18 @@ export function calculateBudgetUsage(
     const cell = matrix.cellMap[emp.band]?.[emp.level]
     if (!cell) return
     
-    const rates = cell.gradeRates[emp.performanceRating] || 
+    // 기본 rates 가져오기
+    let finalRates = cell.gradeRates[emp.performanceRating] || 
       { baseUp: 0, merit: 0, additional: 0 }
     
-    // Pay Zone 오버라이드 확인
-    const zone = payZoneService.assignPayZone(emp)
-    const payZoneRates = cell.payZoneOverrides?.[emp.performanceRating]?.[zone]
-    const finalRates = payZoneRates || rates
+    // Pay Zone 오버라이드 확인 (정의되어 있는 경우만)
+    if (cell.payZoneOverrides?.[emp.performanceRating]) {
+      const zone = payZoneService.assignPayZone(emp)
+      const payZoneRates = cell.payZoneOverrides[emp.performanceRating][zone]
+      if (payZoneRates) {
+        finalRates = payZoneRates
+      }
+    }
     
     // 인상액 계산
     const baseUpAmount = emp.currentSalary * (finalRates.baseUp / 100)
@@ -436,7 +438,7 @@ export function updateMatrixStatistics(
         let cellWeightedSum = { baseUp: 0, merit: 0, additional: 0 }
         let cellTotalWeight = 0
         
-        Object.entries(cell.gradeDistribution).forEach(([grade, count]) => {
+        Object.entries(cell.statistics.gradeDistribution).forEach(([grade, count]) => {
           const rates = cell.gradeRates[grade]
           if (rates && count > 0) {
             const weight = count * cell.statistics.averageSalary

@@ -42,6 +42,8 @@ interface WageContextNewType {
   // === 2. 원본 데이터 (읽기 전용) ===
   originalData: {
     employees: Employee[]
+    competitorData: any[]
+    competitorIncreaseRate?: number
     metadata: {
       bands: string[]
       levels: string[]
@@ -133,6 +135,8 @@ export function WageContextNewProvider({
   // === 기본 상태 ===
   const [isLoading, setIsLoading] = useState(true)
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [competitorData, setCompetitorData] = useState<any[]>([])
+  const [competitorIncreaseRate, setCompetitorIncreaseRate] = useState<number>(0)
   const [metadata, setMetadata] = useState({
     bands: [] as string[],
     levels: [] as string[],
@@ -183,6 +187,14 @@ export function WageContextNewProvider({
       
       // 직원 데이터 설정
       setEmployees(data.employees)
+      
+      // 경쟁사 데이터 설정
+      if (data.competitorData) {
+        setCompetitorData(data.competitorData)
+      }
+      if (data.competitorIncreaseRate !== undefined) {
+        setCompetitorIncreaseRate(data.competitorIncreaseRate)
+      }
       
       // 메타데이터 추출
       const bands = Array.from(new Set(data.employees.map(e => e.band).filter(Boolean)))
@@ -344,8 +356,8 @@ export function WageContextNewProvider({
     const targetMatrix = pendingMatrix || JSON.parse(JSON.stringify(matrix))
     
     // 모든 셀에 동일한 비율 적용
-    targetMatrix.cells.forEach(row => {
-      row.forEach(cell => {
+    targetMatrix.cells.forEach((row: MatrixCell[]) => {
+      row.forEach((cell: MatrixCell) => {
         Object.keys(rates).forEach(grade => {
           cell.gradeRates[grade] = { ...rates[grade] }
         })
@@ -436,6 +448,8 @@ export function WageContextNewProvider({
     },
     originalData: {
       employees,
+      competitorData,
+      competitorIncreaseRate,
       metadata,
       aiSettings
     },

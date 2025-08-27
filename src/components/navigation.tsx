@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ReactNode, useState, Fragment } from 'react'
-import { useWageContext } from '@/context/WageContext'
+import { useWageContextNew } from '@/context/WageContextNew'
+import { useWageContextAdapter } from '@/hooks/useWageContextAdapter'
 import { ScenarioManager } from './ScenarioManager'
 import * as XLSX from 'xlsx'
 
@@ -16,21 +17,25 @@ export function Navigation({ children }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showScenarioManager, setShowScenarioManager] = useState(false)
   
-  const {
-    scenarios,
-    activeScenarioId,
-    saveScenario,
-    loadScenario,
-    deleteScenario,
-    renameScenario,
-    contextEmployeeData,
-    baseUpRate,
-    meritRate,
-    levelRates,
-    bandFinalRates,
-    payZoneRates,
-    adjustmentMode
-  } = useWageContext()
+  const newContext = useWageContextNew()
+  const adapter = useWageContextAdapter()
+  
+  // 필요한 데이터 추출
+  const contextEmployeeData = newContext.originalData.employees
+  const baseUpRate = adapter.baseUpRate
+  const meritRate = adapter.meritRate
+  const levelRates = adapter.levelRates
+  const adjustmentMode = newContext.adjustment.mode
+  
+  // 시나리오 관련 (TODO: 새 시스템에 맞게 구현 필요)
+  const scenarios: any[] = []
+  const activeScenarioId = null
+  const saveScenario = () => {}
+  const loadScenario = () => {}
+  const deleteScenario = () => {}
+  const renameScenario = () => {}
+  const bandFinalRates = {}
+  const payZoneRates = {}
 
   // 홈 화면에서는 네비게이션 바를 숨김
   if (pathname === '/home' || pathname === '/') {
@@ -58,51 +63,52 @@ export function Navigation({ children }: NavigationProps) {
       // 대시보드: 예산 요약 데이터
       exportData = [{
         '항목': '예산 정보',
+        '총예산': newContext.config.budget.total,
+        '가용예산': newContext.config.budget.available,
+        '복리후생비': newContext.config.budget.welfare,
         'Base-up(%)': baseUpRate,
         '성과인상률(%)': meritRate,
-        '총인상률(%)': baseUpRate + meritRate,
-        '조정모드': adjustmentMode
+        '총인상률(%)': baseUpRate + meritRate
       }]
       fileName = '예산_요약.xlsx'
     } else if (pathname === '/simulation') {
       // 시뮬레이션: 인상률 조정 데이터
-      if (adjustmentMode === 'simple') {
+      if (adjustmentMode === 'all') {
+        // 전체 일괄 조정 모드
         exportData = Object.entries(levelRates).map(([level, rates]) => ({
           '직급': level,
-          'Base-up(%)': rates.baseUp,
-          '성과인상률(%)': rates.merit,
-          '총인상률(%)': rates.baseUp + rates.merit
+          'Base-up(%)': rates.baseUp || 0,
+          '성과인상률(%)': rates.merit || 0,
+          '총인상률(%)': (rates.baseUp || 0) + (rates.merit || 0)
         }))
-      } else if (adjustmentMode === 'advanced') {
-        exportData = Object.entries(bandFinalRates).flatMap(([band, levels]) =>
-          Object.entries(levels).map(([level, rates]) => ({
-            '직군': band,
-            '직급': level,
-            'Base-up(%)': rates.baseUp,
-            '성과인상률(%)': rates.merit,
-            '총인상률(%)': rates.baseUp + rates.merit
-          }))
-        )
-      } else if (adjustmentMode === 'expert') {
-        exportData = Object.entries(payZoneRates).flatMap(([zone, bands]) =>
-          Object.entries(bands).flatMap(([band, levels]) =>
-            Object.entries(levels).map(([level, rates]) => ({
-              'Pay Zone': zone,
-              '직군': band,
-              '직급': level,
-              'Base-up(%)': rates.baseUp,
-              '성과인상률(%)': rates.merit,
-              '추가인상률(%)': rates.additional,
-              '총인상률(%)': rates.baseUp + rates.merit + rates.additional
-            }))
-          )
-        )
+      } else if (adjustmentMode === 'matrix') {
+        // Band x Level 별 조정 모드
+        const matrix = newContext.adjustment.matrix
+        if (matrix) {
+          exportData = []
+          newContext.originalData.metadata.bands.forEach(band => {
+            newContext.originalData.metadata.levels.forEach(level => {
+              const cell = matrix.cells[`${band}-${level}`]
+              if (cell) {
+                const avgBaseUp = cell.statistics.averageBaseUp || 0
+                const avgMerit = cell.statistics.averageMerit || 0
+                exportData.push({
+                  '직군': band,
+                  '직급': level,
+                  'Base-up(%)': avgBaseUp.toFixed(1),
+                  '성과인상률(%)': avgMerit.toFixed(1),
+                  '총인상률(%)': (avgBaseUp + avgMerit).toFixed(1)
+                })
+              }
+            })
+          })
+        }
       }
       fileName = '인상률_조정.xlsx'
     } else if (pathname === '/person') {
       // 개인별 결과: 직원 데이터
       exportData = contextEmployeeData.map(emp => ({
-        '사번': emp.employeeId,
+        '사번': emp.employeeNumber,
         '이름': emp.name,
         '부서': emp.department,
         '직군': emp.band,
@@ -110,8 +116,8 @@ export function Navigation({ children }: NavigationProps) {
         'Pay Zone': emp.payZone,
         '현재연봉': emp.currentSalary,
         '평가등급': emp.performanceRating,
-        'Base-up(%)': levelRates[emp.level]?.baseUp || baseUpRate,
-        '성과인상률(%)': levelRates[emp.level]?.merit || meritRate
+        'Base-up(%)': levelRates[emp.level]?.baseUp || baseUpRate || 0,
+        '성과인상률(%)': levelRates[emp.level]?.merit || meritRate || 0
       }))
       fileName = '개인별_결과.xlsx'
     }

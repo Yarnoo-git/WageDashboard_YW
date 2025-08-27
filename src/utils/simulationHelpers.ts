@@ -254,7 +254,8 @@ export const calculateAdvancedFromExpert = (
       if (totalCount > 0) {
         newBandRates[band][level] = {
           baseUp: totalBaseUp / totalCount,
-          merit: totalMerit / totalCount
+          merit: totalMerit / totalCount,
+          additional: 0
         }
       }
     })
@@ -296,7 +297,8 @@ export const calculateSimpleFromExpert = (
     if (totalCount > 0) {
       newLevelRates[level] = {
         baseUp: totalBaseUp / totalCount,
-        merit: totalMerit / totalCount
+        merit: totalMerit / totalCount,
+        additional: 0
       }
     }
   })
@@ -428,8 +430,10 @@ export const getEffectiveRatesForEmployee = (
     if (levelRate) return levelRate
     
     // Level도 없으면 Band로 fallback
-    const bandRate = bandGradeRates[employee.band]?.byGrade[grade]
-    if (bandRate) return bandRate
+    if (employee.band) {
+      const bandRate = bandGradeRates[employee.band]?.byGrade[grade]
+      if (bandRate) return bandRate
+    }
     
     // 모두 없으면 All로 fallback
     return allGradeRates.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }
@@ -441,8 +445,10 @@ export const getEffectiveRatesForEmployee = (
     if (levelRate) return levelRate
     
     // Level 없으면 Band로 fallback
-    const bandRate = bandGradeRates[employee.band]?.byGrade[grade]
-    if (bandRate) return bandRate
+    if (employee.band) {
+      const bandRate = bandGradeRates[employee.band]?.byGrade[grade]
+      if (bandRate) return bandRate
+    }
     
     // Band도 없으면 All로 fallback
     return allGradeRates.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }
@@ -450,8 +456,10 @@ export const getEffectiveRatesForEmployee = (
   
   if (adjustmentScope === 'band') {
     // Band 우선
-    const bandRate = bandGradeRates[employee.band]?.byGrade[grade]
-    if (bandRate) return bandRate
+    if (employee.band) {
+      const bandRate = bandGradeRates[employee.band]?.byGrade[grade]
+      if (bandRate) return bandRate
+    }
     
     // Band 없으면 All로 fallback
     return allGradeRates.byGrade[grade] || { baseUp: 0, merit: 0, additional: 0 }

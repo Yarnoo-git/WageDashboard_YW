@@ -103,10 +103,11 @@ export function RateProvider({ children }: { children: ReactNode }) {
       const fileId = getCurrentFileId()
       if (!fileId) return
       
-      const excelData = await loadExcelData(fileId)
-      if (!excelData?.data) return
+      const excelData = await loadExcelData()
+      if (!excelData) return
       
-      const settings = await loadGradeSettingsFromExcel(excelData.data)
+      // Load settings from cached data or use default
+      const settings = await loadGradeSettingsFromExcel()
       if (settings) {
         setGradeSettings(settings)
         

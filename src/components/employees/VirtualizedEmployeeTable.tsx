@@ -113,18 +113,6 @@ export function VirtualizedEmployeeTable({
     )
   }, [employees, performanceWeights])
   
-  // 가중치 업데이트 핸들러
-  const handleWeightUpdate = useCallback((rating: string, weight: number) => {
-    if (selectedEmployee && onUpdateEmployee) {
-      onUpdateEmployee(selectedEmployee.id, {
-        performanceRating: rating,
-        performanceWeight: weight
-      })
-    }
-    setShowWeightModal(false)
-    setSelectedEmployee(null)
-  }, [selectedEmployee, onUpdateEmployee])
-  
   // 통계 계산 (메모이제이션)
   const statistics = useMemo(() => {
     const totalSalary = employees.reduce((sum, emp) => sum + emp.currentSalary, 0)
@@ -187,17 +175,13 @@ export function VirtualizedEmployeeTable({
       </div>
       
       {/* 성과 가중치 모달 */}
-      {showWeightModal && selectedEmployee && (
-        <PerformanceWeightModal
-          employee={selectedEmployee}
-          currentWeight={performanceWeights[selectedEmployee.performanceRating] || 1.0}
-          onUpdate={handleWeightUpdate}
-          onClose={() => {
-            setShowWeightModal(false)
-            setSelectedEmployee(null)
-          }}
-        />
-      )}
+      <PerformanceWeightModal
+        isOpen={showWeightModal}
+        onClose={() => {
+          setShowWeightModal(false)
+          setSelectedEmployee(null)
+        }}
+      />
     </div>
   )
 }

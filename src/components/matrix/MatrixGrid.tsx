@@ -36,7 +36,7 @@ export function MatrixGrid({
   isReadOnly = false,
   showCompactView = false
 }: MatrixGridProps) {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState('grid')
   const [expandedCell, setExpandedCell] = useState<{ band: string; level: string } | null>(null)
   
   // 선택된 셀 또는 확장된 셀
@@ -54,21 +54,13 @@ export function MatrixGrid({
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-1 text-sm rounded ${
-                viewMode === 'grid' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              className="px-3 py-1 text-sm rounded bg-blue-500 text-white"
             >
               그리드 뷰
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1 text-sm rounded ${
-                viewMode === 'list' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              className="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
             >
               리스트 뷰
             </button>
@@ -174,21 +166,13 @@ export function MatrixGrid({
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-1 text-sm rounded ${
-                viewMode === 'grid' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              className="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
             >
               그리드 뷰
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1 text-sm rounded ${
-                viewMode === 'list' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              className="px-3 py-1 text-sm rounded bg-blue-500 text-white"
             >
               리스트 뷰
             </button>
