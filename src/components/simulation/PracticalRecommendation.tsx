@@ -256,7 +256,7 @@ export function PracticalRecommendation() {
                 <div className={`${selectedBands.length === 0 ? 'text-sm' : 'text-xs'} font-bold text-blue-700 py-0.5`}>
                   {selectedBands.length === 0 ? '【전체 직군】' : '【가중평균】'}
                 </div>
-                {effectiveCompactMode && selectedBands.length > 0 && <div className="text-[10px] text-blue-600">클릭 편집</div>}
+                <div className="text-[10px] text-blue-600">클릭하여 편집</div>
               </th>
               
               {/* 선택된 직군별 컬럼들 */}
@@ -309,22 +309,65 @@ export function PracticalRecommendation() {
                       </div>
                     </td>
                     
-                    {/* 레벨 요약 (접혔을 때) */}
+                    {/* 레벨 요약 (접혔을 때) - 실제 값 표시 및 편집 가능 */}
                     {!isExpanded && (
                       <>
-                        {/* 전체 컬럼 */}
-                        {practicalData.metadata.grades.map(grade => (
-                          <td key={grade} className="border border-gray-300 bg-blue-50 text-center text-xs text-gray-500">
-                            -
-                          </td>
-                        ))}
-                        {/* 선택된 직군별 컬럼 */}
-                        {selectedBands.map(band => 
-                          practicalData.metadata.grades.map(grade => (
-                            <td key={`${band}-${grade}`} className="border border-gray-300 text-center text-xs text-gray-500">
-                              -
+                        {/* 전체 컬럼 - 레벨 전체 값 */}
+                        {practicalData.metadata.grades.map(grade => {
+                          const totalCell = practicalData.hierarchy[level]?.['all']?.total[grade]
+                          
+                          return (
+                            <td key={grade} className="border border-gray-300 p-0">
+                              {totalCell ? (
+                                <PracticalRecommendationCell
+                                  baseUp={totalCell.baseUp}
+                                  merit={totalCell.merit}
+                                  additional={totalCell.additional}
+                                  employeeCount={totalCell.employeeCount}
+                                  isEditable={true}
+                                  isTotal={true}
+                                  isCompact={true}  // 접힌 상태에서는 항상 컴팩트
+                                  onChange={(field, value) => handleTotalCellChange(level, 'all', grade, field, value)}
+                                />
+                              ) : (
+                                <div className="h-full flex items-center justify-center p-1">
+                                  <span className="text-xs text-gray-400">-</span>
+                                </div>
+                              )}
                             </td>
-                          ))
+                          )
+                        })}
+                        
+                        {/* 선택된 직군별 컬럼 - 레벨별 직군 값 */}
+                        {selectedBands.map(band => 
+                          practicalData.metadata.grades.map(grade => {
+                            const bandCell = practicalData.hierarchy[level]?.['all']?.byBand[band]?.[grade]
+                            
+                            return (
+                              <td key={`${band}-${grade}`} className="border border-gray-300 p-0">
+                                {bandCell ? (
+                                  <PracticalRecommendationCell
+                                    baseUp={bandCell.baseUp}
+                                    merit={bandCell.merit}
+                                    additional={bandCell.additional}
+                                    employeeCount={bandCell.employeeCount}
+                                    isEditable={true}
+                                    isTotal={false}
+                                    isCompact={true}  // 접힌 상태에서는 항상 컴팩트
+                                    onChange={(field, value) => handleBandCellChange(level, 'all', band, grade, field, value)}
+                                    band={band}
+                                    level={level}
+                                    payZone={'all'}
+                                    grade={grade}
+                                  />
+                                ) : (
+                                  <div className="h-full flex items-center justify-center p-1">
+                                    <span className="text-xs text-gray-400">-</span>
+                                  </div>
+                                )}
+                              </td>
+                            )
+                          })
                         )}
                       </>
                     )}

@@ -76,7 +76,7 @@ export function PracticalRecommendationCell({
   }, [showPopover])
   
   const handleCellClick = () => {
-    if (isEditable && isCompact) {
+    if (isEditable) {
       setShowPopover(!showPopover)
     }
   }
@@ -223,33 +223,124 @@ export function PracticalRecommendationCell({
   
   // 상세 모드 (기존 방식)
   return (
-    <div className={`h-full p-1 ${isTotal ? 'bg-blue-50' : ''}`}>
-      <div className="flex flex-col items-center justify-center">
-        {/* 3개 인상률 표시 */}
-        <div className="flex items-center gap-0.5">
-          <span className={`text-xs ${isTotal ? 'text-blue-600' : 'text-blue-500'}`}>
-            {baseUp.toFixed(1)}
-          </span>
-          <span className="text-xs text-gray-400">+</span>
-          <span className={`text-xs ${isTotal ? 'text-green-600' : 'text-green-500'}`}>
-            {merit.toFixed(1)}
-          </span>
-          <span className="text-xs text-gray-400">+</span>
-          <span className={`text-xs ${isTotal ? 'text-orange-600' : 'text-orange-500'}`}>
-            {additional.toFixed(1)}
-          </span>
-        </div>
-        
-        {/* 합계 */}
-        <div className={`text-xs font-semibold mt-0.5 ${isTotal ? 'text-blue-700' : 'text-gray-900'}`}>
-          = {formatPercentage(total)}
-        </div>
-        
-        {/* 인원수 */}
-        <div className="text-xs text-gray-500 mt-0.5">
-          ({employeeCount})
+    <div className="relative">
+      <div 
+        ref={cellRef}
+        className={`h-full p-1 ${isTotal ? 'bg-blue-50' : ''} ${
+          isEditable ? 'cursor-pointer hover:bg-gray-50' : ''
+        }`}
+        onClick={handleCellClick}
+      >
+        <div className="flex flex-col items-center justify-center">
+          {/* 3개 인상률 표시 */}
+          <div className="flex items-center gap-0.5">
+            <span className={`text-xs ${isTotal ? 'text-blue-600' : 'text-blue-500'}`}>
+              {baseUp.toFixed(1)}
+            </span>
+            <span className="text-xs text-gray-400">+</span>
+            <span className={`text-xs ${isTotal ? 'text-green-600' : 'text-green-500'}`}>
+              {merit.toFixed(1)}
+            </span>
+            <span className="text-xs text-gray-400">+</span>
+            <span className={`text-xs ${isTotal ? 'text-orange-600' : 'text-orange-500'}`}>
+              {additional.toFixed(1)}
+            </span>
+          </div>
+          
+          {/* 합계 */}
+          <div className={`text-xs font-semibold mt-0.5 ${isTotal ? 'text-blue-700' : 'text-gray-900'}`}>
+            = {formatPercentage(total)}
+          </div>
+          
+          {/* 인원수 */}
+          <div className="text-xs text-gray-500 mt-0.5">
+            ({employeeCount})
+          </div>
         </div>
       </div>
+      
+      {/* 편집 팝오버 (상세 모드에서도 표시) */}
+      {showPopover && isEditable && (
+        <div 
+          ref={popoverRef}
+          className="absolute z-50 top-full left-1/2 transform -translate-x-1/2 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3 min-w-[150px]"
+        >
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-blue-600 font-medium">Base:</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  step="0.1"
+                  value={editValues.baseUp}
+                  onChange={(e) => handleValueChange('baseUp', e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-14 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                />
+                <span className="text-xs text-gray-500">%</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-green-600 font-medium">Merit:</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  step="0.1"
+                  value={editValues.merit}
+                  onChange={(e) => handleValueChange('merit', e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-14 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                />
+                <span className="text-xs text-gray-500">%</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-orange-600 font-medium">Add:</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  step="0.1"
+                  value={editValues.additional}
+                  onChange={(e) => handleValueChange('additional', e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-14 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                />
+                <span className="text-xs text-gray-500">%</span>
+              </div>
+            </div>
+            
+            <div className="border-t pt-2 mt-2">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="text-gray-700">합계:</span>
+                <span className="text-gray-900">
+                  {formatPercentage(
+                    (parseFloat(editValues.baseUp) || 0) +
+                    (parseFloat(editValues.merit) || 0) +
+                    (parseFloat(editValues.additional) || 0)
+                  )}
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={handleApply}
+                className="flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                적용
+              </button>
+              <button
+                onClick={() => setShowPopover(false)}
+                className="flex-1 px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
