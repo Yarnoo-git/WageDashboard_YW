@@ -33,6 +33,15 @@ export interface PracticalRecommendationData {
     }
   }
   
+  // 회사 전체 대표 값 (모든 레벨, PayZone, 직군의 가중평균)
+  companyTotal: {
+    baseUp: number
+    merit: number
+    additional: number
+    employeeCount: number
+    totalSalary: number
+  }
+  
   // 메타데이터
   metadata: {
     bands: string[]
@@ -60,6 +69,13 @@ export function initializePracticalData(
   
   const data: PracticalRecommendationData = {
     hierarchy: {},
+    companyTotal: {
+      baseUp: 0,
+      merit: 0,
+      additional: 0,
+      employeeCount: employees.length,
+      totalSalary: employees.reduce((sum, e) => sum + e.currentSalary, 0)
+    },
     metadata: {
       bands: matrix.bands,
       levels: matrix.levels,
@@ -135,6 +151,9 @@ export function initializePracticalData(
       }
     }
   }
+  
+  // 회사 전체 값 계산 (모든 레벨의 all PayZone 가중평균)
+  calculateCompanyTotal(data)
   
   return data
 }
@@ -348,6 +367,71 @@ export function recalculateAllTotals(data: PracticalRecommendationData): void {
       }
     }
   }
+}
+
+/**
+ * 회사 전체 값 계산 (모든 셀의 가중평균)
+ */
+export function calculateCompanyTotal(data: PracticalRecommendationData): void {
+  let weightedBaseUp = 0
+  let weightedMerit = 0
+  let weightedAdditional = 0
+  let totalWeight = 0
+  
+  // 모든 레벨, 모든 등급의 all PayZone 값들의 가중평균
+  for (const level of data.metadata.levels) {
+    for (const grade of data.metadata.grades) {
+      const cell = data.hierarchy[level]?.['all']?.total[grade]
+      
+      if (cell && cell.employeeCount > 0) {
+        const weight = cell.totalSalary
+        weightedBaseUp += cell.baseUp * weight
+        weightedMerit += cell.merit * weight
+        weightedAdditional += cell.additional * weight
+        totalWeight += weight
+      }
+    }
+  }
+  
+  // 회사 전체 값 업데이트
+  if (totalWeight > 0) {
+    data.companyTotal.baseUp = weightedBaseUp / totalWeight
+    data.companyTotal.merit = weightedMerit / totalWeight
+    data.companyTotal.additional = weightedAdditional / totalWeight
+  }
+}
+
+/**
+ * 회사 전체 값을 모든 하위에 적용 (Top-down)
+ */
+export function applyCompanyTotalToAll(
+  data: PracticalRecommendationData,
+  field: 'baseUp' | 'merit' | 'additional',
+  value: number
+): void {
+  // 모든 레벨, PayZone, 직군, 등급에 동일값 설정
+  for (const level of data.metadata.levels) {
+    for (const payZone of data.metadata.payZones) {
+      for (const grade of data.metadata.grades) {
+        // 전체 컬럼
+        const totalCell = data.hierarchy[level]?.[payZone]?.total[grade]
+        if (totalCell) {
+          totalCell[field] = value
+        }
+        
+        // 각 직군
+        for (const band of data.metadata.bands) {
+          const bandCell = data.hierarchy[level]?.[payZone]?.byBand[band]?.[grade]
+          if (bandCell) {
+            bandCell[field] = value
+          }
+        }
+      }
+    }
+  }
+  
+  // 회사 전체 값도 업데이트
+  data.companyTotal[field] = value
 }
 
 /**

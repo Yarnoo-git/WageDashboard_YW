@@ -15,6 +15,8 @@ import {
   distributeTotalToBands,
   distributeAllToPayZones,
   calculateAllFromPayZones,
+  calculateCompanyTotal,
+  applyCompanyTotalToAll,
   applyPracticalToMatrix
 } from '@/utils/practicalCalculation'
 
@@ -134,12 +136,39 @@ export function PracticalRecommendation() {
       calculateAllFromPayZones(newData, level, 'total', grade)
     }
     
+    // 4. 회사 전체 값 재계산 (Bottom-up)
+    calculateCompanyTotal(newData)
+    
     setPracticalData(newData)
   }
   
   // 선택된 직군 또는 전체 직군 가져오기
   const getEffectiveBands = () => {
     return selectedBands.length === 0 ? practicalData?.metadata.bands || [] : selectedBands
+  }
+  
+  // 회사 전체 값 변경 핸들러 (모든 셀에 동일값 적용)
+  const handleCompanyTotalChange = (
+    field: 'baseUp' | 'merit' | 'additional',
+    value: number
+  ) => {
+    if (!practicalData) return
+    
+    const newData = { ...practicalData }
+    
+    // 모든 레벨, PayZone, 직군, 등급에 동일값 적용
+    applyCompanyTotalToAll(newData, field, value)
+    
+    setPracticalData(newData)
+    
+    // Context에 모든 직군 업데이트
+    for (const band of newData.metadata.bands) {
+      for (const level of newData.metadata.levels) {
+        for (const grade of newData.metadata.grades) {
+          context.actions.updateCellGradeRate(band, level, grade, field, value)
+        }
+      }
+    }
   }
   
   // 전체 값 변경 핸들러 (직군에 동일값 설정 + PayZone 처리)
@@ -180,6 +209,9 @@ export function PracticalRecommendation() {
       }
     }
     
+    // 4. 회사 전체 값 재계산 (Bottom-up)
+    calculateCompanyTotal(newData)
+    
     setPracticalData(newData)
   }
   
@@ -201,9 +233,73 @@ export function PracticalRecommendation() {
   const displayedPayZones = showAllZones ? practicalData.metadata.payZones : ['all']
   
   return (
-    <div className="bg-white rounded-lg shadow-lg p-4">
-      {/* 직군 선택 바 */}
-      <div className="pb-4 border-b border-gray-200">
+    <div>
+      {/* 회사 전체 대표 값 */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-lg p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold mb-2">회사 전체 대표 인상률</h3>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-sm opacity-90">Base-up:</span>
+                <button
+                  onClick={() => {
+                    const newValue = prompt('Base-up (%)', practicalData.companyTotal.baseUp.toFixed(1))
+                    if (newValue !== null && !isNaN(parseFloat(newValue))) {
+                      handleCompanyTotalChange('baseUp', parseFloat(newValue))
+                    }
+                  }}
+                  className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition-colors"
+                >
+                  {practicalData.companyTotal.baseUp.toFixed(1)}%
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm opacity-90">Merit:</span>
+                <button
+                  onClick={() => {
+                    const newValue = prompt('Merit (%)', practicalData.companyTotal.merit.toFixed(1))
+                    if (newValue !== null && !isNaN(parseFloat(newValue))) {
+                      handleCompanyTotalChange('merit', parseFloat(newValue))
+                    }
+                  }}
+                  className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition-colors"
+                >
+                  {practicalData.companyTotal.merit.toFixed(1)}%
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm opacity-90">Additional:</span>
+                <button
+                  onClick={() => {
+                    const newValue = prompt('Additional (%)', practicalData.companyTotal.additional.toFixed(1))
+                    if (newValue !== null && !isNaN(parseFloat(newValue))) {
+                      handleCompanyTotalChange('additional', parseFloat(newValue))
+                    }
+                  }}
+                  className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition-colors"
+                >
+                  {practicalData.companyTotal.additional.toFixed(1)}%
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm opacity-90">총 인상률</div>
+            <div className="text-2xl font-bold">
+              {(practicalData.companyTotal.baseUp + practicalData.companyTotal.merit + practicalData.companyTotal.additional).toFixed(1)}%
+            </div>
+          </div>
+        </div>
+        <div className="mt-2 text-xs opacity-75">
+          클릭하여 회사 전체 정책을 일괄 설정할 수 있습니다. 설정 시 모든 레벨, PayZone, 직군에 동일하게 적용됩니다.
+        </div>
+      </div>
+      
+      {/* 기존 테이블 */}
+      <div className="bg-white rounded-lg shadow-lg p-4">
+        {/* 직군 선택 바 */}
+        <div className="pb-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-700">실무 추천안 설정</h3>
           <div className="flex gap-2">
@@ -522,6 +618,7 @@ export function PracticalRecommendation() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   )
 }
