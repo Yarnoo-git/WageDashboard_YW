@@ -10,15 +10,13 @@ import { useRouter } from 'next/navigation'
 import { useWageContextNew } from '@/context/WageContextNew'
 import { useWageContextAdapter } from '@/hooks/useWageContextAdapter'
 import { useBandData } from './hooks/useBandData'
-import { MatrixGrid } from '@/components/matrix/MatrixGrid'
-import { MatrixGridCompact } from '@/components/matrix/MatrixGridCompact'
 import { ApplyResetBar } from '@/components/common/ApplyResetBar'
 import { FixedSummaryBar } from '@/components/simulation/FixedSummaryBar'
 import { IndustryComparisonSection } from '@/components/dashboard/IndustryComparisonSection'
 import { PayBandCard } from '@/components/band/PayBandCard'
 import { PayBandCompetitivenessHeatmap } from '@/components/analytics/PayBandCompetitivenessHeatmap'
-import { AllModeAdjustment } from './components/AllModeAdjustment'
 import { ViewModeSelector } from './components/ViewModeSelector'
+import { PracticalRecommendation } from '@/components/simulation/PracticalRecommendation'
 import { formatKoreanCurrency } from '@/lib/utils'
 
 type ViewMode = 'adjustment' | 'all' | 'competitiveness' | 'band'
@@ -151,32 +149,9 @@ function SimulationContent() {
                   </div>
                 </div>
                 
-                {/* 조정 모드 선택 */}
-                <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => newContext.actions.setAdjustmentMode('all')}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                          newContext.adjustment.mode === 'all'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        전체 일괄 조정
-                      </button>
-                      <button
-                        onClick={() => newContext.actions.setAdjustmentMode('matrix')}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                          newContext.adjustment.mode === 'matrix'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        Band × Level별
-                      </button>
-                    </div>
-                    
+                {/* 추가 인상 타입 선택 */}
+                <div className="bg-white rounded-lg shadow-sm p-3 mb-4">
+                  <div className="flex justify-end items-center">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-600">추가 인상:</span>
                       <button
@@ -203,18 +178,8 @@ function SimulationContent() {
                   </div>
                 </div>
                 
-                {/* 조정 UI */}
-                {newContext.adjustment.mode === 'all' ? (
-                  <AllModeAdjustment />
-                ) : (
-                  <div className="bg-white rounded-lg shadow-sm">
-                    <MatrixGridCompact
-                      matrix={newContext.adjustment.pendingMatrix || newContext.adjustment.matrix}
-                      onCellGradeRateChange={newContext.actions.updateCellGradeRate}
-                      isReadOnly={false}
-                    />
-                  </div>
-                )}
+                {/* 실무 추천안 테이블 */}
+                <PracticalRecommendation />
               </>
             )}
             
