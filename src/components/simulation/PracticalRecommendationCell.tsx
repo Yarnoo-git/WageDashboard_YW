@@ -48,7 +48,7 @@ export function PracticalRecommendationCell({
   }, [editingField])
   
   const handleFieldClick = (field: 'baseUp' | 'merit' | 'additional') => {
-    if (isEditable && !isTotal) {
+    if (isEditable) {  // isTotal 체크 제거 - 전체 컬럼도 편집 가능
       setEditingField(field)
       const value = field === 'baseUp' ? baseUp : field === 'merit' ? merit : additional
       setEditValue(value.toFixed(1))
@@ -102,7 +102,7 @@ export function PracticalRecommendationCell({
     
     return (
       <span
-        className={`text-xs ${isEditable && !isTotal ? 'cursor-pointer hover:underline' : ''} ${color}`}
+        className={`text-xs ${isEditable ? 'cursor-pointer hover:underline' : ''} ${color}`}
         onClick={() => handleFieldClick(field)}
       >
         {value.toFixed(1)}
@@ -132,12 +132,6 @@ export function PracticalRecommendationCell({
           ({employeeCount})
         </div>
         
-        {/* 가중평균 표시 (전체 컬럼만) */}
-        {isTotal && (
-          <div className="text-xs text-blue-500 mt-0.5">
-            가중평균
-          </div>
-        )}
       </div>
     </div>
   )

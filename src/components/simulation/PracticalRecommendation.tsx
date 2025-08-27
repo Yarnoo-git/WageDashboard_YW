@@ -1,6 +1,6 @@
 /**
  * 실무 추천안 메인 컴포넌트
- * 레벨 × PayZone × (전체 + 직군별) 구조
+ * 개선: 직군 선택 방식 + 전체 컬럼 편집 가능
  */
 
 'use client'
@@ -15,12 +15,13 @@ import {
   distributeTotalToBands,
   applyPracticalToMatrix
 } from '@/utils/practicalCalculation'
-// Remove heroicons import - use text symbols instead
 
 export function PracticalRecommendation() {
   const context = useWageContextNew()
   const [practicalData, setPracticalData] = useState<PracticalRecommendationData | null>(null)
+  const [selectedBands, setSelectedBands] = useState<string[]>([])
   const [expandedLevels, setExpandedLevels] = useState<Set<string>>(new Set())
+  const [showAllZones, setShowAllZones] = useState(false) // 기본적으로 전체 Zone만 표시
   
   // 실무 추천안 데이터 초기화
   useEffect(() => {
@@ -31,10 +32,33 @@ export function PracticalRecommendation() {
       )
       setPracticalData(data)
       
-      // 기본적으로 모든 레벨 펼치기
+      // 기본적으로 첫 2개 직군 선택, 모든 레벨 펼치기
+      if (data.metadata.bands.length > 0) {
+        setSelectedBands(data.metadata.bands.slice(0, Math.min(2, data.metadata.bands.length)))
+      }
       setExpandedLevels(new Set(data.metadata.levels))
     }
   }, [context.originalData.employees, context.adjustment.matrix])
+  
+  // 직군 선택 토글
+  const toggleBandSelection = (band: string) => {
+    setSelectedBands(prev => {
+      if (prev.includes(band)) {
+        return prev.filter(b => b !== band)
+      } else {
+        return [...prev, band]
+      }
+    })
+  }
+  
+  // 모든 직군 선택/해제
+  const toggleAllBands = () => {
+    if (selectedBands.length === practicalData?.metadata.bands.length) {
+      setSelectedBands([])
+    } else {
+      setSelectedBands(practicalData?.metadata.bands || [])
+    }
+  }
   
   // 레벨 펼치기/접기 토글
   const toggleLevel = (level: string) => {
@@ -109,8 +133,53 @@ export function PracticalRecommendation() {
     return `Zone ${payZone.replace('zone', '')}`
   }
   
+  // 표시할 PayZone 목록
+  const displayedPayZones = showAllZones ? practicalData.metadata.payZones : ['all']
+  
   return (
     <div className="bg-white rounded-lg shadow-lg">
+      {/* 직군 선택 바 */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">표시할 직군 선택</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={toggleAllBands}
+              className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              {selectedBands.length === practicalData.metadata.bands.length ? '모두 해제' : '모두 선택'}
+            </button>
+            <button
+              onClick={() => setShowAllZones(!showAllZones)}
+              className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              {showAllZones ? 'Zone 숨기기' : 'Zone 보기'}
+            </button>
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          {practicalData.metadata.bands.map(band => (
+            <button
+              key={band}
+              onClick={() => toggleBandSelection(band)}
+              className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                selectedBands.includes(band)
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {band}
+            </button>
+          ))}
+        </div>
+        
+        {selectedBands.length === 0 && (
+          <p className="text-xs text-gray-500 mt-2">최소 1개 이상의 직군을 선택해주세요</p>
+        )}
+      </div>
+      
+      {/* 테이블 */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -123,11 +192,11 @@ export function PracticalRecommendation() {
               {/* 전체 컬럼 */}
               <th className="bg-blue-100 border border-gray-300 text-center" colSpan={practicalData.metadata.grades.length}>
                 <div className="text-sm font-bold text-blue-700 py-1">【전체】</div>
-                <div className="text-xs text-blue-600">가중평균</div>
+                <div className="text-xs text-blue-600">클릭하여 편집 가능</div>
               </th>
               
-              {/* 직군별 컬럼들 */}
-              {practicalData.metadata.bands.map(band => (
+              {/* 선택된 직군별 컬럼들 */}
+              {selectedBands.map(band => (
                 <th key={band} className="bg-gray-100 border border-gray-300 text-center" colSpan={practicalData.metadata.grades.length}>
                   <div className="text-sm font-bold text-gray-700 py-1">【{band}】</div>
                 </th>
@@ -143,8 +212,8 @@ export function PracticalRecommendation() {
                 </th>
               ))}
               
-              {/* 각 직군의 평가등급들 */}
-              {practicalData.metadata.bands.map(band => 
+              {/* 각 선택된 직군의 평가등급들 */}
+              {selectedBands.map(band => 
                 practicalData.metadata.grades.map(grade => (
                   <th key={`${band}-${grade}`} className="bg-gray-50 border border-gray-300 px-1 py-1 min-w-[80px]">
                     <div className="text-xs font-semibold text-gray-700">{grade}</div>
@@ -182,8 +251,8 @@ export function PracticalRecommendation() {
                             -
                           </td>
                         ))}
-                        {/* 직군별 컬럼 */}
-                        {practicalData.metadata.bands.map(band => 
+                        {/* 선택된 직군별 컬럼 */}
+                        {selectedBands.map(band => 
                           practicalData.metadata.grades.map(grade => (
                             <td key={`${band}-${grade}`} className="border border-gray-300 text-center text-xs text-gray-500">
                               -
@@ -196,8 +265,8 @@ export function PracticalRecommendation() {
                     {/* 빈 셀들 (펼쳐졌을 때) */}
                     {isExpanded && (
                       <>
-                        {/* 전체 + 직군별 모든 등급 수만큼 빈 셀 */}
-                        {[...Array(practicalData.metadata.grades.length * (1 + practicalData.metadata.bands.length))].map((_, i) => (
+                        {/* 전체 + 선택된 직군별 모든 등급 수만큼 빈 셀 */}
+                        {[...Array(practicalData.metadata.grades.length * (1 + selectedBands.length))].map((_, i) => (
                           <td key={i} className="border border-gray-300"></td>
                         ))}
                       </>
@@ -205,7 +274,7 @@ export function PracticalRecommendation() {
                   </tr>
                   
                   {/* PayZone별 상세 행들 (펼쳐졌을 때만) */}
-                  {isExpanded && practicalData.metadata.payZones.map(payZone => {
+                  {isExpanded && displayedPayZones.map(payZone => {
                     const zoneData = practicalData.hierarchy[level]?.[payZone]
                     if (!zoneData) return null
                     
@@ -217,7 +286,7 @@ export function PracticalRecommendation() {
                           </div>
                         </td>
                         
-                        {/* 전체 컬럼 (가중평균) */}
+                        {/* 전체 컬럼 (편집 가능) */}
                         {practicalData.metadata.grades.map(grade => {
                           const totalCell = zoneData.total[grade]
                           
@@ -230,7 +299,7 @@ export function PracticalRecommendation() {
                                   additional={totalCell.additional}
                                   employeeCount={totalCell.employeeCount}
                                   isEditable={true}
-                                  isTotal={true}
+                                  isTotal={false} // 전체 컬럼도 편집 가능
                                   onChange={(field, value) => handleTotalCellChange(level, payZone, grade, field, value)}
                                 />
                               )}
@@ -238,8 +307,8 @@ export function PracticalRecommendation() {
                           )
                         })}
                         
-                        {/* 직군별 컬럼들 */}
-                        {practicalData.metadata.bands.map(band => 
+                        {/* 선택된 직군별 컬럼들 */}
+                        {selectedBands.map(band => 
                           practicalData.metadata.grades.map(grade => {
                             const bandCell = zoneData.byBand[band]?.[grade]
                             
@@ -276,7 +345,15 @@ export function PracticalRecommendation() {
       
       {/* 하단 안내 */}
       <div className="p-4 border-t border-gray-200">
-        <div className="grid grid-cols-3 gap-4 text-xs">
+        <div className="grid grid-cols-2 gap-4 text-xs">
+          <div>
+            <p className="font-semibold text-gray-700 mb-1">💡 사용 방법</p>
+            <ul className="space-y-0.5 text-gray-600">
+              <li>• 상단에서 보고 싶은 직군을 선택하세요</li>
+              <li>• 전체 컬럼도 직접 수정 가능합니다</li>
+              <li>• 전체 수정 시 선택된 직군에 비례 분배됩니다</li>
+            </ul>
+          </div>
           <div>
             <p className="font-semibold text-gray-700 mb-1">📊 인상률 구성</p>
             <p className="text-gray-600">
@@ -285,14 +362,7 @@ export function PracticalRecommendation() {
               <span className="text-orange-500 ml-1">Additional</span> = 
               <span className="font-semibold ml-1">총 인상률</span>
             </p>
-          </div>
-          <div>
-            <p className="font-semibold text-gray-700 mb-1">💡 사용 방법</p>
-            <p className="text-gray-600">직군별 셀의 각 값을 클릭하여 수정 가능</p>
-          </div>
-          <div>
-            <p className="font-semibold text-gray-700 mb-1">🔄 가중평균</p>
-            <p className="text-gray-600">전체 컬럼은 직군별 값의 가중평균으로 자동 계산</p>
+            <p className="text-gray-500 mt-1">가중치 = 인원수 × 평균급여</p>
           </div>
         </div>
       </div>
