@@ -6,7 +6,6 @@
  */
 
 import { useWageContextNew } from '@/context/WageContextNew'
-import { useWageContextAdapter } from '@/hooks/useWageContextAdapter'
 import { Employee } from '@/types/employee'
 import { BudgetUsage } from '@/utils/matrixCalculations'
 
@@ -16,14 +15,11 @@ import { BudgetUsage } from '@/utils/matrixCalculations'
  */
 export class WageSystemFacade {
   private context: ReturnType<typeof useWageContextNew>
-  private adapter: ReturnType<typeof useWageContextAdapter>
   
   constructor(
-    context: ReturnType<typeof useWageContextNew>,
-    adapter: ReturnType<typeof useWageContextAdapter>
+    context: ReturnType<typeof useWageContextNew>
   ) {
     this.context = context
-    this.adapter = adapter
   }
   
   // ===== 예산 관리 =====
@@ -73,10 +69,14 @@ export class WageSystemFacade {
    * 현재 인상률 정보 가져오기
    */
   getRates(): { baseUpRate: number; meritRate: number; totalRate: number } {
+    const avgRates = this.context.computed.weightedAverage.totalAverage || { baseUp: 0, merit: 0 }
+    const baseUpRate = avgRates.baseUp || this.context.originalData.aiSettings.baseUpPercentage || 0
+    const meritRate = avgRates.merit || this.context.originalData.aiSettings.meritIncreasePercentage || 0
+    
     return {
-      baseUpRate: this.adapter.baseUpRate,
-      meritRate: this.adapter.meritRate,
-      totalRate: this.adapter.baseUpRate + this.adapter.meritRate
+      baseUpRate,
+      meritRate,
+      totalRate: baseUpRate + meritRate
     }
   }
   
@@ -93,11 +93,16 @@ export class WageSystemFacade {
    * 직원 통계 가져오기
    */
   getStatistics() {
+    const stats = this.context.computed.statistics
+    const totalPayroll = stats.totalEmployees * stats.averageSalary
+    
     return {
-      totalEmployees: this.context.computed.statistics.totalEmployees,
-      averageSalary: this.context.computed.statistics.averageSalary,
-      totalPayroll: this.context.computed.statistics.totalPayroll,
-      competitiveness: this.context.computed.statistics.competitiveness
+      totalEmployees: stats.totalEmployees,
+      averageSalary: stats.averageSalary,
+      totalPayroll,
+      byLevel: stats.byLevel,
+      byBand: stats.byBand,
+      byGrade: stats.byGrade
     }
   }
   
@@ -188,7 +193,6 @@ export class WageSystemFacade {
  */
 export function useWageSystemFacade(): WageSystemFacade {
   const context = useWageContextNew()
-  const adapter = useWageContextAdapter()
   
-  return new WageSystemFacade(context, adapter)
+  return new WageSystemFacade(context)
 }

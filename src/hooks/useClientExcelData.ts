@@ -52,7 +52,7 @@ export function useClientExcelData() {
         })
       }
     } catch (err) {
-      console.error('데이터 로드 실패:', err)
+      // 데이터 로드 실패
       setError('저장된 데이터를 불러올 수 없습니다.')
     } finally {
       setLoading(false)
@@ -73,15 +73,15 @@ export function useClientExcelData() {
       if (workbook.SheetNames.includes('평가등급순서')) {
         const gradeOrderSheet = workbook.Sheets['평가등급순서']
         const gradeOrderData = XLSX.utils.sheet_to_json(gradeOrderSheet, { header: 1 })
-        console.log('[클라이언트] 평가등급순서 시트 데이터:', gradeOrderData)
+        // [클라이언트] 평가등급순서 시트 데이터
         
         // 첫 번째 행은 헤더, 두 번째 행부터 실제 데이터
         gradeOrder = gradeOrderData.slice(1)
           .filter((row: any) => row[0])  // 첫 번째 열에 값이 있는 행만
           .map((row: any) => String(row[0]).trim())
-        console.log('[클라이언트] 평가등급 순서 (높은순):', gradeOrder)
+        // [클라이언트] 평가등급 순서 (높은순)
       } else {
-        console.log('[클라이언트] 평가등급순서 시트가 없음, 기본값 사용')
+        // [클라이언트] 평가등급순서 시트가 없음, 기본값 사용
         gradeOrder = ['ST', 'AT', 'OT', 'BT']  // 기본값
       }
       
@@ -90,15 +90,15 @@ export function useClientExcelData() {
       if (workbook.SheetNames.includes('직급순서')) {
         const levelOrderSheet = workbook.Sheets['직급순서']
         const levelOrderData = XLSX.utils.sheet_to_json(levelOrderSheet, { header: 1 })
-        console.log('[클라이언트] 직급순서 시트 데이터:', levelOrderData)
+        // [클라이언트] 직급순서 시트 데이터
         
         // 첫 번째 행은 헤더, 두 번째 행부터 실제 데이터
         levelOrder = levelOrderData.slice(1)
           .filter((row: any) => row[0])  // 첫 번째 열에 값이 있는 행만
           .map((row: any) => String(row[0]).trim())
-        console.log('[클라이언트] 직급 순서 (높은순):', levelOrder)
+        // [클라이언트] 직급 순서 (높은순)
       } else {
-        console.log('[클라이언트] 직급순서 시트가 없음, 기본값 사용')
+        // [클라이언트] 직급순서 시트가 없음, 기본값 사용
         levelOrder = ['Lv.5', 'Lv.4', 'Lv.3', 'Lv.2', 'Lv.1']  // 기본값
       }
       
@@ -114,7 +114,7 @@ export function useClientExcelData() {
       if (workbook.SheetNames.includes('AI설정')) {
         const aiSheet = workbook.Sheets['AI설정']
         const aiData = XLSX.utils.sheet_to_json(aiSheet)
-        console.log('[클라이언트] AI설정 시트 데이터:', aiData)
+        // [클라이언트] AI설정 시트 데이터
         
         const baseUpRow = aiData.find((row: any) => row['항목'] === 'Base-up(%)')
         const meritRow = aiData.find((row: any) => 
@@ -123,8 +123,8 @@ export function useClientExcelData() {
           row['항목'] === '성과 인상률 (%)' ||
           row['항목'] === '성과인상률 (%)')
         
-        console.log('[클라이언트] Base-up 행:', baseUpRow)
-        console.log('[클라이언트] Merit 행:', meritRow)
+        // [클라이언트] Base-up 행
+        // [클라이언트] Merit 행
         
         aiSettings = {
           baseUpPercentage: baseUpRow ? (baseUpRow as any)['값'] || 0 : 0,
@@ -137,26 +137,26 @@ export function useClientExcelData() {
           minRange: (aiData.find((row: any) => row['항목'] === '최소범위(%)') as any)?.['값'] || 0,
           maxRange: (aiData.find((row: any) => row['항목'] === '최대범위(%)') as any)?.['값'] || 0
         }
-        console.log('[클라이언트] AI 설정 로드 완료:', aiSettings)
+        // [클라이언트] AI 설정 로드 완료
       } else {
-        console.log('[클라이언트] AI설정 시트가 없음')
+        // [클라이언트] AI설정 시트가 없음
       }
       
       // C사인상률 시트 읽기
       let competitorIncreaseRate = 0
-      console.log('엑셀 시트 목록:', workbook.SheetNames)
+      // 엑셀 시트 목록
       
       if (workbook.SheetNames.includes('C사인상률')) {
         const competitorRateSheet = workbook.Sheets['C사인상률']
         const competitorRateData = XLSX.utils.sheet_to_json(competitorRateSheet)
-        console.log('C사인상률 시트 데이터:', competitorRateData)
+        // C사인상률 시트 데이터
         const rateRow = competitorRateData.find((row: any) => row['항목'] === 'C사 인상률(%)')
         if (rateRow) {
           competitorIncreaseRate = (rateRow as any)['값'] || 0
-          console.log('C사 인상률 찾음:', competitorIncreaseRate)
+          // C사 인상률 찾음
         }
       } else {
-        console.log('C사인상률 시트를 찾을 수 없음')
+        // C사인상률 시트를 찾을 수 없음
       }
       
       // C사데이터 시트 읽기
@@ -164,7 +164,7 @@ export function useClientExcelData() {
       if (workbook.SheetNames.includes('C사데이터')) {
         const competitorSheet = workbook.Sheets['C사데이터']
         const competitorRawData = XLSX.utils.sheet_to_json(competitorSheet)
-        console.log('C사데이터 시트 원본:', competitorRawData)
+        // C사데이터 시트 원본
         
         competitorRawData.forEach((row: any) => {
           const band = row['직군']
@@ -181,9 +181,9 @@ export function useClientExcelData() {
             })
           }
         })
-        console.log('처리된 C사 데이터:', competitorData.length, '개 항목')
+        // 처리된 C사 데이터
       } else {
-        console.log('C사데이터 시트를 찾을 수 없음')
+        // C사데이터 시트를 찾을 수 없음
       }
       
       // 직원 데이터 읽기
@@ -209,13 +209,7 @@ export function useClientExcelData() {
         
         // 디버깅: 처음 몇 개 직원의 평가등급 및 Pay Zone 확인
         if (index < 3) {
-          console.log(`직원 ${index + 1} (${emp['이름'] || emp['name']}) 데이터 매핑:`, {
-            원본데이터키: Object.keys(emp),
-            최종평가등급: rating,
-            PayZone: payZone,
-            평가등급필드: emp['평가등급'],
-            평가필드: emp['평가']
-          })
+          // 직원 데이터 매핑 확인
         }
         
         return {
@@ -255,7 +249,7 @@ export function useClientExcelData() {
       
       return { success: true, data: newData }
     } catch (err) {
-      console.error('엑셀 업로드 실패:', err)
+      // 엑셀 업로드 실패
       setError('엑셀 파일 처리 중 오류가 발생했습니다.')
       return { success: false, error: '파일 처리 실패' }
     } finally {
@@ -268,7 +262,7 @@ export function useClientExcelData() {
       await clearExcelData()
       setData(null)
     } catch (err) {
-      console.error('데이터 삭제 실패:', err)
+      // 데이터 삭제 실패
       setError('데이터 삭제 중 오류가 발생했습니다.')
     }
   }

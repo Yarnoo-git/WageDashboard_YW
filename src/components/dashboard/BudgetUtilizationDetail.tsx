@@ -103,7 +103,7 @@ function BudgetUtilizationDetailComponent({
   const totalUsedCost = usedDirectCost + usedIndirectCost
   // 남은 예산
   const remainingBudget = totalBudget - totalUsedCost
-  // 최대인상가능폭 (남은 예산을 1.178로 나누어 직접비용만 추출)
+  // 최대인상가능폭 (남은 예산을 간접비용 포함 계수로 나누어 직접비용만 추출)
   const maxIncreasePossible = remainingBudget / (1 + indirectCostRatio)
   
   // 현재 설정값 (체크박스 상태에 따라 결정)

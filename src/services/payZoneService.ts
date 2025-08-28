@@ -45,7 +45,7 @@ class PayZoneService {
         this.currentConfig = config
       }
     } catch (error) {
-      console.error('Failed to load Pay Zone config:', error)
+      // Failed to load Pay Zone config
       this.currentConfig = DEFAULT_PAY_ZONE_CONFIG
     }
   }
@@ -58,7 +58,8 @@ class PayZoneService {
       this.currentConfig = config
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(config))
     } catch (error) {
-      console.error('Failed to save Pay Zone config:', error)
+      // Failed to save Pay Zone config
+      throw error
       throw error
     }
   }
@@ -101,7 +102,7 @@ class PayZoneService {
     )
 
     if (!levelConfig) {
-      console.warn(`No Pay Zone config for level ${employee.level}, using default`)
+      // No Pay Zone config for level, using default
       return 1
     }
 
