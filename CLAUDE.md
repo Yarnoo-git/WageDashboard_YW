@@ -12,6 +12,46 @@ AI 개발자를 위한 WageDashboard 프로젝트 가이드
 - **타입 안전성**: TypeScript strict mode
 - **모듈화**: 모든 파일 300줄 이하
 
+## 🛠️ 기술 스택 (2025-08-28 기준)
+
+### Frontend Core
+- **Framework**: Next.js 14.2.31 (App Router)
+- **UI Library**: React 18.3
+- **Language**: TypeScript 5.6 (strict mode)
+- **Styling**: TailwindCSS 3.4 + Pretendard font
+- **Build**: SWC compiler + Webpack 5
+
+### Data & State
+- **State Management**: 
+  - React Context API (WageContextNew)
+  - Local component state
+  - Custom hooks pattern
+- **Storage**: 
+  - IndexedDB (primary)
+  - localStorage (settings)
+  - No server database
+- **Data Source**: Excel files (client-side processing)
+
+### Libraries
+- **Excel Processing**: xlsx 0.18.5
+- **Charts**: Recharts 2.15
+- **PDF Export**: jsPDF (준비 중)
+- **Utilities**: 
+  - date-fns (날짜 처리)
+  - clsx (className 조합)
+
+### Development Tools
+- **Testing**: Jest + React Testing Library (현재 비활성화)
+- **Linting**: ESLint
+- **Formatting**: Prettier
+- **Version Control**: Git
+
+### Removed/Deprecated
+- ❌ ~~Prisma~~ (제거됨)
+- ❌ ~~Server API routes~~ (제거됨)
+- ❌ ~~useWageContextAdapter~~ (제거됨)
+- ❌ ~~Person pages~~ (제거됨)
+
 ## 🏗️ 아키텍처 원칙
 
 ### 1. Context System (⚠️ 중요)
@@ -325,6 +365,34 @@ console.log('Current state:', { originalData, computed, hasChanges })
 // ErrorBoundary에서 에러 로깅
 // Sentry 등 에러 트래킹 서비스 연동 고려
 ```
+
+## 📊 현재 구현 상태 (2025-08-28)
+
+### ✅ 완료된 기능
+- **엑셀 데이터 기반 시스템**: 모든 데이터는 엑셀 파일에서 동적 추출
+- **클라이언트 사이드 처리**: 서버 없이 브라우저에서 모든 계산
+- **인상률 시뮬레이션**: Base-up/Merit 기반 계산
+- **예산 관리**: 직접비/간접비 자동 계산
+- **TypeScript Strict Mode**: 100% 타입 안전성
+
+### 🚧 진행 중
+- **PracticalRecommendation**: UI는 있으나 로직 미구현 (placeholder 상태)
+- **PDF Export**: jsPDF 라이브러리 준비 중
+- **테스트**: Jest 설정은 있으나 현재 비활성화
+
+### ❌ 제거된 기능
+- **Person 페이지**: 개인별 상세 페이지 (6개 파일 삭제)
+- **서버 API**: 모든 API routes 제거
+- **Prisma**: 데이터베이스 ORM 제거
+- **useWageContextAdapter**: Context adapter 패턴 제거
+
+### 📝 Known Issues
+- PracticalRecommendation 컴포넌트가 placeholder 텍스트만 표시
+- 일부 파일에 useWageContextAdapter 주석 잔여
+- 테스트 파일들이 tsconfig.json에서 제외됨
+- WageContextNew가 불필요하게 디렉토리 구조로 되어있음
+
+자세한 수정 계획은 `RECOVERY_PLAN.md` 참조
 
 ## 📚 추가 리소스
 
