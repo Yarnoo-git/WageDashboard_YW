@@ -205,7 +205,6 @@ export class WeightedAverageCalculator {
       .slice(0, 20) // 상위 20개만
       .forEach(d => {
         const baseUpContrib = (d.rates.baseUp * d.weight / this.totalWeight).toFixed(2)
-        const meritContrib = (d.rates.merit * d.weight / this.totalWeight).toFixed(2)
         lines.push(
           `${d.path}: ${d.employeeCount}명 × ${d.rates.baseUp.toFixed(1)}% = ${baseUpContrib}% (가중치 ${d.contribution.toFixed(1)}%)`
         )

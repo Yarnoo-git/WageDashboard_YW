@@ -24,23 +24,18 @@ type ViewMode = 'adjustment' | 'all' | 'competitiveness' | 'band'
 function SimulationContent() {
   const router = useRouter()
   const newContext = useWageContextNew()
-  // Using newContext directly instead of adapter
-  const adapter = {
-    baseUpRate: newContext.computed.weightedAverage.totalAverage?.baseUp || 0,
-    meritRate: newContext.computed.weightedAverage.totalAverage?.merit || 0,
-    levelRates: {},  // Level rates from matrix cells
-    levelTotalRates: {},
-    weightedAverageRate: (newContext.computed.weightedAverage.totalAverage?.baseUp || 0) + (newContext.computed.weightedAverage.totalAverage?.merit || 0),
-    levelStatistics: [],  // Level statistics from computed data
-    competitorData: newContext.originalData.competitorData,
-    competitorIncreaseRate: 0  // Competitor increase rate
-  }
   const { bandsData, totalBandData } = useBandData()
+  
+  // 필요한 데이터 직접 추출
+  const baseUpRate = newContext.computed.weightedAverage.totalAverage?.baseUp || 0
+  const meritRate = newContext.computed.weightedAverage.totalAverage?.merit || 0
+  const weightedAverageRate = baseUpRate + meritRate
+  const competitorData = newContext.originalData.competitorData
+  const competitorIncreaseRate = 0  // TODO: 경쟁사 인상률 데이터 추가 필요
   
   const [viewMode, setViewMode] = useState<ViewMode>('adjustment')
   const [selectedBand, setSelectedBand] = useState<string | null>(null)
-  const [selectedCell, setSelectedCell] = useState<{ band: string; level: string } | null>(null)
-  const [bandAdjustments, setBandAdjustments] = useState<Record<string, { baseUpAdjustment: number; meritAdjustment: number }>>({})
+  const bandAdjustments: Record<string, { baseUpAdjustment: number; meritAdjustment: number }> = {}
   
   // 데이터 없으면 홈으로
   useEffect(() => {
@@ -115,13 +110,13 @@ function SimulationContent() {
                 {/* C사 대비 비교 섹션 */}
                 <div className="mb-3">
                   <IndustryComparisonSection 
-                    baseUpRate={adapter.baseUpRate}
-                    meritRate={adapter.meritRate}
-                    levelTotalRates={adapter.levelTotalRates}
-                    weightedAverageRate={adapter.weightedAverageRate}
-                    levelStatistics={adapter.levelStatistics}
-                    competitorData={adapter.competitorData}
-                    competitorIncreaseRate={adapter.competitorIncreaseRate}
+                    baseUpRate={baseUpRate}
+                    meritRate={meritRate}
+                    levelTotalRates={{}}
+                    weightedAverageRate={weightedAverageRate}
+                    levelStatistics={[]}
+                    competitorData={competitorData}
+                    competitorIncreaseRate={competitorIncreaseRate}
                   />
                 </div>
                 
@@ -201,7 +196,7 @@ function SimulationContent() {
                 headcount: level.headcount,
                 meanBasePay: level.company.mean,
                 baseUpKRW: 0,
-                baseUpRate: adapter.levelRates[level.level]?.baseUp || 0,
+                baseUpRate: 0,  // TODO: Level별 rate 데이터 추가 필요
                 sblIndex: 100,
                 caIndex: level.competitor.median > 0 
                   ? (level.company.median / level.competitor.median) * 100 
@@ -221,10 +216,10 @@ function SimulationContent() {
                   bandId="total"
                   bandName="전체"
                   levels={levelsForCard}
-                  initialBaseUp={adapter.baseUpRate}
-                  initialMerit={adapter.meritRate}
-                  levelRates={adapter.levelRates}
-                  onRateChange={(bandId, updatedData) => {
+                  initialBaseUp={baseUpRate}
+                  initialMerit={meritRate}
+                  levelRates={{}}
+                  onRateChange={() => {
                     // 전체 조정값 업데이트
                   }}
                   isReadOnly={true}
@@ -257,7 +252,7 @@ function SimulationContent() {
                       headcount: level.headcount,
                       meanBasePay: level.company.mean,
                       baseUpKRW: 0, // 계산된 값
-                      baseUpRate: adapter.levelRates[level.level]?.baseUp || 0,
+                      baseUpRate: 0,  // TODO: Level별 rate 데이터 추가 필요
                       sblIndex: 100, // 기본값
                       caIndex: level.competitor.median > 0 
                         ? (level.company.median / level.competitor.median) * 100 
@@ -278,10 +273,10 @@ function SimulationContent() {
                         bandId={band!.bandId}
                         bandName={band!.bandName}
                         levels={levelsForCard}
-                        initialBaseUp={adapter.baseUpRate}
-                        initialMerit={adapter.meritRate}
-                        levelRates={adapter.levelRates}
-                        onRateChange={(bandId, updatedData) => {
+                        initialBaseUp={baseUpRate}
+                        initialMerit={meritRate}
+                        levelRates={{}}
+                        onRateChange={() => {
                           // 조정값 업데이트는 이미 WageContext에서 처리됨
                         }}
                         isReadOnly={true}  // 직군별 분석에서는 읽기 전용
@@ -301,6 +296,9 @@ function SimulationContent() {
                     level: level.level,
                     headcount: level.headcount,
                     meanBasePay: level.company.mean,
+                    competitiveness: level.competitor.median > 0
+                      ? (level.company.median / level.competitor.median) * 100
+                      : 100,
                     sblIndex: 100,
                     caIndex: level.competitor.median > 0
                       ? (level.company.median / level.competitor.median) * 100
@@ -316,16 +314,7 @@ function SimulationContent() {
                     }
                   ])
                 )}
-                levelRates={adapter.levelRates}
-                onBandRateChange={(bandName, adjustments) => {
-                  setBandAdjustments(prev => ({
-                    ...prev,
-                    [bandName]: adjustments
-                  }))
-                }}
-                aiSettings={newContext.originalData.aiSettings}
-                showDifference={true}
-                selectedBands={[]}
+                levelRates={{}}
               />
             )}
           </div>

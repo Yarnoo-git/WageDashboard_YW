@@ -49,20 +49,27 @@ function GradeSalaryAdjustmentTableComponent({
     setRates(prev => {
       const updated = { ...prev }
       Object.keys(updated).forEach(level => {
-        updated[level] = {
-          ...updated[level],
-          baseUp: baseUpRate
+        const currentLevel = updated[level]
+        if (currentLevel) {
+          updated[level] = {
+            ...currentLevel,
+            baseUp: baseUpRate,
+            merit: currentLevel.merit || meritRate,
+            promotion: currentLevel.promotion || 0,
+            advancement: currentLevel.advancement || 0,
+            additional: currentLevel.additional || 0
+          }
         }
       })
       return updated
     })
-  }, [baseUpRate])
+  }, [baseUpRate, meritRate])
   
   // 계산 함수들
   const calculateLevelAmount = (level: string) => {
     const rate = rates[level]
     const data = employeeData.levels[level]
-    if (!data) return 0
+    if (!data || !rate) return 0
     
     const totalRate = rate.baseUp + rate.merit + rate.additional
     return data.headcount * data.averageSalary * (totalRate / 100)
@@ -114,15 +121,21 @@ function GradeSalaryAdjustmentTableComponent({
     const numValue = parseFloat(value) || 0
     
     setRates(prev => {
+      const currentLevel = prev[level]
+      if (!currentLevel) return prev
+      
       const updated = {
         ...prev,
         [level]: {
-          ...prev[level],
-          [field]: numValue
+          baseUp: field === 'baseUp' ? numValue : currentLevel.baseUp,
+          merit: field === 'merit' ? numValue : currentLevel.merit,
+          promotion: field === 'promotion' ? numValue : currentLevel.promotion,
+          advancement: field === 'advancement' ? numValue : currentLevel.advancement,
+          additional: field === 'additional' ? numValue : currentLevel.additional
         }
       }
       
-      if (onRateChange) {
+      if (onRateChange && updated[level]) {
         onRateChange(level, updated[level])
       }
       
@@ -216,16 +229,20 @@ function GradeSalaryAdjustmentTableComponent({
             onEnableAdditionalIncreaseChange={onEnableAdditionalIncreaseChange}
           />
           <tbody>
-            {LEVELS.map(level => (
-              <TableRow
-                key={level}
-                level={level}
-                rates={rates[level]}
-                employeeData={employeeData}
-                enableAdditionalIncrease={enableAdditionalIncrease}
-                onRateChange={handleRateChange}
-              />
-            ))}
+            {LEVELS.map(level => {
+              const levelRates = rates[level]
+              if (!levelRates) return null
+              return (
+                <TableRow
+                  key={level}
+                  level={level}
+                  rates={levelRates}
+                  employeeData={employeeData}
+                  enableAdditionalIncrease={enableAdditionalIncrease}
+                  onRateChange={handleRateChange}
+                />
+              )
+            })}
             
             {/* 합계 행 */}
             <tr className="font-bold bg-gray-100">

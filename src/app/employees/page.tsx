@@ -9,8 +9,6 @@ import React, { useState, useMemo } from 'react'
 import { WageContextNewProvider, useWageContextNew } from '@/context/WageContextNew'
 import { VirtualizedEmployeeTable } from '@/components/employees/VirtualizedEmployeeTable'
 import { formatKoreanCurrency } from '@/lib/utils'
-import { Employee } from '@/types/employee'
-import { UI_CONFIG } from '@/config/constants'
 
 function EmployeesContent() {
   const {
@@ -206,10 +204,6 @@ function EmployeesContent() {
         {/* 가상화된 테이블 */}
         <VirtualizedEmployeeTable
           employees={filteredEmployees}
-          onUpdateEmployee={(id, data) => {
-            // 직원 업데이트 로직 (필요시 구현)
-            console.log('Update employee:', id, data)
-          }}
           performanceWeights={computed.performanceWeights}
         />
       </div>

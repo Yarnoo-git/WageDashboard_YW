@@ -6,7 +6,7 @@
 'use client'
 
 import React from 'react'
-import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
+import { formatKoreanCurrency } from '@/lib/utils'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 
 interface LevelData {
@@ -244,7 +244,7 @@ export function AllView({
             <YAxis />
             <Tooltip formatter={(value: any) => `${value.toLocaleString()}명`} />
             <Bar dataKey="headcount" name="인원수">
-              {levels.filter(l => l.headcount > 0).map((entry, index) => (
+              {levels.filter(l => l.headcount > 0).map((_entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
                   fill={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b'][index % 4]} 

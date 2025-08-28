@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import { formatPercentage } from '@/lib/utils'
 
 interface BandData {
   id: string

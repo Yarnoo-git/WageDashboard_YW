@@ -27,10 +27,6 @@ interface BudgetResourceCardProps {
 
 function BudgetResourceCardComponent({ 
   totalBudget = 0, // 기본값
-  baseUpRate = 0,
-  meritRate = 0,
-  totalEmployees,
-  averageSalary,
   levelRates,
   levelStatistics,
   customTotalBudget,

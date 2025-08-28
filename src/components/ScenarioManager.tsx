@@ -9,7 +9,6 @@ interface ScenarioManagerProps {
   onSave: (name: string) => void
   onLoad: (id: string) => void
   onDelete: (id: string) => void
-  onRename: (id: string, newName: string) => void
   isNavigation?: boolean // 네비게이션 바에서 사용하는지 여부
 }
 
@@ -19,13 +18,10 @@ export function ScenarioManager({
   onSave,
   onLoad,
   onDelete,
-  onRename,
   isNavigation = false
 }: ScenarioManagerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [newScenarioName, setNewScenarioName] = useState('')
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingName, setEditingName] = useState('')
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(activeScenarioId)
 
   const handleSave = () => {
@@ -44,14 +40,6 @@ export function ScenarioManager({
       setTimeout(() => {
         alert('시나리오가 적용되었습니다.')
       }, 100)
-    }
-  }
-
-  const handleRename = (id: string) => {
-    if (editingName.trim()) {
-      onRename(id, editingName.trim())
-      setEditingId(null)
-      setEditingName('')
     }
   }
 

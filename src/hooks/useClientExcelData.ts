@@ -2,9 +2,9 @@
  * 클라이언트 사이드 엑셀 데이터 관리 훅
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import * as XLSX from 'xlsx'
-import { saveExcelData, loadExcelData, clearExcelData, hasStoredData, generateFileId, getCurrentFileId } from '@/lib/clientStorage'
+import { saveExcelData, loadExcelData, clearExcelData, hasStoredData, generateFileId } from '@/lib/clientStorage'
 
 export interface ClientExcelData {
   employees: any[]
@@ -72,6 +72,9 @@ export function useClientExcelData() {
       let gradeOrder: string[] = []
       if (workbook.SheetNames.includes('평가등급순서')) {
         const gradeOrderSheet = workbook.Sheets['평가등급순서']
+        if (!gradeOrderSheet) {
+          throw new Error('평가등급순서 시트를 찾을 수 없습니다')
+        }
         const gradeOrderData = XLSX.utils.sheet_to_json(gradeOrderSheet, { header: 1 })
         // [클라이언트] 평가등급순서 시트 데이터
         
@@ -89,6 +92,9 @@ export function useClientExcelData() {
       let levelOrder: string[] = []
       if (workbook.SheetNames.includes('직급순서')) {
         const levelOrderSheet = workbook.Sheets['직급순서']
+        if (!levelOrderSheet) {
+          throw new Error('직급순서 시트를 찾을 수 없습니다')
+        }
         const levelOrderData = XLSX.utils.sheet_to_json(levelOrderSheet, { header: 1 })
         // [클라이언트] 직급순서 시트 데이터
         
@@ -113,6 +119,9 @@ export function useClientExcelData() {
       
       if (workbook.SheetNames.includes('AI설정')) {
         const aiSheet = workbook.Sheets['AI설정']
+        if (!aiSheet) {
+          throw new Error('AI설정 시트를 찾을 수 없습니다')
+        }
         const aiData = XLSX.utils.sheet_to_json(aiSheet)
         // [클라이언트] AI설정 시트 데이터
         
@@ -148,6 +157,9 @@ export function useClientExcelData() {
       
       if (workbook.SheetNames.includes('C사인상률')) {
         const competitorRateSheet = workbook.Sheets['C사인상률']
+        if (!competitorRateSheet) {
+          throw new Error('C사인상률 시트를 찾을 수 없습니다')
+        }
         const competitorRateData = XLSX.utils.sheet_to_json(competitorRateSheet)
         // C사인상률 시트 데이터
         const rateRow = competitorRateData.find((row: any) => row['항목'] === 'C사 인상률(%)')
@@ -163,6 +175,9 @@ export function useClientExcelData() {
       let competitorData: any[] = []
       if (workbook.SheetNames.includes('C사데이터')) {
         const competitorSheet = workbook.Sheets['C사데이터']
+        if (!competitorSheet) {
+          throw new Error('C사데이터 시트를 찾을 수 없습니다')
+        }
         const competitorRawData = XLSX.utils.sheet_to_json(competitorSheet)
         // C사데이터 시트 원본
         
@@ -191,7 +206,14 @@ export function useClientExcelData() {
         ? '직원기본정보' 
         : workbook.SheetNames.find(name => name.includes('직원')) || workbook.SheetNames[0]
       
+      if (!employeeSheetName) {
+        throw new Error('직원 데이터 시트를 찾을 수 없습니다')
+      }
+      
       const worksheet = workbook.Sheets[employeeSheetName]
+      if (!worksheet) {
+        throw new Error(`${employeeSheetName} 시트를 찾을 수 없습니다`)
+      }
       const employees = XLSX.utils.sheet_to_json(worksheet)
       
       // 데이터 변환 (필요한 경우) - Lv0 제외

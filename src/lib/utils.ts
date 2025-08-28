@@ -48,7 +48,7 @@ export function formatPercentage(value: number, decimals: number = 1): string {
  */
 export function levelToNumber(level: string): number {
   const match = level.match(/Lv\.(\d+)/)
-  return match ? parseInt(match[1]) : 0
+  return match && match[1] ? parseInt(match[1]) : 0
 }
 
 /**

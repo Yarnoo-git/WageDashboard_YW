@@ -32,10 +32,10 @@ export function PracticalRecommendationCell({
   isTotal = false,
   isCompact = true,  // 기본값 컴팩트 모드
   onChange,
-  band,
-  level,
-  payZone,
-  grade
+  band: _band,
+  level: _level,
+  payZone: _payZone,
+  grade: _grade
 }: PracticalRecommendationCellProps) {
   const [showPopover, setShowPopover] = useState(false)
   const [editValues, setEditValues] = useState({
@@ -73,6 +73,7 @@ export function PracticalRecommendationCell({
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
+    return undefined
   }, [showPopover])
   
   const handleCellClick = () => {

@@ -6,8 +6,9 @@
 'use client'
 
 import React from 'react'
-import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
-import { WeightedAverageResult, BudgetUsage } from '@/utils/matrixCalculations'
+import { formatKoreanCurrency } from '@/lib/utils'
+import { WeightedAverageResult } from '@/types/adjustmentMatrix'
+import { BudgetUsage } from '@/utils/matrixCalculations'
 
 interface FixedSummaryBarProps {
   totalEmployees: number

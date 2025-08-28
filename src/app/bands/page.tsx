@@ -73,15 +73,22 @@ function BandsContent() {
           }
         }
         
-        const salaries = levelEmployees.map(e => e.currentSalary).sort((a, b) => a - b)
-        const meanSalary = salaries.reduce((sum, s) => sum + s, 0) / salaries.length
-        const medianSalary = salaries[Math.floor(salaries.length / 2)]
+        const salaries: number[] = levelEmployees
+          .map(e => e.currentSalary)
+          .filter((s): s is number => s !== undefined)
+          .sort((a, b) => a - b)
+        const meanSalary: number = salaries.length > 0 ? salaries.reduce((sum, s) => sum + s, 0) / salaries.length : 0
+        const medianSalary: number = salaries.length > 0 ? (salaries[Math.floor(salaries.length / 2)] ?? 0) : 0
         
         // 경쟁사 데이터 찾기
         const competitorInfo = competitorData.find(c => 
           c.band === band && c.level === level
         )
-        const competitorMedian = competitorInfo?.averageSalary || 0
+        const competitorMedian: number = competitorInfo?.averageSalary || 0
+        
+        // 안전하게 계산
+        const sblIndexValue = competitorMedian > 0 && medianSalary > 0 ? (medianSalary / competitorMedian) * 100 : 0
+        const caIndexValue = competitorMedian > 0 && medianSalary > 0 ? (medianSalary / competitorMedian) * 100 : 0
         
         return {
           level,
@@ -89,8 +96,8 @@ function BandsContent() {
           meanBasePay: meanSalary,
           baseUpKRW: meanSalary * 0.032, // 3.2% 기본 인상
           baseUpRate: 3.2,
-          sblIndex: competitorMedian > 0 ? (medianSalary / competitorMedian) * 100 : 0,
-          caIndex: competitorMedian > 0 ? (medianSalary / competitorMedian) * 100 : 0,
+          sblIndex: sblIndexValue,
+          caIndex: caIndexValue,
           company: {
             median: medianSalary,
             mean: meanSalary,

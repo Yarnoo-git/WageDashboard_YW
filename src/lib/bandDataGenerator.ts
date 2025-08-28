@@ -168,12 +168,15 @@ export function generateEmployeeData(totalCount: number = 1000): EmployeeRecord[
     const diff = bandHeadcount - totalAssigned
     if (diff !== 0) {
       const maxLevel = 'Lv.1' // 가장 큰 그룹
-      levelDistribution[maxLevel] += diff
+      if (levelDistribution[maxLevel] !== undefined) {
+        levelDistribution[maxLevel] += diff
+      }
     }
     
     // 직급별로 직원 생성
     for (const level of levels) {
       const count = levelDistribution[level]
+      if (count === undefined || count === 0) continue
       const levelInfo = LEVEL_INFO[level as keyof typeof LEVEL_INFO]
       
       // 해당 직군의 부서들
@@ -182,8 +185,11 @@ export function generateEmployeeData(totalCount: number = 1000): EmployeeRecord[
       )
       
       for (let i = 0; i < count; i++) {
-        // 랜덤하게 부서 선택
-        const department = bandDepartments[Math.floor(Math.random() * bandDepartments.length)]
+        // 랜덤하게 부서 선택 (없으면 기본값)
+        const selectedDept = bandDepartments.length > 0 
+          ? bandDepartments[Math.floor(Math.random() * bandDepartments.length)]
+          : undefined
+        const department = selectedDept || '미배정'
         
         // 입사일 생성 (직급이 높을수록 오래됨)
         const yearsAgo = level === 'Lv.4' ? 10 + Math.random() * 10 :
@@ -213,7 +219,7 @@ export function generateEmployeeData(totalCount: number = 1000): EmployeeRecord[
                    level === 'Lv.3' ? '차장' :
                    level === 'Lv.2' ? '과장' :
                    level === 'Lv.1' ? '대리' : '사원',
-          hireDate: hireDate.toISOString().split('T')[0],
+          hireDate: hireDate.toISOString().split('T')[0] || '',
           currentSalary: generateSalary(
             levelInfo.avgSalary,
             levelInfo.minSalary,
@@ -282,10 +288,12 @@ export function calculatePercentile(values: number[], percentile: number): numbe
   const weight = index - lower
   
   if (lower === upper) {
-    return sorted[lower]
+    return sorted[lower] ?? 0
   }
   
-  return sorted[lower] * (1 - weight) + sorted[upper] * weight
+  const lowerValue = sorted[lower] ?? 0
+  const upperValue = sorted[upper] ?? 0
+  return lowerValue * (1 - weight) + upperValue * weight
 }
 
 // 엑셀 데이터 형식으로 변환

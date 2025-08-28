@@ -5,8 +5,7 @@ import { Employee } from '@/types/employee'
 import { AdjustmentMatrix } from '@/types/adjustmentMatrix'
 import { 
   WeightedAverageCalculator,
-  calculateBudgetUsage,
-  BudgetUsage
+  calculateBudgetUsage
 } from '@/utils/matrixCalculations'
 
 interface UseWageComputedParams {

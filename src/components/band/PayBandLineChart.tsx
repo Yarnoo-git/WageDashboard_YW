@@ -9,8 +9,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  ReferenceLine
+  ResponsiveContainer
 } from 'recharts'
 import { formatKoreanCurrency } from '@/lib/utils'
 
@@ -26,7 +25,7 @@ interface PayBandLineChartProps {
   bandName: string
 }
 
-export function PayBandLineChart({ data, bandName }: PayBandLineChartProps) {
+export function PayBandLineChart({ data }: PayBandLineChartProps) {
   // Y축 범위 계산 - 고정된 범위로 설정
   const yAxisDomain = useMemo(() => {
     // 초기 데이터의 모든 값을 기준으로 계산

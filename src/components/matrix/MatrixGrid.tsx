@@ -5,10 +5,9 @@
 
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { AdjustmentMatrix } from '@/types/adjustmentMatrix'
 import { MatrixCellAdjustment } from './MatrixAdjustmentView'
-import { UI_CONFIG } from '@/config/constants'
 
 interface MatrixGridProps {
   matrix: AdjustmentMatrix
@@ -92,7 +91,8 @@ export function MatrixGrid({
                     {band}
                   </td>
                   {matrix.levels.map(level => {
-                    const cell = matrix.cellMap[band][level]
+                    const cell = matrix.cellMap[band]?.[level]
+                    if (!cell) return null
                     const isActive = activeCell?.band === band && activeCell?.level === level
                     const avgRate = cell.weightedAverage.total
                     const empCount = cell.statistics.employeeCount
@@ -127,29 +127,34 @@ export function MatrixGrid({
         </div>
         
         {/* 선택된 셀 상세 뷰 */}
-        {activeCell && (
-          <div className="mt-6">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-base font-semibold text-gray-900">
-                {activeCell.band} × {activeCell.level} 상세 조정
-              </h3>
-              <button
-                onClick={() => setExpandedCell(null)}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                닫기
-              </button>
+        {activeCell && (() => {
+          const cell = matrix.cellMap[activeCell.band]?.[activeCell.level]
+          if (!cell) return null
+          
+          return (
+            <div className="mt-6">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-base font-semibold text-gray-900">
+                  {activeCell.band} × {activeCell.level} 상세 조정
+                </h3>
+                <button
+                  onClick={() => setExpandedCell(null)}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  닫기
+                </button>
+              </div>
+              <MatrixCellAdjustment
+                cell={cell}
+                grades={matrix.grades}
+                onGradeRateChange={(grade, field, value) => 
+                  onCellGradeRateChange(activeCell.band, activeCell.level, grade, field, value)
+                }
+                isReadOnly={isReadOnly}
+              />
             </div>
-            <MatrixCellAdjustment
-              cell={matrix.cellMap[activeCell.band][activeCell.level]}
-              grades={matrix.grades}
-              onGradeRateChange={(grade, field, value) => 
-                onCellGradeRateChange(activeCell.band, activeCell.level, grade, field, value)
-              }
-              isReadOnly={isReadOnly}
-            />
-          </div>
-        )}
+          )
+        })()}
       </div>
     )
   }
@@ -188,7 +193,8 @@ export function MatrixGrid({
           </div>
           <div className="divide-y">
             {matrix.levels.map(level => {
-              const cell = matrix.cellMap[band][level]
+              const cell = matrix.cellMap[band]?.[level]
+              if (!cell) return null
               const isExpanded = expandedCell?.band === band && expandedCell?.level === level
               
               return (

@@ -3,8 +3,6 @@
  * Band × Level 매트릭스 구조에서 각 셀은 평가등급별 인상률을 가짐
  */
 
-import { Employee } from '@/types/employee'
-
 // 기본 인상률 타입
 export interface RateValues {
   baseUp: number      // Base-up 비율 (%)

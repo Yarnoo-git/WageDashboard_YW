@@ -99,7 +99,12 @@ export function useWageActions({
     targetMatrix.cells.forEach((row: MatrixCell[]) => {
       row.forEach((cell: MatrixCell) => {
         Object.keys(rates).forEach(grade => {
-          cell.gradeRates[grade] = { ...rates[grade] }
+          const rateValue = rates[grade]
+          cell.gradeRates[grade] = {
+            baseUp: rateValue?.baseUp ?? 0,
+            merit: rateValue?.merit ?? 0,
+            additional: rateValue?.additional ?? 0
+          }
         })
       })
     })
@@ -129,7 +134,7 @@ export function useWageActions({
   const undo = useCallback(() => {
     if (historyIndex > 0) {
       const previousMatrix = history[historyIndex - 1]
-      setMatrix(previousMatrix)
+      setMatrix(previousMatrix || null)
       setHistoryIndex(historyIndex - 1)
       setPendingMatrix(null)
     }
@@ -138,7 +143,7 @@ export function useWageActions({
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       const nextMatrix = history[historyIndex + 1]
-      setMatrix(nextMatrix)
+      setMatrix(nextMatrix || null)
       setHistoryIndex(historyIndex + 1)
       setPendingMatrix(null)
     }

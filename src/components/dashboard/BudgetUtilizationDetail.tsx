@@ -46,14 +46,11 @@ function BudgetUtilizationDetailComponent({
   baseUpRate = 0,
   meritRate = 0,
   meritWeightedAverage,
-  totalEmployees,
   totalSalaryBase, // 총급여베이스 - props로 전달받음
   totalBudget = 0, // 총예산 기본값
   levelStatistics,
   promotionBudgets = { lv1: 0, lv2: 0, lv3: 0, lv4: 0 },
-  onPromotionBudgetChange,
   additionalBudget = 0,
-  onAdditionalBudgetChange,
   enableAdditionalIncrease = false,
   onBudgetCalculated
 }: BudgetUtilizationDetailProps) {

@@ -5,7 +5,7 @@ import { PayBandLineChart } from './PayBandLineChart'
 import { ComparisonTable } from './ComparisonTable'
 import { RaiseSliderPanel } from './RaiseSliderPanel'
 import { PayBandCompetitivenessHeatmapCards } from './PayBandCompetitivenessHeatmapCards'
-import { useWageContextNew } from '@/context/WageContextNew'
+// import { useWageContextNew } from '@/context/WageContextNew' // 임시 제거
 
 interface LevelData {
   level: string
@@ -51,37 +51,15 @@ export function PayBandCard({
   bandId,
   bandName,
   levels,
-  initialBaseUp,
-  initialMerit,
-  levelRates,
   onRateChange,
-  currentRates,
   isReadOnly = false,
   bands = []
 }: PayBandCardProps) {
-  const { computed, matrix, updateMatrix } = useWageContextNew()
-  const bandAdjustments = {}  // 임시로 빈 객체 사용
-  const setBandAdjustments = () => {}  // 임시 함수
-  const bandFinalRates = {}  // 임시 객체
-  const setBandFinalRates = () => {}  // 임시 함수
+  // const { computed, matrix, updateMatrix } = useWageContextNew() // 임시 제거
   
-  // 읽기 전용 모드일 때는 모든 직군의 조정값 합계를 계산
-  let baseUpAdjustment = 0
-  let meritAdjustment = 0
-  
-  if (isReadOnly) {
-    // 전체 보기 모드: 모든 직군의 조정값 평균 계산
-    const allAdjustments = Object.values(bandAdjustments)
-    if (allAdjustments.length > 0) {
-      baseUpAdjustment = allAdjustments.reduce((sum, adj) => sum + adj.baseUpAdjustment, 0) / allAdjustments.length
-      meritAdjustment = allAdjustments.reduce((sum, adj) => sum + adj.meritAdjustment, 0) / allAdjustments.length
-    }
-  } else {
-    // 개별 직군 모드: 해당 직군의 조정값 사용
-    const bandAdjustment = bandAdjustments[bandName] || { baseUpAdjustment: 0, meritAdjustment: 0 }
-    baseUpAdjustment = bandAdjustment.baseUpAdjustment
-    meritAdjustment = bandAdjustment.meritAdjustment
-  }
+  // 조정값 초기화 (현재 미구현)
+  const baseUpAdjustment = 0
+  const meritAdjustment = 0
   
   const [localBaseUpAdjustment, setLocalBaseUpAdjustment] = useState(baseUpAdjustment)
   const [localMeritAdjustment, setLocalMeritAdjustment] = useState(meritAdjustment)
@@ -89,61 +67,27 @@ export function PayBandCard({
   // WageContext에서 값이 변경되면 로컬 상태 업데이트
   useEffect(() => {
     if (isReadOnly) {
-      // 전체 보기 모드: 모든 직군의 평균 계산
-      const allAdjustments = Object.values(bandAdjustments)
-      if (allAdjustments.length > 0) {
-        setLocalBaseUpAdjustment(allAdjustments.reduce((sum, adj) => sum + adj.baseUpAdjustment, 0) / allAdjustments.length)
-        setLocalMeritAdjustment(allAdjustments.reduce((sum, adj) => sum + adj.meritAdjustment, 0) / allAdjustments.length)
-      }
+      // 전체 보기 모드: 현재는 조정값 0으로 유지
+      setLocalBaseUpAdjustment(0)
+      setLocalMeritAdjustment(0)
     } else {
-      // 개별 직군 모드
-      const adjustment = bandAdjustments[bandName]
-      if (adjustment) {
-        setLocalBaseUpAdjustment(adjustment.baseUpAdjustment)
-        setLocalMeritAdjustment(adjustment.meritAdjustment)
-      }
+      // 개별 직군 모드: 현재는 조정값 0으로 유지
+      setLocalBaseUpAdjustment(0)
+      setLocalMeritAdjustment(0)
     }
-  }, [bandAdjustments, bandName, isReadOnly])
+  }, [bandName, isReadOnly])
 
   // 로컬 조정값 변경 시 WageContext 업데이트 (읽기 전용이 아닐 때만)
   useEffect(() => {
-    if (!isReadOnly && bandName) {
-      setBandAdjustments(prev => ({
-        ...prev,
-        [bandName]: {
-          baseUpAdjustment: localBaseUpAdjustment,
-          meritAdjustment: localMeritAdjustment
-        }
-      }))
+    if (!isReadOnly && bandName && onRateChange) {
+      // 현재는 조정값 변경이 미구현
     }
-  }, [bandName, localBaseUpAdjustment, localMeritAdjustment, setBandAdjustments, isReadOnly])
+  }, [bandName, localBaseUpAdjustment, localMeritAdjustment, isReadOnly, onRateChange])
 
   // 최종 인상률 계산 및 Context 저장
   useEffect(() => {
-    if (levelRates && bandName) {
-      const finalRates: { [level: string]: { baseUp: number; merit: number } } = {};
-      
-      ['Lv.1', 'Lv.2', 'Lv.3', 'Lv.4'].forEach(level => {
-        finalRates[level] = {
-          baseUp: (levelRates[level]?.baseUp || 0) + baseUpAdjustment,
-          merit: (levelRates[level]?.merit || 0) + meritAdjustment
-        }
-      })
-      
-      // Context에 직군별 최종 인상률 저장
-      setBandFinalRates((prev: {
-        [bandName: string]: {
-          [level: string]: {
-            baseUp: number
-            merit: number
-          }
-        }
-      }) => ({
-        ...prev,
-        [bandName]: finalRates
-      }))
-    }
-  }, [levelRates, bandName, baseUpAdjustment, meritAdjustment, setBandFinalRates])
+    // 현재는 최종 인상률 계산이 미구현
+  }, [bandName, baseUpAdjustment, meritAdjustment])
 
   // 차트 데이터 준비 - 인상률 적용
   const chartData = ['Lv.1', 'Lv.2', 'Lv.3', 'Lv.4']
@@ -153,13 +97,8 @@ export function PayBandCard({
         return null
       }
       
-      // 최종 인상률 계산 (대시보드 기준 + 직군 조정)
-      let totalRaiseRate = 0
-      if (levelRates && levelRates[level.level]) {
-        const baseRate = levelRates[level.level]
-        totalRaiseRate = (baseRate.baseUp + baseUpAdjustment) / 100 + 
-                        (baseRate.merit + meritAdjustment) / 100
-      }
+      // 최종 인상률 계산 (현재는 0으로 고정)
+      const totalRaiseRate = 0
       const adjustedSblMedian = level.company.median * (1 + totalRaiseRate)
       
       return {
@@ -179,13 +118,8 @@ export function PayBandCard({
         return null
       }
       
-      // 최종 인상률 계산 (대시보드 기준 + 직군 조정)
-      let totalRaiseRate = 0
-      if (levelRates && levelRates[level.level]) {
-        const baseRate = levelRates[level.level]
-        totalRaiseRate = (baseRate.baseUp + baseUpAdjustment) / 100 + 
-                        (baseRate.merit + meritAdjustment) / 100
-      }
+      // 최종 인상률 계산 (현재는 0으로 고정)
+      const totalRaiseRate = 0
       const adjustedSblMedian = level.company.median * (1 + totalRaiseRate)
       
       return {
@@ -216,14 +150,7 @@ export function PayBandCard({
       localStorage.removeItem(`bandAdjustments_${bandName}`)
     }
     
-    // Context에서 해당 직군 조정값 제거
-    if (bandName) {
-      setBandFinalRates(prev => {
-        const newRates = { ...prev }
-        delete newRates[bandName]
-        return newRates
-      })
-    }
+    // Context에서 해당 직군 조정값 제거 (현재 미구현)
   }
 
   // 조정값 변경 시 상위 컴포넌트에 알림
@@ -292,7 +219,7 @@ export function PayBandCard({
             <RaiseSliderPanel
               bandId={bandId}
               bandName={bandName}
-              levelRates={levelRates}
+              levelRates={{}}
               baseUpAdjustment={localBaseUpAdjustment}
               meritAdjustment={localMeritAdjustment}
               onBaseUpAdjustmentChange={setLocalBaseUpAdjustment}
@@ -306,8 +233,8 @@ export function PayBandCard({
           <div className="xl:col-span-5">
             <PayBandCompetitivenessHeatmapCards 
               bands={bands}
-              bandAdjustments={bandAdjustments}
-              levelRates={levelRates}
+              bandAdjustments={{}}
+              levelRates={{}}
             />
           </div>
         )}

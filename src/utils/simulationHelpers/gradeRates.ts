@@ -2,7 +2,6 @@
 
 import { 
   GradeAdjustmentRates,
-  AllAdjustmentRates,
   LevelGradeRates,
   BandGradeRates,
   PayZoneLevelGradeRates
@@ -34,14 +33,15 @@ export const propagateLevelToBand = (
   const bandGradeRates: BandGradeRates = {}
   
   bands.forEach(band => {
-    bandGradeRates[band] = {}
-    Object.entries(levelGradeRates).forEach(([level, levelData]) => {
-      bandGradeRates[band][level] = {
-        average: { ...levelData.average },
-        byGrade: { ...levelData.byGrade },
-        employeeCount: { ...levelData.employeeCount }
+    // For each band, copy the first level's data structure
+    const firstLevel = Object.keys(levelGradeRates)[0]
+    if (firstLevel) {
+      bandGradeRates[band] = {
+        average: { ...levelGradeRates[firstLevel].average },
+        byGrade: { ...levelGradeRates[firstLevel].byGrade },
+        employeeCount: { ...levelGradeRates[firstLevel].employeeCount }
       }
-    })
+    }
   })
   
   return bandGradeRates

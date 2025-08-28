@@ -24,7 +24,7 @@ export function Navigation({ children }: NavigationProps) {
   const contextEmployeeData = newContext.originalData.employees
   const baseUpRate = newContext.computed.weightedAverage.totalAverage?.baseUp || 0
   const meritRate = newContext.computed.weightedAverage.totalAverage?.merit || 0
-  const levelRates = {}  // Level rates from matrix
+  const levelRates: Record<string, {baseUp?: number; merit?: number}> = {}  // Level rates from matrix
   const adjustmentMode = newContext.adjustment.mode
   
   // 시나리오 관련 (TODO: 새 시스템에 맞게 구현 필요)
@@ -33,9 +33,6 @@ export function Navigation({ children }: NavigationProps) {
   const saveScenario = () => {}
   const loadScenario = () => {}
   const deleteScenario = () => {}
-  const renameScenario = () => {}
-  const bandFinalRates = {}
-  const payZoneRates = {}
 
   // 홈 화면에서는 네비게이션 바를 숨김
   if (pathname === '/home' || pathname === '/') {
@@ -45,7 +42,7 @@ export function Navigation({ children }: NavigationProps) {
   const navItems = [
     { href: '/dashboard', label: '예산 설정' },
     { href: '/simulation', label: '인상률 조정' },
-    { href: '/person', label: '개인별 결과' },
+    { href: '/employees', label: '결과 확인' },
   ]
 
   // Excel 내보내기 함수
@@ -88,7 +85,7 @@ export function Navigation({ children }: NavigationProps) {
           exportData = []
           newContext.originalData.metadata.bands.forEach(band => {
             newContext.originalData.metadata.levels.forEach(level => {
-              const cell = matrix.cells[`${band}-${level}`]
+              const cell = (matrix.cells as Record<string, any>)[`${band}-${level}`]
               if (cell) {
                 const avgBaseUp = cell.statistics.averageBaseUp || 0
                 const avgMerit = cell.statistics.averageMerit || 0
@@ -105,8 +102,8 @@ export function Navigation({ children }: NavigationProps) {
         }
       }
       fileName = '인상률_조정.xlsx'
-    } else if (pathname === '/person') {
-      // 개인별 결과: 직원 데이터
+    } else if (pathname === '/employees') {
+      // 직원 결과: 직원 데이터
       exportData = contextEmployeeData.map(emp => ({
         '사번': emp.employeeNumber,
         '이름': emp.name,
@@ -119,7 +116,7 @@ export function Navigation({ children }: NavigationProps) {
         'Base-up(%)': levelRates[emp.level]?.baseUp || baseUpRate || 0,
         '성과인상률(%)': levelRates[emp.level]?.merit || meritRate || 0
       }))
-      fileName = '개인별_결과.xlsx'
+      fileName = '직원_결과.xlsx'
     }
 
     // Excel 파일 생성
@@ -141,7 +138,6 @@ export function Navigation({ children }: NavigationProps) {
               onSave={saveScenario}
               onLoad={loadScenario}
               onDelete={deleteScenario}
-              onRename={renameScenario}
               isNavigation={true}
             />
             <button
@@ -184,9 +180,9 @@ export function Navigation({ children }: NavigationProps) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   )}
-                  {item.href === '/person' && (
+                  {item.href === '/employees' && (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v1a1 1 0 001 1h4a1 1 0 001-1v-1m3-2V8a1 1 0 00-1-1H7a1 1 0 00-1 1v7m0 0h12M9 5h6a1 1 0 011 1v1H8V6a1 1 0 011-1z" />
                     </svg>
                   )}
                   {item.label}

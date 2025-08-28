@@ -17,14 +17,6 @@ export function DisplayControls({
   onToggleCompactMode,
   selectedBandsCount
 }: DisplayControlsProps) {
-  // 동적 컴팩트 모드 - 직군 수에 따라 자동 조정
-  const getAutoCompactMode = () => {
-    if (selectedBandsCount >= 3) return true  // 3개 이상은 무조건 컴팩트
-    return isCompactMode  // 2개 이하는 사용자 설정 따름
-  }
-  
-  const effectiveCompactMode = getAutoCompactMode()
-  
   return (
     <div className="flex items-center gap-4">
       {/* Zone 표시 토글 */}

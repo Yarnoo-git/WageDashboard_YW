@@ -64,9 +64,12 @@ export function useBandData() {
           }
         }
         
-        const salaries = levelEmployees.map(e => e.currentSalary).sort((a, b) => a - b)
-        const meanSalary = salaries.reduce((sum, s) => sum + s, 0) / salaries.length
-        const medianSalary = salaries[Math.floor(salaries.length / 2)]
+        const salaries: number[] = levelEmployees
+          .map(e => e.currentSalary)
+          .filter((s): s is number => s !== undefined)
+          .sort((a, b) => a - b)
+        const meanSalary: number = salaries.length > 0 ? salaries.reduce((sum, s) => sum + s, 0) / salaries.length : 0
+        const medianSalary: number = salaries.length > 0 ? (salaries[Math.floor(salaries.length / 2)] ?? 0) : 0
         
         const competitorInfo = competitorData.find(c => 
           c.band === band && c.level === level
@@ -81,8 +84,8 @@ export function useBandData() {
           meanBasePay: meanSalary,
           baseUpKRW: meanSalary * baseUpRate / 100,
           baseUpRate,
-          sblIndex: competitorMedian > 0 ? (medianSalary / competitorMedian) * 100 : 0,
-          caIndex: competitorMedian > 0 ? (medianSalary / competitorMedian) * 100 : 0,
+          sblIndex: competitorMedian > 0 && medianSalary > 0 ? (medianSalary / competitorMedian) * 100 : 0,
+          caIndex: competitorMedian > 0 && medianSalary > 0 ? (medianSalary / competitorMedian) * 100 : 0,
           company: {
             median: medianSalary,
             mean: meanSalary,

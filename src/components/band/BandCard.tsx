@@ -9,8 +9,7 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  ResponsiveContainer,
-  CartesianGrid
+  ResponsiveContainer
 } from 'recharts'
 
 interface BandCardProps {

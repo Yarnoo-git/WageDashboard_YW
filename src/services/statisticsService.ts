@@ -3,14 +3,16 @@
  * 레벨별, 밴드별, 대시보드 통계 계산
  */
 
-import { 
-  EmployeeRecord,
-  calculateBandStatistics,
-  calculatePercentile,
-  LEVEL_INFO
-} from '@/lib/bandDataGenerator'
-import { getEmployeeData } from './employeeService'
-import { getCompetitorData, getAISettings } from './excelService'
+// bandDataGenerator는 테스트용이므로 제거
+// import { 
+//   EmployeeRecord,
+//   calculateBandStatistics,
+//   calculatePercentile,
+//   LEVEL_INFO
+// } from '@/lib/bandDataGenerator'
+import { getEmployeeData, EmployeeRecord } from './employeeService'
+import { getCompetitorData, getAISettings, getCachedBands, getCachedLevels } from './excelService'
+import { calculatePercentile, calculateBandStatistics, createLevelInfo } from '@/utils/excelDataUtils'
 import { INDIRECT_COST } from '@/config/constants'
 
 /**
@@ -63,12 +65,8 @@ export async function getBandLevelDetails() {
   const competitorData = getCompetitorData()
   
   // 밴드별 데이터 생성
-  const bands = ['생산', '영업', '생산기술', '경영지원', '품질보증', '기획', '구매&물류', 'Facility']
-  const levels = Object.keys(LEVEL_INFO).sort((a, b) => {
-    const orderA = LEVEL_INFO[a].order
-    const orderB = LEVEL_INFO[b].order
-    return orderB - orderA // 높은 직급부터
-  })
+  const bands = getCachedBands()
+  const levels = getCachedLevels()
   
   return bands.map(bandName => {
     const bandEmployees = employees.filter(emp => emp.band === bandName)
@@ -168,6 +166,7 @@ export async function getDashboardData() {
 export async function getDashboardSummary() {
   const employees = await getEmployeeData()
   const aiSettings = getAISettings()
+  const levelInfo = createLevelInfo(employees)
   
   // 레벨별 데이터 그룹화
   const levelData = new Map<string, {
@@ -190,15 +189,15 @@ export async function getDashboardSummary() {
   })
   
   // 평균 계산
-  levelData.forEach((data, level) => {
+  levelData.forEach((data) => {
     data.avgSalary = data.totalSalary / data.employees.length
   })
   
   // 레벨 순서대로 정렬
   const sortedLevels = Array.from(levelData.entries())
     .sort((a, b) => {
-      const orderA = LEVEL_INFO[a[0]]?.order || 0
-      const orderB = LEVEL_INFO[b[0]]?.order || 0
+      const orderA = levelInfo[a[0]]?.order || 0
+      const orderB = levelInfo[b[0]]?.order || 0
       return orderB - orderA
     })
   

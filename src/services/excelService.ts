@@ -4,13 +4,9 @@
  */
 
 import * as XLSX from 'xlsx'
-import { 
-  EmployeeRecord, 
-  convertFromExcelFormat,
-  calculateBandStatistics,
-  calculatePercentile,
-  LEVEL_INFO
-} from '@/lib/bandDataGenerator'
+// bandDataGenerator는 테스트용이므로 제거하고 필요한 타입만 정의
+import { EmployeeRecord } from './employeeService'
+import { extractBands, extractLevels, extractGrades } from '@/utils/excelDataUtils'
 
 // AI 설정 구조
 export interface AISettings {
@@ -34,6 +30,9 @@ let cachedEmployeeData: EmployeeRecord[] | null = null
 let cachedAISettings: AISettings | null = null
 let cachedCompetitorData: CompetitorData[] | null = null
 let cachedCompetitorIncrease: number | null = null
+let cachedBands: string[] | null = null
+let cachedLevels: string[] | null = null
+let cachedGrades: string[] | null = null
 
 /**
  * 캐시 초기화
@@ -44,6 +43,9 @@ export function clearCache() {
     cachedAISettings = null
     cachedCompetitorData = null
     cachedCompetitorIncrease = null
+    cachedBands = null
+    cachedLevels = null
+    cachedGrades = null
   }
 }
 
@@ -75,20 +77,15 @@ export async function loadEmployeeDataFromExcel(file?: File): Promise<EmployeeRe
         // 기본값으로 필수 필드 채우기
         const rowWithDefaults = {
           employeeId: row['사번'] || '',
+          name: row['이름'] || row['성명'] || '미입력',  // 추가
+          department: row['부서'] || row['팀'] || '미배정',  // 추가
           band: row['Band'] || row['직군'] || '',
           level: row['Level'] || row['직급'] || '',
+          position: row['직책'] || '',  // optional
+          hireDate: row['입사일'] || new Date().toISOString().split('T')[0],  // 추가
           currentSalary: parseFloat(String(row['현재연봉'] || '0').replace(/,/g, '')) || 0,
           performanceRating: row['평가등급'] || 'B', // 기본값 B
-          promotionEligible: false,
-          promotionType: '',
-          promotionLevel: '',
-          baseIncrease: 0,
-          meritIncrease: 0,
-          promotionIncrease: 0,
-          specialAdjustment: 0,
-          totalIncrease: 0,
-          finalSalary: 0,
-          increasePercentage: 0,
+          payZone: row['PayZone'] ? parseInt(row['PayZone']) : undefined  // optional
         }
         
         // 빈 문자열이나 유효하지 않은 값 체크
@@ -103,14 +100,19 @@ export async function loadEmployeeDataFromExcel(file?: File): Promise<EmployeeRe
       })
       .filter(Boolean) as EmployeeRecord[]
     
-    // 최종 연봉 계산
-    employees.forEach(emp => {
-      emp.finalSalary = emp.currentSalary
-      emp.increasePercentage = 0
-    })
+    // 최종 연봉 계산 (현재는 필요 없음)
+    // employees.forEach(emp => {
+    //   emp.finalSalary = emp.currentSalary
+    //   emp.increasePercentage = 0
+    // })
     
     // 캐시 업데이트
     cachedEmployeeData = employees
+    
+    // 밴드, 직급, 평가등급 정보도 캐시
+    cachedBands = extractBands(employees)
+    cachedLevels = extractLevels(employees)
+    cachedGrades = extractGrades(employees)
     
     // AI 설정 시트 처리
     const aiSheet = workbook.Sheets['AI설정'] || workbook.Sheets['AI 설정']
@@ -254,4 +256,38 @@ export function getCachedEmployeeData(): EmployeeRecord[] | null {
  */
 export function setCachedEmployeeData(data: EmployeeRecord[]): void {
   cachedEmployeeData = data
+  // 밴드, 직급, 평가등급 정보도 업데이트
+  cachedBands = extractBands(data)
+  cachedLevels = extractLevels(data)
+  cachedGrades = extractGrades(data)
+}
+
+/**
+ * 캐시된 밴드 목록 가져오기
+ */
+export function getCachedBands(): string[] {
+  if (!cachedBands && cachedEmployeeData) {
+    cachedBands = extractBands(cachedEmployeeData)
+  }
+  return cachedBands || []
+}
+
+/**
+ * 캐시된 직급 목록 가져오기
+ */
+export function getCachedLevels(): string[] {
+  if (!cachedLevels && cachedEmployeeData) {
+    cachedLevels = extractLevels(cachedEmployeeData)
+  }
+  return cachedLevels || []
+}
+
+/**
+ * 캐시된 평가등급 목록 가져오기
+ */
+export function getCachedGrades(): string[] {
+  if (!cachedGrades && cachedEmployeeData) {
+    cachedGrades = extractGrades(cachedEmployeeData)
+  }
+  return cachedGrades || []
 }

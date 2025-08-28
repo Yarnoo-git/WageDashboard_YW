@@ -1,6 +1,6 @@
 'use client'
 
-import { formatKoreanCurrency } from '@/lib/utils'
+// import removed - not used
 
 interface AIRecommendationDetailCardProps {
   baseUpRate: number

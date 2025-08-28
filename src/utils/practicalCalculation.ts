@@ -4,7 +4,7 @@
  */
 
 import { Employee } from '@/types/employee'
-import { AdjustmentMatrix, RateValues } from '@/types/adjustmentMatrix'
+import { AdjustmentMatrix } from '@/types/adjustmentMatrix'
 import { payZoneService } from '@/services/payZoneService'
 
 export interface PracticalCell {

@@ -8,7 +8,6 @@ import { PerformanceWeightModal } from './PerformanceWeightModal'
 
 interface VirtualizedEmployeeTableProps {
   employees: Employee[]
-  onUpdateEmployee?: (id: string, data: Partial<Employee>) => void
   performanceWeights?: Record<string, number>
 }
 
@@ -21,7 +20,7 @@ const EmployeeRow = memo(({
 }: { 
   employee: Employee
   style: React.CSSProperties
-  onEdit: (employee: Employee) => void
+  onEdit: () => void
   performanceWeight: number
 }) => {
   const increaseInfo = employee.increaseInfo || {
@@ -59,7 +58,7 @@ const EmployeeRow = memo(({
           {/* 평가등급 */}
           <div className="text-center">
             <button
-              onClick={() => onEdit(employee)}
+              onClick={() => onEdit()}
               className="px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
             >
               {employee.performanceRating} ({performanceWeight.toFixed(1)})
@@ -89,23 +88,22 @@ EmployeeRow.displayName = 'EmployeeRow'
 
 export function VirtualizedEmployeeTable({
   employees,
-  onUpdateEmployee,
   performanceWeights = {}
 }: VirtualizedEmployeeTableProps) {
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [showWeightModal, setShowWeightModal] = useState(false)
   
   // 행 렌더러
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const employee = employees[index]
+    if (!employee) return null
+    
     const weight = performanceWeights[employee.performanceRating] || 1.0
     
     return (
       <EmployeeRow
         employee={employee}
         style={style}
-        onEdit={(emp) => {
-          setSelectedEmployee(emp)
+        onEdit={() => {
           setShowWeightModal(true)
         }}
         performanceWeight={weight}
@@ -179,7 +177,6 @@ export function VirtualizedEmployeeTable({
         isOpen={showWeightModal}
         onClose={() => {
           setShowWeightModal(false)
-          setSelectedEmployee(null)
         }}
       />
     </div>

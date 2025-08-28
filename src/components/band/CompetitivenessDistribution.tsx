@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
 
 interface BandData {
   id: string
@@ -162,6 +161,7 @@ export function CompetitivenessDistribution({
         <h5 className="text-sm font-semibold text-gray-700">직급별 분포</h5>
         {['Lv.4', 'Lv.3', 'Lv.2', 'Lv.1'].map(level => {
           const data = competitivenessData[level]
+          if (!data) return null
           const levelTotal = data.insufficient + data.appropriate + data.superior
           
           return (

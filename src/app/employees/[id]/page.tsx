@@ -5,7 +5,7 @@ export async function generateStaticParams() {
   return []
 }
 
-export default function EmployeeDetailPage({ params }: { params: { id: string } }) {
+export default function EmployeeDetailPage() {
   // Electron 빌드에서는 404 처리
   // 직원 상세 페이지는 /employees/detail?id=xxx 로 이동
   notFound()

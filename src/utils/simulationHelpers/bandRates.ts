@@ -115,7 +115,7 @@ export const propagateBandToPayZone = (
     if (!newPayZoneRates[zone]) newPayZoneRates[zone] = {}
     if (!newPayZoneRates[zone][band]) newPayZoneRates[zone][band] = {}
     if (!newPayZoneRates[zone][band][level]) {
-      newPayZoneRates[zone][band][level] = { baseUp: 0, merit: 0 }
+      newPayZoneRates[zone][band][level] = { baseUp: 0, merit: 0, additional: 0 }
     }
     newPayZoneRates[zone][band][level][field] = value
   })

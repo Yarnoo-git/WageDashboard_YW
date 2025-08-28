@@ -1,8 +1,7 @@
 'use client'
 
 import React from 'react'
-import { formatPercentage } from '@/lib/utils'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, Scatter } from 'recharts'
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, Scatter } from 'recharts'
 
 interface IndustryComparisonSectionProps {
   baseUpRate?: number
@@ -61,7 +60,6 @@ function IndustryComparisonSectionComponent({
   // 동적 Y축 범위 계산
   const maxValue = Math.max(companyIncrease, cCompanyIncrease)
   const yAxisMax = Math.ceil(maxValue + 1) // 최대값보다 1 큰 정수로 설정
-  const tickCount = yAxisMax + 1 // 0부터 yAxisMax까지의 눈금 개수
   
   // 직급별 우리 회사 실제 평균 급여 가져오기
   const getOurCompanySalary = (level: string) => {

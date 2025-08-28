@@ -3,15 +3,29 @@
  * CRUD 작업, 검색, 급여 계산
  */
 
-import { 
-  EmployeeRecord,
-  calculateBandStatistics,
-  calculatePercentile,
-  generateDummyEmployees
-} from '@/lib/bandDataGenerator'
+// bandDataGenerator는 테스트용이므로 제거
+// import { 
+//   EmployeeRecord,
+//   calculateBandStatistics,
+//   calculatePercentile,
+//   generateDummyEmployees
+// } from '@/lib/bandDataGenerator'
+
+// Employee 타입 정의 (엑셀 데이터와 호환)
+export interface EmployeeRecord {
+  employeeId: string
+  name: string
+  department: string
+  band: string
+  level: string
+  position?: string  // optional로 변경
+  hireDate: string
+  currentSalary: number
+  performanceRating: string
+  payZone?: number
+}
 import {
   getCachedEmployeeData,
-  setCachedEmployeeData,
   loadEmployeeDataFromExcel,
   getAISettings
 } from './excelService'
@@ -39,10 +53,8 @@ export async function getEmployeeData(): Promise<EmployeeRecord[]> {
     return cached
   }
   
-  // 3. 더미 데이터 생성
-  const dummyData = generateDummyEmployees()
-  setCachedEmployeeData(dummyData)
-  return dummyData
+  // 3. 데이터가 없으면 빈 배열 반환
+  return []
 }
 
 /**
@@ -58,11 +70,12 @@ export async function updateEmployee(id: string, updates: Partial<EmployeeRecord
   
   // 수정된 데이터 배열 생성 (원본을 변경하지 않음)
   modifiedEmployeeData = [...employees]
-  modifiedEmployeeData[index] = {
+  const updatedEmployee: EmployeeRecord = {
     ...modifiedEmployeeData[index],
     ...updates,
     employeeId: id // ID는 변경 불가
-  }
+  } as EmployeeRecord
+  modifiedEmployeeData[index] = updatedEmployee
   
   return modifiedEmployeeData[index]
 }

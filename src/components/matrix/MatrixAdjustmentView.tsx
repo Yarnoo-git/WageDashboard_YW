@@ -238,7 +238,7 @@ export const MatrixCellAdjustment = memo(function MatrixCellAdjustment({
               <tr className="border-t">
                 <td colSpan={grades.length + 2} className="px-4 py-2">
                   <button
-                    onClick={() => setExpandedGrade(expandedGrade ? null : grades[0])}
+                    onClick={() => setExpandedGrade(expandedGrade ? null : (grades[0] ?? null))}
                     className="text-xs text-blue-600 hover:underline"
                   >
                     {expandedGrade ? '▲ Pay Zone 세부 설정 닫기' : '▼ Pay Zone 세부 설정 열기'}

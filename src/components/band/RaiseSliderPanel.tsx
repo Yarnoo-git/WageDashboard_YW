@@ -21,14 +21,12 @@ interface RaiseSliderPanelProps {
 }
 
 export function RaiseSliderPanel({
-  bandId,
   bandName = '',
   levelRates = {},
   baseUpAdjustment,
   meritAdjustment,
   onBaseUpAdjustmentChange,
   onMeritAdjustmentChange,
-  onReset,
   budgetImpact = 0
 }: RaiseSliderPanelProps) {
   // 직급별 최종 인상률 계산

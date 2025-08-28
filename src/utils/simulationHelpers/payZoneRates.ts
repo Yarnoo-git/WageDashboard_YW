@@ -102,7 +102,8 @@ export const synchronizePayZoneToBand = (
         if (!newBandRates[band]) newBandRates[band] = {}
         newBandRates[band][level] = {
           baseUp: baseUpAvg ?? newBandRates[band][level]?.baseUp ?? 0,
-          merit: meritAvg ?? newBandRates[band][level]?.merit ?? 0
+          merit: meritAvg ?? newBandRates[band][level]?.merit ?? 0,
+          additional: 0
         }
       }
     })
@@ -126,7 +127,7 @@ export const propagateLevelToPayZone = (
     dynamicStructure.bands.forEach(band => {
       if (!newPayZoneRates[zone][band]) newPayZoneRates[zone][band] = {}
       if (!newPayZoneRates[zone][band][level]) {
-        newPayZoneRates[zone][band][level] = { baseUp: 0, merit: 0 }
+        newPayZoneRates[zone][band][level] = { baseUp: 0, merit: 0, additional: 0 }
       }
       newPayZoneRates[zone][band][level][field] = value
     })

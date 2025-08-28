@@ -80,7 +80,9 @@ export function PayBandCompetitivenessHeatmap({
     // 1. 우선순위: 대시보드에서 설정한 직급별 인상률 사용
     if (levelRates && levelRates[level.level]) {
       const levelRate = levelRates[level.level]
-      totalRate = levelRate.baseUp / 100 + levelRate.merit / 100
+      if (levelRate) {
+        totalRate = levelRate.baseUp / 100 + levelRate.merit / 100
+      }
       
       // 2. Pay Band에서 조정한 값이 있으면 추가 적용
       const rate = bandRates[band.name]

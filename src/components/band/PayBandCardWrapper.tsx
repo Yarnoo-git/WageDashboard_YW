@@ -5,7 +5,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useWageContextNew } from '@/context/WageContextNew'
+// import { useWageContextNew } from '@/context/WageContextNew' // 현재 미사용
 
 interface LevelData {
   level: string
@@ -63,17 +63,12 @@ export function PayBandCardWrapper({
   bandId,
   bandName,
   levels,
-  initialBaseUp,
-  initialMerit,
-  levelRates,
   onRateChange,
-  currentRates,
   isReadOnly = false,
-  bands = [],
   bandAdjustments,
   setBandAdjustments
 }: PayBandCardWrapperProps) {
-  const newContext = useWageContextNew()
+  // const newContext = useWageContextNew() // 현재 미사용
   const [localBaseUpAdjustment, setLocalBaseUpAdjustment] = useState(0)
   const [localMeritAdjustment, setLocalMeritAdjustment] = useState(0)
 
@@ -133,13 +128,8 @@ export function PayBandCardWrapper({
         return null
       }
       
-      // 최종 인상률 계산 (대시보드 기준 + 직군 조정)
-      let totalRaiseRate = 0
-      if (levelRates && levelRates[level.level]) {
-        const baseRate = levelRates[level.level]
-        totalRaiseRate = (baseRate.baseUp + baseUpAdjustment) / 100 + 
-                        (baseRate.merit + meritAdjustment) / 100
-      }
+      // 최종 인상률 계산 (현재는 0으로 고정)
+      const totalRaiseRate = 0
       const adjustedSblMedian = level.company.median * (1 + totalRaiseRate)
       
       return {
@@ -159,13 +149,8 @@ export function PayBandCardWrapper({
         return null
       }
       
-      // 최종 인상률 계산 (대시보드 기준 + 직군 조정)
-      let totalRaiseRate = 0
-      if (levelRates && levelRates[level.level]) {
-        const baseRate = levelRates[level.level]
-        totalRaiseRate = (baseRate.baseUp + baseUpAdjustment) / 100 + 
-                        (baseRate.merit + meritAdjustment) / 100
-      }
+      // 최종 인상률 계산 (현재는 0으로 고정)
+      const totalRaiseRate = 0
       const adjustedSblMedian = level.company.median * (1 + totalRaiseRate)
       
       return {

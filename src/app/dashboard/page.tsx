@@ -29,8 +29,8 @@ export default function DashboardPage() {
   
   // 초기값 설정
   useEffect(() => {
-    setBudgetInput((availableBudget / UNITS.HUNDRED_MILLION).toFixed(0))
-    setWelfareInput((welfareBudget / UNITS.HUNDRED_MILLION).toFixed(0))
+    setBudgetInput((availableBudget / UNITS.EOK_WON).toFixed(0))
+    setWelfareInput((welfareBudget / UNITS.EOK_WON).toFixed(0))
   }, [availableBudget, welfareBudget])
   
   // 데이터 없으면 홈으로
@@ -45,8 +45,8 @@ export default function DashboardPage() {
   
   // 예산 적용
   const handleBudgetApply = () => {
-    const budget = parseFloat(budgetInput) * UNITS.HUNDRED_MILLION
-    const welfare = parseFloat(welfareInput) * UNITS.HUNDRED_MILLION
+    const budget = parseFloat(budgetInput) * UNITS.EOK_WON
+    const welfare = parseFloat(welfareInput) * UNITS.EOK_WON
     
     if (!isNaN(budget) && budget >= 0 && !isNaN(welfare) && welfare >= 0) {
       newContext.actions.updateBudget(budget + welfare, welfare)

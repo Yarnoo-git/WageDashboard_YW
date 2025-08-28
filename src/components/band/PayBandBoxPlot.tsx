@@ -5,15 +5,12 @@ import {
   ComposedChart,
   Bar,
   Line,
-  Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  Rectangle,
-  Cell
+  ResponsiveContainer
 } from 'recharts'
 import { formatKoreanCurrency } from '@/lib/utils'
 
@@ -46,7 +43,7 @@ interface PayBandBoxPlotProps {
 }
 
 // 커스텀 박스플롯 렌더러 - 각 직급별로 박스플롯을 그림
-const CustomBoxPlot = ({ x, y, width, height, fill, data }: any) => {
+const CustomBoxPlot = ({ x, y, width, height, data }: any) => {
   if (!data) return null
   
   const { min, q1, median, q3, max } = data

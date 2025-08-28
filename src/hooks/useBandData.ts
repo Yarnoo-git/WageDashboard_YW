@@ -138,9 +138,9 @@ export function useBandData() {
               }).filter(level => level.headcount > 0)
               
               const totalHeadcount = bandInfo.employees.length
-              const avgSalary = totalHeadcount > 0
-                ? bandInfo.employees.reduce((sum: number, e: any) => sum + (e.currentSalary || 0), 0) / totalHeadcount
-                : 0
+              // const avgSalary = totalHeadcount > 0
+              //   ? bandInfo.employees.reduce((sum: number, e: any) => sum + (e.currentSalary || 0), 0) / totalHeadcount
+              //   : 0
               
               bandDataArray.push({
                 id: bandName.toLowerCase().replace(/[&\s]/g, '_'),
@@ -187,5 +187,7 @@ function calculatePercentile(values: number[], percentile: number): number {
   const lower = Math.floor(index)
   const upper = Math.ceil(index)
   const weight = index % 1
-  return sorted[lower] * (1 - weight) + sorted[upper] * weight
+  const lowerValue = sorted[lower] ?? 0
+  const upperValue = sorted[upper] ?? 0
+  return lowerValue * (1 - weight) + upperValue * weight
 }

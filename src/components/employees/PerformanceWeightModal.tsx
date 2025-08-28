@@ -16,7 +16,6 @@ export function PerformanceWeightModal({ isOpen, onClose }: PerformanceWeightMod
     // WageContextNew doesn't have direct setPerformanceWeights, using updateMatrix instead
     console.log('Performance weights update:', weights)
   }
-  const gradeSettings = context.originalData.gradeSettings
   const [localWeights, setLocalWeights] = useState(performanceWeights)
 
   useEffect(() => {
@@ -32,7 +31,7 @@ export function PerformanceWeightModal({ isOpen, onClose }: PerformanceWeightMod
 
   const handleReset = () => {
     // 엑셀에서 로드된 기본값 사용, 없으면 하드코딩된 값 사용
-    const defaultWeights = getPerformanceWeights(gradeSettings || undefined)
+    const defaultWeights = getPerformanceWeights(undefined)
     setLocalWeights(defaultWeights)
   }
 
@@ -66,7 +65,7 @@ export function PerformanceWeightModal({ isOpen, onClose }: PerformanceWeightMod
           </p>
 
           <div className="space-y-6">
-            {Object.entries(localWeights).map(([grade, weight]) => (
+            {(Object.entries(localWeights) as [string, number][]).map(([grade, weight]) => (
               <div key={grade} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-slate-700">
@@ -84,7 +83,7 @@ export function PerformanceWeightModal({ isOpen, onClose }: PerformanceWeightMod
                     max="2.0"
                     step="0.1"
                     value={weight}
-                    onChange={(e) => setLocalWeights(prev => ({
+                    onChange={(e) => setLocalWeights((prev: Record<string, number>) => ({
                       ...prev,
                       [grade]: parseFloat(e.target.value)
                     }))}
@@ -109,7 +108,7 @@ export function PerformanceWeightModal({ isOpen, onClose }: PerformanceWeightMod
           <div className="mt-6 p-4 bg-slate-50 rounded-lg">
             <p className="text-xs font-medium text-slate-600 mb-2">예시 계산 (성과 인상률 2.5% 기준)</p>
             <div className="grid grid-cols-4 gap-2 text-xs">
-              {Object.entries(localWeights).map(([grade, weight]) => (
+              {(Object.entries(localWeights) as [string, number][]).map(([grade, weight]) => (
                 <div key={grade} className="text-center">
                   <span className="font-medium text-slate-700">{grade}</span>
                   <p className="text-indigo-600 font-semibold">{(2.5 * weight).toFixed(1)}%</p>

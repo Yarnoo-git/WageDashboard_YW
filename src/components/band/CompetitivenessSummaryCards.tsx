@@ -88,15 +88,15 @@ export function CompetitivenessSummaryCards({
           if (value < 95) {
             totalUnder += level.headcount
             if (!underBands[band.name]) underBands[band.name] = []
-            underBands[band.name].push(level.level)
+            underBands[band.name]!.push(level.level)
           } else if (value <= 105) {
             totalFit += level.headcount
             if (!fitBands[band.name]) fitBands[band.name] = []
-            fitBands[band.name].push(level.level)
+            fitBands[band.name]!.push(level.level)
           } else {
             totalOver += level.headcount
             if (!overBands[band.name]) overBands[band.name] = []
-            overBands[band.name].push(level.level)
+            overBands[band.name]!.push(level.level)
           }
         }
       })
