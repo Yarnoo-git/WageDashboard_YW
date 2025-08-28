@@ -13,6 +13,7 @@ import {
   BandGradeRates,
   PayZoneLevelGradeRates
 } from '@/types/simulation'
+import { INDIRECT_COST } from '@/config/constants'
 
 // 가중평균 계산 헬퍼
 export const calculateWeightedAverage = (
@@ -357,7 +358,7 @@ export const calculateBudgetUsage = (
     totalDirect += increase
   })
   
-  const totalIndirect = totalDirect * 0.178 // 간접비용 17.8%
+  const totalIndirect = totalDirect * INDIRECT_COST.TOTAL // 간접비용
   const total = totalDirect + totalIndirect
   const actualBudget = availableBudget - welfareBudget
   const remaining = actualBudget - total

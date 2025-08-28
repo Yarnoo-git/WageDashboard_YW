@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/Footer'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { WageContextNewProvider } from '@/context/WageContextNew'
 import './globals.css'
 
@@ -25,15 +26,17 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="font-sans antialiased">
-        <WageContextNewProvider>
-          <div className="flex flex-col min-h-screen">
-            <Navigation />
-            <main className="flex-grow">
-              {children}
-            </main>
-            <Footer />
-          </div>
-        </WageContextNewProvider>
+        <ErrorBoundary>
+          <WageContextNewProvider>
+            <div className="flex flex-col min-h-screen">
+              <Navigation />
+              <main className="flex-grow">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </WageContextNewProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

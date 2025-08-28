@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useWageContextNew } from '@/context/WageContextNew'
-import { useWageContextAdapter } from '@/hooks/useWageContextAdapter'
+// useWageContextAdapter removed - using WageContextNew directly
 import { useBandData } from './hooks/useBandData'
 import { ApplyResetBar } from '@/components/common/ApplyResetBar'
 import { FixedSummaryBar } from '@/components/simulation/FixedSummaryBar'
@@ -24,7 +24,17 @@ type ViewMode = 'adjustment' | 'all' | 'competitiveness' | 'band'
 function SimulationContent() {
   const router = useRouter()
   const newContext = useWageContextNew()
-  const adapter = useWageContextAdapter()
+  // Using newContext directly instead of adapter
+  const adapter = {
+    baseUpRate: newContext.computed.weightedAverage.totalAverage?.baseUp || 0,
+    meritRate: newContext.computed.weightedAverage.totalAverage?.merit || 0,
+    levelRates: {},  // Level rates from matrix cells
+    levelTotalRates: {},
+    weightedAverageRate: (newContext.computed.weightedAverage.totalAverage?.baseUp || 0) + (newContext.computed.weightedAverage.totalAverage?.merit || 0),
+    levelStatistics: [],  // Level statistics from computed data
+    competitorData: newContext.originalData.competitorData,
+    competitorIncreaseRate: 0  // Competitor increase rate
+  }
   const { bandsData, totalBandData } = useBandData()
   
   const [viewMode, setViewMode] = useState<ViewMode>('adjustment')
@@ -339,12 +349,12 @@ function SimulationContent() {
 }
 
 
-import { WageProvider } from '@/context/WageContext'
+import { WageContextNewProvider } from '@/context/WageContextNew'
 
 export default function SimulationPage() {
   return (
-    <WageProvider>
+    <WageContextNewProvider>
       <SimulationContent />
-    </WageProvider>
+    </WageContextNewProvider>
   )
 }

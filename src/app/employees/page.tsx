@@ -1,14 +1,16 @@
 /**
  * 직원 관리 페이지
- * 새로운 시스템 기반 재구현
+ * 새로운 시스템 기반 재구현 - VirtualizedTable 적용
  */
 
 'use client'
 
 import React, { useState, useMemo } from 'react'
 import { WageContextNewProvider, useWageContextNew } from '@/context/WageContextNew'
+import { VirtualizedEmployeeTable } from '@/components/employees/VirtualizedEmployeeTable'
 import { formatKoreanCurrency } from '@/lib/utils'
 import { Employee } from '@/types/employee'
+import { UI_CONFIG } from '@/config/constants'
 
 function EmployeesContent() {
   const {
@@ -22,8 +24,6 @@ function EmployeesContent() {
   const [selectedBand, setSelectedBand] = useState<string>('')
   const [selectedRating, setSelectedRating] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 50
   
   // 필터링된 직원 목록
   const filteredEmployees = useMemo(() => {
@@ -43,14 +43,6 @@ function EmployeesContent() {
       return true
     })
   }, [originalData.employees, selectedLevel, selectedDepartment, selectedBand, selectedRating, searchTerm])
-  
-  // 페이지네이션
-  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage)
-  const paginatedEmployees = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    const end = start + itemsPerPage
-    return filteredEmployees.slice(start, end)
-  }, [filteredEmployees, currentPage, itemsPerPage])
   
   // 통계 계산
   const statistics = useMemo(() => {
@@ -198,7 +190,6 @@ function EmployeesContent() {
                   setSelectedDepartment('')
                   setSelectedBand('')
                   setSelectedRating('')
-                  setCurrentPage(1)
                 }}
                 className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900"
               >
@@ -212,147 +203,15 @@ function EmployeesContent() {
           </div>
         </div>
         
-        {/* 테이블 */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    사번
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    이름
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    부서
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    직군
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    레벨
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    평가
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pay Zone
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    현재 연봉
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {paginatedEmployees.map((employee) => (
-                  <tr key={employee.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {employee.employeeNumber}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {employee.name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {employee.department}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {employee.band}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {employee.level}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        employee.performanceRating === 'S' || employee.performanceRating === 'ST' ? 'bg-blue-100 text-blue-800' :
-                        employee.performanceRating === 'A' || employee.performanceRating === 'AT' ? 'bg-green-100 text-green-800' :
-                        employee.performanceRating === 'B' || employee.performanceRating === 'BT' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {employee.performanceRating}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-center text-gray-600">
-                      {employee.payZone ? `Zone ${employee.payZone}` : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-900">
-                      {formatKoreanCurrency(employee.currentSalary)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {/* 페이지네이션 */}
-          {totalPages > 1 && (
-            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  이전
-                </button>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  다음
-                </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    전체 <span className="font-medium">{filteredEmployees.length}</span>명 중{' '}
-                    <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> -{' '}
-                    <span className="font-medium">
-                      {Math.min(currentPage * itemsPerPage, filteredEmployees.length)}
-                    </span>
-                    명 표시
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      이전
-                    </button>
-                    {[...Array(Math.min(5, totalPages))].map((_, idx) => {
-                      const pageNum = currentPage - 2 + idx
-                      if (pageNum < 1 || pageNum > totalPages) return null
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            currentPage === pageNum
-                              ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      )
-                    })}
-                    <button
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      다음
-                    </button>
-                  </nav>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* 가상화된 테이블 */}
+        <VirtualizedEmployeeTable
+          employees={filteredEmployees}
+          onUpdateEmployee={(id, data) => {
+            // 직원 업데이트 로직 (필요시 구현)
+            console.log('Update employee:', id, data)
+          }}
+          performanceWeights={computed.performanceWeights}
+        />
       </div>
     </div>
   )

@@ -5,7 +5,7 @@ import { PayBandLineChart } from './PayBandLineChart'
 import { ComparisonTable } from './ComparisonTable'
 import { RaiseSliderPanel } from './RaiseSliderPanel'
 import { PayBandCompetitivenessHeatmapCards } from './PayBandCompetitivenessHeatmapCards'
-import { useWageContext } from '@/context/WageContext'
+import { useWageContextNew } from '@/context/WageContextNew'
 
 interface LevelData {
   level: string
@@ -59,7 +59,11 @@ export function PayBandCard({
   isReadOnly = false,
   bands = []
 }: PayBandCardProps) {
-  const { setBandFinalRates, bandFinalRates, bandAdjustments, setBandAdjustments } = useWageContext()
+  const { computed, matrix, updateMatrix } = useWageContextNew()
+  const bandAdjustments = {}  // 임시로 빈 객체 사용
+  const setBandAdjustments = () => {}  // 임시 함수
+  const bandFinalRates = {}  // 임시 객체
+  const setBandFinalRates = () => {}  // 임시 함수
   
   // 읽기 전용 모드일 때는 모든 직군의 조정값 합계를 계산
   let baseUpAdjustment = 0

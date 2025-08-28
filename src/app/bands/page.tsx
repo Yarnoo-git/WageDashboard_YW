@@ -8,14 +8,24 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { WageContextNewProvider, useWageContextNew } from '@/context/WageContextNew'
-import { useWageContextAdapter } from '@/hooks/useWageContextAdapter'
+// useWageContextAdapter removed - using WageContextNew directly
 import { PayBandCardWrapper } from '@/components/band/PayBandCardWrapper'
 import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
 
 function BandsContent() {
   const router = useRouter()
   const newContext = useWageContextNew()
-  const adapter = useWageContextAdapter()
+  // Using newContext directly instead of adapter
+  const adapter = {
+    baseUpRate: newContext.computed.weightedAverage.totalAverage?.baseUp || 0,
+    meritRate: newContext.computed.weightedAverage.totalAverage?.merit || 0,
+    levelRates: {},  // Level rates from matrix cells
+    levelTotalRates: {},
+    weightedAverageRate: (newContext.computed.weightedAverage.totalAverage?.baseUp || 0) + (newContext.computed.weightedAverage.totalAverage?.merit || 0),
+    levelStatistics: [],  // Level statistics from computed data
+    competitorData: newContext.originalData.competitorData,
+    competitorIncreaseRate: 0  // Competitor increase rate
+  }
   const [selectedBand, setSelectedBand] = useState<string | null>(null)
   const [bandAdjustments, setBandAdjustments] = useState<Record<string, { baseUpAdjustment: number; meritAdjustment: number }>>({})
   

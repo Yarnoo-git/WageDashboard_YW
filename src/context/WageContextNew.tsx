@@ -15,7 +15,8 @@ import {
   AdjustmentMode
 } from '@/types/adjustmentMatrix'
 import { PayZoneConfiguration } from '@/types/payZone'
-import { payZoneService } from '@/services/payZoneService'
+import { getPayZoneService } from '@/services/payZoneService'
+import { DEFAULT_PAY_ZONE_CONFIG } from '@/types/payZone'
 import {
   WeightedAverageCalculator,
   calculateBudgetUsage,
@@ -154,7 +155,7 @@ export function WageContextNewProvider({
     available: 0
   })
   const [payZoneConfig, setPayZoneConfig] = useState<PayZoneConfiguration>(
-    payZoneService.getConfig()
+    typeof window !== 'undefined' ? getPayZoneService().getConfig() : DEFAULT_PAY_ZONE_CONFIG
   )
   const [additionalType, setAdditionalType] = useState<'percentage' | 'amount'>('percentage')
   
@@ -432,7 +433,9 @@ export function WageContextNewProvider({
   
   const updatePayZoneConfig = useCallback((config: PayZoneConfiguration) => {
     setPayZoneConfig(config)
-    payZoneService.saveConfig(config)
+    if (typeof window !== 'undefined') {
+      getPayZoneService().saveConfig(config)
+    }
   }, [])
   
   const reloadEmployeeData = useCallback(async () => {

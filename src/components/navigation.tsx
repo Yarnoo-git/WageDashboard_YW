@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ReactNode, useState, Fragment } from 'react'
 import { useWageContextNew } from '@/context/WageContextNew'
-import { useWageContextAdapter } from '@/hooks/useWageContextAdapter'
+// useWageContextAdapter removed - using WageContextNew directly
 import { ScenarioManager } from './ScenarioManager'
 import * as XLSX from 'xlsx'
 
@@ -18,13 +18,13 @@ export function Navigation({ children }: NavigationProps) {
   const [showScenarioManager, setShowScenarioManager] = useState(false)
   
   const newContext = useWageContextNew()
-  const adapter = useWageContextAdapter()
+  // Using newContext directly
   
   // 필요한 데이터 추출
   const contextEmployeeData = newContext.originalData.employees
-  const baseUpRate = adapter.baseUpRate
-  const meritRate = adapter.meritRate
-  const levelRates = adapter.levelRates
+  const baseUpRate = newContext.computed.weightedAverage.totalAverage?.baseUp || 0
+  const meritRate = newContext.computed.weightedAverage.totalAverage?.merit || 0
+  const levelRates = {}  // Level rates from matrix
   const adjustmentMode = newContext.adjustment.mode
   
   // 시나리오 관련 (TODO: 새 시스템에 맞게 구현 필요)

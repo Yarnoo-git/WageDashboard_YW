@@ -13,10 +13,11 @@ import {
   GradeRates
 } from '@/types/adjustmentMatrix'
 import { payZoneService } from '@/services/payZoneService'
+import { INDIRECT_COST } from '@/config/constants'
 
-// 상수 설정 (하드코딩 제거)
+// 상수 설정
 export const BUDGET_CONSTANTS = {
-  INDIRECT_COST_RATE: 0.178,  // 17.8% 간접비용 (퇴직금 4.5% + 보험 11.3% + 연금 2.0%)
+  INDIRECT_COST_RATE: INDIRECT_COST.TOTAL,  // 간접비용 비율
   WELFARE_DEFAULT: 0,          // 기본 복리후생 예산
   MILLION: 10000,              // 만원 단위
   HUNDRED_MILLION: 100000000   // 억원 단위

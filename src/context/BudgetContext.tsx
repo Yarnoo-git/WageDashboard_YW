@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, ReactNode } from 'react'
+import { INDIRECT_COST } from '@/config/constants'
 
 interface BudgetContextType {
   // 예산 관리
@@ -9,7 +10,7 @@ interface BudgetContextType {
   totalBudget: number      // 총 예산 (기존 호환용)
   
   // 간접비용 비율
-  indirectCostRate: number // 간접비용 비율 (기본 0.178)
+  indirectCostRate: number // 간접비용 비율
   
   // 예산 업데이트 함수
   setAvailableBudget: (budget: number) => void
@@ -31,7 +32,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   const [availableBudget, setAvailableBudget] = useState(0)
   const [welfareBudget, setWelfareBudget] = useState(0)
   const [totalBudget, setTotalBudget] = useState(0)
-  const [indirectCostRate, setIndirectCostRate] = useState(0.178)  // 17.8%
+  const [indirectCostRate, setIndirectCostRate] = useState(INDIRECT_COST.TOTAL)  // 간접비용 집계
   
   // 직접비용 계산
   const calculateDirectCost = (totalSalary: number, increaseRate: number): number => {

@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react'
 import { useWageContextNew } from '@/context/WageContextNew'
-import { useWageContextAdapter } from '@/hooks/useWageContextAdapter'
+// useWageContextAdapter removed - using WageContextNew directly
 
 interface BandLevelData {
   level: string
@@ -35,13 +35,13 @@ interface BandData {
 
 export function useBandData() {
   const newContext = useWageContextNew()
-  const adapter = useWageContextAdapter()
+  // Using newContext directly
   
   // 직군별 데이터 집계
   const bandsData = useMemo(() => {
     const bands = newContext.originalData.metadata.bands
     const employees = newContext.originalData.employees
-    const competitorData = adapter.competitorData || []
+    const competitorData = newContext.originalData.competitorData || []
     
     return bands.map(band => {
       const bandEmployees = employees.filter(e => e.band === band)
@@ -73,7 +73,7 @@ export function useBandData() {
         )
         const competitorMedian = competitorInfo?.averageSalary || 0
         
-        const baseUpRate = adapter.levelRates[level]?.baseUp || adapter.baseUpRate || 0
+        const baseUpRate = newContext.originalData.aiSettings.baseUpPercentage || 0
         
         return {
           level,
@@ -102,7 +102,7 @@ export function useBandData() {
         averageSalary: bandEmployees.reduce((sum, e) => sum + e.currentSalary, 0) / bandEmployees.length
       }
     }).filter(Boolean) as BandData[]
-  }, [newContext.originalData, adapter])
+  }, [newContext.originalData])
   
   // 전체 집계 데이터
   const totalBandData = useMemo(() => {
@@ -124,7 +124,7 @@ export function useBandData() {
           headcount: totalHeadcount,
           meanBasePay: totalHeadcount > 0 ? totalBasePay / totalHeadcount : 0,
           baseUpKRW: 0,
-          baseUpRate: adapter.levelRates[level]?.baseUp || 0,
+          baseUpRate: newContext.originalData.aiSettings.baseUpPercentage || 0,
           sblIndex: 100,
           caIndex: 100,
           company: {
@@ -138,7 +138,7 @@ export function useBandData() {
         }
       })
     }
-  }, [bandsData, newContext.originalData.metadata.levels, adapter.levelRates])
+  }, [bandsData, newContext.originalData.metadata.levels])
   
   return {
     bandsData,

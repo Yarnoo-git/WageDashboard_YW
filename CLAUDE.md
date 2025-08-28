@@ -83,29 +83,35 @@ npm run generate:test-excel # Generate test Excel file
 ```
 /src
 ├── /app              # Next.js App Router pages
-│   ├── /api         # API routes (minimal usage)
-│   ├── /dashboard   # Main dashboard page
 │   ├── /bands       # Pay band analysis
-│   ├── /employees   # Employee management
+│   ├── /dashboard   # Main dashboard page
+│   ├── /employees   # Employee management (VirtualizedTable 적용)
 │   └── /simulation  # Wage simulation
 ├── /components      # React components
 │   ├── /dashboard   # Dashboard-specific components
 │   ├── /band        # Pay band components
-│   └── /charts      # Chart components
-├── /context         # React Context (WageContext)
+│   ├── /employees   # VirtualizedEmployeeTable 컴포넌트
+│   ├── /charts      # Chart components
+│   └── ErrorBoundary.tsx # 글로벌 에러 핸들링
+├── /config          # 설정 파일
+│   └── constants.ts # 중앙화된 상수 (간접비용, 성과 가중치 등)
+├── /context         # React Context (WageContextNew 통합)
+│   └── WageContextNew.tsx # 통합된 새 Context 시스템
 ├── /hooks           # Custom hooks
+│   └── useClientExcelData.ts # Excel 데이터 처리
 ├── /lib             # Utility functions
 │   └── clientStorage.ts # IndexedDB management
 ├── /services        # Data services
 │   └── employeeDataService.ts # Excel data processing
 └── /utils           # Calculation utilities
+    └── matrixCalculations.ts # 매트릭스 계산 통합
 ```
 
 ## Data Flow
 
 1. **Excel Upload** → `useClientExcelData` hook
 2. **IndexedDB Storage** → `clientStorage.ts`
-3. **Context Distribution** → `WageContext`
+3. **Context Distribution** → `WageContextNew` (통합 Context)
 4. **Component Rendering** → Dashboard/Bands/Employees pages
 5. **Export** → PDF/Excel generation
 
@@ -124,12 +130,25 @@ npm run generate:test-excel # Generate test Excel file
 - Number formatting: `toLocaleString('ko-KR')`
 - Currency: 원, 만원, 억원 units
 
-## Current Limitations & Known Issues
+## Recent Improvements (2025-08-28)
 
-1. **No Pagination**: All 4,925+ employees render at once (performance issue)
-2. **No Error Boundaries**: Missing global error handling
-3. **Test Coverage**: Some tests still reference removed Prisma mocks
-4. **Hardcoded Values**: Some indirect cost rates (17.8%) still hardcoded
+### 성능 최적화
+- ✅ **VirtualizedEmployeeTable 적용**: 4,925명+ 직원 데이터 가상화 렌더링
+- ✅ **Error Boundary 구현**: 글로벌 에러 처리 시스템 추가
+
+### 코드 품질 개선
+- ✅ **Context 통합**: WageContext → WageContextNew로 완전 마이그레이션
+- ✅ **하드코딩 제거**: 모든 상수를 constants.ts로 중앙화
+- ✅ **TypeScript 엄격 모드**: 타입 안전성 강화
+- ✅ **미사용 코드 제거**: 6개 미사용 파일 삭제
+  - _api_backup 폴더 전체 제거
+  - 구 Context 시스템 제거
+  - 미사용 hooks 및 services 제거
+
+## Current Limitations
+
+1. **Test Coverage**: 테스트 커버리지 부족
+2. **Performance Monitoring**: 성능 모니터링 시스템 미구축
 
 ## Environment Variables (Optional)
 
@@ -182,16 +201,19 @@ merit = baseSalary * meritRate * performanceWeight[rating]
 
 ### Budget Calculation
 ```typescript
+// constants.ts에서 정의된 상수 사용
+import { INDIRECT_COST } from '@/config/constants'
+
 directCost = totalSalary * (baseUp + merit) / 100
-indirectCost = directCost * 0.178
+indirectCost = directCost * INDIRECT_COST.TOTAL
 totalBudget = directCost + indirectCost
 
 // 최대인상가능폭 계산 (Fixed)
 usedDirectCost = aiTotalBudget + promotionTotal
-usedIndirectCost = usedDirectCost * 0.178
+usedIndirectCost = usedDirectCost * INDIRECT_COST.TOTAL
 totalUsedCost = usedDirectCost + usedIndirectCost
 remainingBudget = totalBudget - totalUsedCost
-maxIncreasePossible = remainingBudget / 1.178  // 간접비용 포함 역산
+maxIncreasePossible = remainingBudget / (1 + INDIRECT_COST.TOTAL)  // 간접비용 포함 역산
 ```
 
 ### Competitiveness Index

@@ -3,15 +3,18 @@
  * 하드코딩 제거를 위한 중앙 관리
  */
 
+// 간접비용 상수 (별도 export)
+export const INDIRECT_COST = {
+  RETIREMENT: 0.045,      // 퇴직금 4.5%
+  INSURANCE: 0.113,       // 보험 11.3%
+  PENSION: 0.020,         // 연금 2.0%
+  TOTAL: 0.178           // 총계 17.8%
+}
+
 // 예산 관련 상수
 export const BUDGET_CONFIG = {
-  // 간접비용 구성 (총 17.8%)
-  INDIRECT_COST: {
-    RETIREMENT: 0.045,      // 퇴직금 4.5%
-    INSURANCE: 0.113,       // 보험 11.3%
-    PENSION: 0.020,         // 연금 2.0%
-    TOTAL: 0.178           // 총계 17.8%
-  },
+  // 간접비용 참조
+  INDIRECT_COST,
   
   // 기본값
   DEFAULT_BUDGET: 0,          // 기본 예산 (원)

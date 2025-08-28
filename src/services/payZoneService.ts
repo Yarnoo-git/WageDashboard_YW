@@ -33,6 +33,10 @@ class PayZoneService {
    */
   private loadConfig(): void {
     try {
+      // Check if running in browser environment
+      if (typeof window === 'undefined') {
+        return
+      }
       const stored = localStorage.getItem(this.STORAGE_KEY)
       if (stored) {
         const config = JSON.parse(stored)
@@ -251,5 +255,15 @@ class PayZoneService {
   }
 }
 
-export const payZoneService = PayZoneService.getInstance()
+// Lazy initialization to avoid SSR issues
+let _instance: PayZoneService | null = null
+
+export const getPayZoneService = () => {
+  if (!_instance) {
+    _instance = PayZoneService.getInstance()
+  }
+  return _instance
+}
+
+export const payZoneService = typeof window !== 'undefined' ? PayZoneService.getInstance() : ({} as PayZoneService)
 export default payZoneService

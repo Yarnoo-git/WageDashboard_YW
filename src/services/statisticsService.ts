@@ -11,6 +11,7 @@ import {
 } from '@/lib/bandDataGenerator'
 import { getEmployeeData } from './employeeService'
 import { getCompetitorData, getAISettings } from './excelService'
+import { INDIRECT_COST } from '@/config/constants'
 
 /**
  * 레벨별 통계 계산
@@ -210,8 +211,8 @@ export async function getDashboardSummary() {
   const meritAmount = totalSalary * (aiSettings.meritIncreasePercentage / 100)
   const totalIncreaseAmount = baseUpAmount + meritAmount
   
-  // 간접비용 (17.8%)
-  const indirectCost = totalIncreaseAmount * 0.178
+  // 간접비용
+  const indirectCost = totalIncreaseAmount * INDIRECT_COST.TOTAL
   const totalBudgetRequired = totalIncreaseAmount + indirectCost
   
   return {

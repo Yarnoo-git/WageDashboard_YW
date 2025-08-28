@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { formatKoreanCurrency } from '@/lib/utils'
+import { INDIRECT_COST } from '@/config/constants'
 
 interface BudgetUtilizationDetailProps {
   baseUpRate?: number
@@ -90,8 +91,8 @@ function BudgetUtilizationDetailComponent({
   const promotionTotal = promotionLv1 + promotionLv2 + promotionLv3 + promotionLv4
   
   // 카드 3: 추가 인상 가능 범위 계산
-  // 간접비용 비중 (퇴직급여 4.5% + 4대보험 11.3% + 개인연금 2.0% = 17.8%)
-  const indirectCostRatio = 0.178
+  // 간접비용 비중
+  const indirectCostRatio = INDIRECT_COST.TOTAL
   
   // 최대인상가능폭 계산
   // 현재까지 사용된 직접비용
@@ -112,9 +113,9 @@ function BudgetUtilizationDetailComponent({
   // 기준값 = AI예산 + 승급승격예산 + 현재설정값(체크박스 상태 반영)
   const totalBasisAmount = aiTotalBudget + promotionTotal + currentSetting
   
-  const retirementCost = totalBasisAmount * 0.045 // 퇴직급여충당분(4.5%)
-  const insuranceCost = totalBasisAmount * 0.113 // 4대보험(11.3%)
-  const pensionCost = totalBasisAmount * 0.020 // 개인연금(2.0%)
+  const retirementCost = totalBasisAmount * INDIRECT_COST.RETIREMENT // 퇴직급여충당분
+  const insuranceCost = totalBasisAmount * INDIRECT_COST.INSURANCE // 4대보험
+  const pensionCost = totalBasisAmount * INDIRECT_COST.PENSION // 개인연금
   const indirectTotal = retirementCost + insuranceCost + pensionCost
   
   // 계산된 예산 값들을 부모 컴포넌트로 전달
@@ -268,19 +269,19 @@ function BudgetUtilizationDetailComponent({
           </h3>
           <div className="space-y-2">
             <div className="flex justify-between">
-              <span className="text-base text-gray-700">퇴직급여충당분(4.5%)</span>
+              <span className="text-base text-gray-700">퇴직급여충당분({(INDIRECT_COST.RETIREMENT * 100).toFixed(1)}%)</span>
               <span className="font-semibold text-gray-900 text-base">
                 {formatKoreanCurrency(retirementCost, '백만원', 1000000)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-base text-gray-700">4대보험(11.3%)</span>
+              <span className="text-base text-gray-700">4대보험({(INDIRECT_COST.INSURANCE * 100).toFixed(1)}%)</span>
               <span className="font-semibold text-gray-900 text-base">
                 {formatKoreanCurrency(insuranceCost, '백만원', 1000000)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-base text-gray-700">개인연금(2.0%)</span>
+              <span className="text-base text-gray-700">개인연금({(INDIRECT_COST.PENSION * 100).toFixed(1)}%)</span>
               <span className="font-semibold text-gray-900 text-base">
                 {formatKoreanCurrency(pensionCost, '백만원', 1000000)}
               </span>

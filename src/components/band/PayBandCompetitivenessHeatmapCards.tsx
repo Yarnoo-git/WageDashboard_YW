@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { useWageContext } from '@/context/WageContext'
+import { useWageContextNew } from '@/context/WageContextNew'
 
 interface BandData {
   id: string
@@ -36,7 +36,9 @@ export function PayBandCompetitivenessHeatmapCards({
   bandAdjustments,
   levelRates 
 }: Props) {
-  const { baseUpRate: contextBaseUp, meritRate: contextMerit } = useWageContext()
+  const context = useWageContextNew()
+  const contextBaseUp = context.computed.weightedAverage.totalAverage?.baseUp || 0
+  const contextMerit = context.computed.weightedAverage.totalAverage?.merit || 0
   const initialBaseUp = contextBaseUp || 3.2
   const initialMerit = contextMerit || 2.5
   const [viewMode, setViewMode] = useState<'AS-IS' | 'TO-BE'>('TO-BE')

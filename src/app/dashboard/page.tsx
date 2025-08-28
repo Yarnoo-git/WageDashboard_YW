@@ -8,20 +8,20 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useWageContextNew } from '@/context/WageContextNew'
-import { useWageContextAdapter } from '@/hooks/useWageContextAdapter'
+// useWageContextAdapter removed - using WageContextNew directly
 import { formatKoreanCurrency, formatPercentage } from '@/lib/utils'
 import { UNITS, BUDGET_CONFIG } from '@/config/constants'
 
 export default function DashboardPage() {
   const router = useRouter()
   const newContext = useWageContextNew()
-  const adapter = useWageContextAdapter()
+  // Using newContext directly instead of adapter
   
   const availableBudget = newContext.config.budget.available
   const welfareBudget = newContext.config.budget.welfare
   const totalBudget = newContext.config.budget.total
-  const baseUpRate = adapter.baseUpRate
-  const meritRate = adapter.meritRate
+  const baseUpRate = newContext.computed.weightedAverage.totalAverage?.baseUp || 0
+  const meritRate = newContext.computed.weightedAverage.totalAverage?.merit || 0
   const contextEmployeeData = newContext.originalData.employees
   
   const [budgetInput, setBudgetInput] = useState('')

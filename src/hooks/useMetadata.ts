@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useWageContext } from '@/context/WageContext'
+import { useWageContextNew } from '@/context/WageContextNew'
 
 interface Metadata {
   departments: string[]
@@ -29,7 +29,8 @@ const DEFAULT_METADATA: Metadata = {
 }
 
 export function useMetadata(): UseMetadataReturn {
-  const { contextEmployeeData } = useWageContext()
+  const { originalData } = useWageContextNew()
+  const contextEmployeeData = originalData.employees
   const [metadata, setMetadata] = useState<Metadata>(DEFAULT_METADATA)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -83,7 +84,7 @@ export function useMetadata(): UseMetadataReturn {
 
   useEffect(() => {
     fetchMetadata()
-  }, [contextEmployeeData])  // contextEmployeeData가 변경될 때마다 업데이트
+  }, [contextEmployeeData])  // employees 데이터가 변경될 때마다 업데이트
 
   return {
     ...metadata,

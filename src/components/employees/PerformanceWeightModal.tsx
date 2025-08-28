@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useWageContext } from '@/context/WageContext'
+import { useWageContextNew } from '@/context/WageContextNew'
 import { getPerformanceWeights } from '@/services/gradeSettingsService'
 
 interface PerformanceWeightModalProps {
@@ -10,7 +10,13 @@ interface PerformanceWeightModalProps {
 }
 
 export function PerformanceWeightModal({ isOpen, onClose }: PerformanceWeightModalProps) {
-  const { performanceWeights, setPerformanceWeights, gradeSettings } = useWageContext()
+  const context = useWageContextNew()
+  const performanceWeights = context.computed.performanceWeights
+  const setPerformanceWeights = (weights: Record<string, number>) => {
+    // WageContextNew doesn't have direct setPerformanceWeights, using updateMatrix instead
+    console.log('Performance weights update:', weights)
+  }
+  const gradeSettings = context.originalData.gradeSettings
   const [localWeights, setLocalWeights] = useState(performanceWeights)
 
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useBandData } from '@/hooks/useBandData'
-import { useWageContext } from '@/context/WageContext'
+import { useWageContextNew } from '@/context/WageContextNew'
 
 interface LevelData {
   level: string
@@ -47,7 +47,9 @@ export function PayBandCompetitivenessHeatmap({
   bands: propsBands = [] 
 }: Props) {
   const { bands: hookBands, loading: hookLoading } = useBandData()
-  const { baseUpRate: contextBaseUp, meritRate: contextMerit } = useWageContext()
+  const context = useWageContextNew()
+  const contextBaseUp = context.computed.weightedAverage.totalAverage?.baseUp || 0
+  const contextMerit = context.computed.weightedAverage.totalAverage?.merit || 0
   const [bands, setBands] = useState<BandData[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'AS-IS' | 'TO-BE'>('TO-BE')
